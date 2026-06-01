@@ -70,11 +70,31 @@ describe("usePublicConfig", () => {
       wrapper: createWrapper(),
     });
 
+    // Wait on license_enabled (default is false) rather than registration_mode,
+    // since the fail-closed default is now also "closed" — keying on it would let
+    // waitFor pass on the default before the second fetch resolves.
     await waitFor(() => {
-      expect(second.result.current.registration_mode).toBe("closed");
+      expect(second.result.current.license_enabled).toBe(true);
     });
-    expect(second.result.current.license_enabled).toBe(true);
+    expect(second.result.current.registration_mode).toBe("closed");
     expect(second.result.current.billing_enabled).toBe(false);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("fails closed (never 'open') when the public config cannot be loaded", async () => {
+    fetchMock.mockRejectedValue(new Error("network down"));
+
+    const { result } = renderHook(() => usePublicConfig(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.registration_mode).not.toBe("open");
+    expect(result.current.registration_mode).toBe("closed");
+    expect(result.current.license_enabled).toBe(false);
+    expect(result.current.billing_enabled).toBe(false);
   });
 });
