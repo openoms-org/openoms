@@ -257,9 +257,19 @@ func (s *ImportService) ImportOrders(
 	err = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		statusConfig := s.loadStatusConfig(ctx, tx, tenantID)
 
+		// Enforce the monthly order limit once for the whole batch instead of
+		// re-counting per row (previously an O(n) COUNT(*) + tenant FOR UPDATE
+		// lock on every CSV row). pendingCreatesBeforeCurrent = batchSize-1
+		// rejects iff base+batchSize > max — equivalent to the old per-row check,
+		// which aborted the whole transaction on the row that hit the limit.
+		batchSize := len(records) - 1
+		if err := EnforceMonthlyOrderLimit(ctx, tx, s.orderRepo, tenantID, opts.MaxOrdersMonthly, batchSize-1); err != nil {
+			return err
+		}
+
 		for rowNum := 1; rowNum < len(records); rowNum++ {
 			row := records[rowNum]
-			rowErrors, err := s.importRow(ctx, tx, tenantID, row, fieldToCol, rowNum, result, statusConfig, opts.MaxOrdersMonthly)
+			rowErrors, err := s.importRow(ctx, tx, tenantID, row, fieldToCol, rowNum, result, statusConfig)
 			if err != nil {
 				return err
 			}
@@ -304,7 +314,6 @@ func (s *ImportService) importRow(
 	rowNum int,
 	result *model.ImportResult,
 	statusConfig *model.OrderStatusConfig,
-	maxOrdersMonthly int,
 ) ([]model.ImportError, error) {
 	var rowErrors []model.ImportError
 
@@ -490,12 +499,6 @@ func (s *ImportService) importRow(
 	}
 	if paymentMethod != "" {
 		order.PaymentMethod = &paymentMethod
-	}
-
-	// CountThisMonth runs in the same transaction, so it sees orders inserted by
-	// earlier CSV rows. Passing 0 avoids double-counting this import batch.
-	if err := EnforceMonthlyOrderLimit(ctx, tx, s.orderRepo, tenantID, maxOrdersMonthly, 0); err != nil {
-		return nil, err
 	}
 
 	if err := s.orderRepo.Create(ctx, tx, &order); err != nil {
