@@ -93,6 +93,28 @@ func TestFindTenantBySlugMigrationRedactsSettings(t *testing.T) {
 	require.Contains(t, down, "revoke execute on function public.find_tenant_by_slug(text) from public")
 }
 
+func TestGetTenantPlanMigrationRedactsSettings(t *testing.T) {
+	up := normalizedSQL(readMigrationSQL(t, "000029_redact_get_tenant_plan_settings.up.sql"))
+	down := normalizedSQL(readMigrationSQL(t, "000029_redact_get_tenant_plan_settings.down.sql"))
+
+	require.Contains(t, up, "create or replace function public.get_tenant_plan(p_tenant_id uuid)")
+	require.NotContains(t, up, "drop function")
+	require.Contains(t, up, "security definer")
+	require.Contains(t, up, "set search_path")
+	// Only the plaintext `limits` subtree (and the injected subscription_status) may
+	// leave the SECURITY DEFINER boundary — never the whole encrypted settings blob.
+	require.Contains(t, up, "jsonb_build_object('limits', t.settings -> 'limits')")
+	require.NotContains(t, up, "then t.settings")
+	require.Contains(t, up, "revoke execute on function public.get_tenant_plan(uuid) from public")
+	require.Contains(t, up, "grant execute on function public.get_tenant_plan(uuid) to openoms")
+	require.Contains(t, up, "grant execute on function public.get_tenant_plan(uuid) to openoms_app")
+	require.Contains(t, up, "grant execute on function public.get_tenant_plan(uuid) to openoms_auth")
+
+	require.Contains(t, down, "then t.settings")
+	require.NotContains(t, down, "drop function")
+	require.Contains(t, down, "revoke execute on function public.get_tenant_plan(uuid) from public")
+}
+
 func readMigrationSQL(t *testing.T, file string) string {
 	t.Helper()
 
@@ -104,7 +126,9 @@ func readMigrationSQL(t *testing.T, file string) string {
 		"000025_auth_function_openoms_grants.up.sql",
 		"000025_auth_function_openoms_grants.down.sql",
 		"000027_redact_find_tenant_by_slug_settings.up.sql",
-		"000027_redact_find_tenant_by_slug_settings.down.sql":
+		"000027_redact_find_tenant_by_slug_settings.down.sql",
+		"000029_redact_get_tenant_plan_settings.up.sql",
+		"000029_redact_get_tenant_plan_settings.down.sql":
 	default:
 		t.Fatalf("unexpected migration file %q", file)
 	}
