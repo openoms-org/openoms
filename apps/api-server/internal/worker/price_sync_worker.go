@@ -75,75 +75,86 @@ func (w *PriceSyncWorker) Run(ctx context.Context) error {
 			continue
 		}
 
-		tenantErr := database.WithTenant(ctx, w.pool, ti.TenantID, func(tx pgx.Tx) error {
-			// Query auto-sync product_listings with price data.
-			// stock_sync_mode = 'auto' gates both stock and price sync (single toggle per listing).
-			rows, err := tx.Query(ctx,
-				`SELECT pl.id, pl.external_id, COALESCE(pl.price_override, p.price) AS sync_price
-				 FROM product_listings pl
-				 JOIN products p ON p.id = pl.product_id
-				 WHERE pl.integration_id = $1 AND pl.status = 'active'
-				   AND pl.external_id IS NOT NULL AND pl.stock_sync_mode = 'auto'`,
-				ti.IntegrationID,
-			)
-			if err != nil {
-				return err
-			}
-			defer rows.Close()
-
-			// Collect all listings into a slice
-			var listings []listingPrice
-			for rows.Next() {
-				if err := checkWorkerContext(ctx); err != nil {
-					return err
-				}
-				var listingID, externalID string
-				var price float64
-				if err := rows.Scan(&listingID, &externalID, &price); err != nil {
-					w.logger.Error("price sync: scan listing", "error", err)
-					continue
-				}
-
-				// Skip rows where price <= 0
-				if price <= 0 {
-					continue
-				}
-
-				listings = append(listings, listingPrice{
-					ListingID:  listingID,
-					ExternalID: externalID,
-					Price:      price,
-				})
-			}
-			if err := rows.Err(); err != nil {
-				return err
-			}
-
-			// Try bulk path if provider supports it
-			bulkProvider, hasBulk := provider.(integration.BulkPriceUpdater)
-			if hasBulk {
-				totalSynced += w.syncBulk(ctx, tx, ti, bulkProvider, listings)
-			} else {
-				totalSynced += w.syncOneByOne(ctx, tx, ti, provider, listings)
-			}
-
-			return nil
-		})
-		closeProvider(provider)
-		if tenantErr != nil {
-			w.logger.Error("price sync: tenant error", "tenant_id", ti.TenantID, "error", tenantErr)
+		// Phase 1: read the active listings in a short transaction (no API calls held).
+		listings, err := w.loadActiveListings(ctx, ti)
+		if err != nil {
+			w.logger.Error("price sync: load listings", "tenant_id", ti.TenantID, "error", err)
+			closeProvider(provider)
 			continue
 		}
+
+		// Phase 2+3: push to the marketplace API with NO DB transaction open, then
+		// persist each batch's sync status in its own short transaction.
+		if bulkProvider, hasBulk := provider.(integration.BulkPriceUpdater); hasBulk {
+			totalSynced += w.syncBulk(ctx, ti, bulkProvider, listings)
+		} else {
+			totalSynced += w.syncOneByOne(ctx, ti, provider, listings)
+		}
+		closeProvider(provider)
 	}
 
 	w.logger.Info("price sync completed", "tenants", len(tis), "synced", totalSynced)
 	return nil
 }
 
+// loadActiveListings reads the auto-sync product listings for an integration in a
+// short transaction. Kept separate from the marketplace API calls so no DB
+// transaction is held while waiting on the carrier/marketplace (OPE-479).
+// stock_sync_mode = 'auto' gates both stock and price sync (single toggle per listing).
+func (w *PriceSyncWorker) loadActiveListings(ctx context.Context, ti TenantIntegration) ([]listingPrice, error) {
+	var listings []listingPrice
+	err := database.WithTenant(ctx, w.pool, ti.TenantID, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx,
+			`SELECT pl.id, pl.external_id, COALESCE(pl.price_override, p.price) AS sync_price
+			 FROM product_listings pl
+			 JOIN products p ON p.id = pl.product_id
+			 WHERE pl.integration_id = $1 AND pl.status = 'active'
+			   AND pl.external_id IS NOT NULL AND pl.stock_sync_mode = 'auto'`,
+			ti.IntegrationID,
+		)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			if err := checkWorkerContext(ctx); err != nil {
+				return err
+			}
+			var listingID, externalID string
+			var price float64
+			if err := rows.Scan(&listingID, &externalID, &price); err != nil {
+				w.logger.Error("price sync: scan listing", "error", err)
+				continue
+			}
+			if price <= 0 {
+				continue
+			}
+			listings = append(listings, listingPrice{
+				ListingID:  listingID,
+				ExternalID: externalID,
+				Price:      price,
+			})
+		}
+		return rows.Err()
+	})
+	return listings, err
+}
+
+// persistListingStatus applies sync-status updates for a set of listings in a
+// single short transaction (no marketplace API call is held open).
+func (w *PriceSyncWorker) persistListingStatus(ctx context.Context, ti TenantIntegration, apply func(tx pgx.Tx)) {
+	if err := database.WithTenant(ctx, w.pool, ti.TenantID, func(tx pgx.Tx) error {
+		apply(tx)
+		return nil
+	}); err != nil {
+		w.logger.Error("price sync: persist listing status", "tenant_id", ti.TenantID, "error", err)
+	}
+}
+
 // syncBulk sends price updates in batches of priceBulkBatchSize.
 func (w *PriceSyncWorker) syncBulk(
 	ctx context.Context,
-	tx pgx.Tx,
 	ti TenantIntegration,
 	provider integration.BulkPriceUpdater,
 	listings []listingPrice,
@@ -180,17 +191,16 @@ func (w *PriceSyncWorker) syncBulk(
 				"error", err,
 			)
 			errMsg := truncateErrorMessage(err.Error())
-			for _, l := range batchListings {
-				if err := checkWorkerContext(ctx); err != nil {
-					return synced
+			w.persistListingStatus(ctx, ti, func(tx pgx.Tx) {
+				for _, l := range batchListings {
+					if _, execErr := tx.Exec(ctx,
+						`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
+						l.ListingID, errMsg,
+					); execErr != nil {
+						w.logger.Error("price sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
+					}
 				}
-				if _, execErr := tx.Exec(ctx,
-					`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
-					l.ListingID, errMsg,
-				); execErr != nil {
-					w.logger.Error("price sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
-				}
-			}
+			})
 			continue
 		}
 
@@ -199,32 +209,31 @@ func (w *PriceSyncWorker) syncBulk(
 			syncStatus = "pending"
 		}
 		feedMeta := buildFeedMeta(provider)
-		for _, l := range batchListings {
-			if err := checkWorkerContext(ctx); err != nil {
-				return synced
+		w.persistListingStatus(ctx, ti, func(tx pgx.Tx) {
+			for _, l := range batchListings {
+				var execErr error
+				switch {
+				case syncStatus == "pending" && feedMeta != nil:
+					_, execErr = tx.Exec(ctx,
+						`UPDATE product_listings SET sync_status = 'pending', error_message = NULL, metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb, updated_at = NOW() WHERE id = $1`,
+						l.ListingID, string(feedMeta),
+					)
+				case syncStatus == "pending":
+					_, execErr = tx.Exec(ctx,
+						`UPDATE product_listings SET sync_status = 'pending', error_message = NULL, updated_at = NOW() WHERE id = $1`,
+						l.ListingID,
+					)
+				default:
+					_, execErr = tx.Exec(ctx,
+						`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
+						l.ListingID,
+					)
+				}
+				if execErr != nil {
+					w.logger.Error("price sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
+				}
 			}
-			var execErr error
-			switch {
-			case syncStatus == "pending" && feedMeta != nil:
-				_, execErr = tx.Exec(ctx,
-					`UPDATE product_listings SET sync_status = 'pending', error_message = NULL, metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb, updated_at = NOW() WHERE id = $1`,
-					l.ListingID, string(feedMeta),
-				)
-			case syncStatus == "pending":
-				_, execErr = tx.Exec(ctx,
-					`UPDATE product_listings SET sync_status = 'pending', error_message = NULL, updated_at = NOW() WHERE id = $1`,
-					l.ListingID,
-				)
-			default:
-				_, execErr = tx.Exec(ctx,
-					`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
-					l.ListingID,
-				)
-			}
-			if execErr != nil {
-				w.logger.Error("price sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
-			}
-		}
+		})
 		w.logger.Info("worker: price batch synced",
 			"operation", "listing.price_bulk_update",
 			"tenant_id", ti.TenantID,
@@ -240,7 +249,6 @@ func (w *PriceSyncWorker) syncBulk(
 // syncOneByOne updates price one listing at a time (fallback for providers without bulk support).
 func (w *PriceSyncWorker) syncOneByOne(
 	ctx context.Context,
-	tx pgx.Tx,
 	ti TenantIntegration,
 	provider integration.MarketplaceProvider,
 	listings []listingPrice,
@@ -259,12 +267,15 @@ func (w *PriceSyncWorker) syncOneByOne(
 				"external_id", l.ExternalID,
 				"error", err,
 			)
-			if _, execErr := tx.Exec(ctx,
-				`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
-				l.ListingID, truncateErrorMessage(err.Error()),
-			); execErr != nil {
-				w.logger.Error("price sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
-			}
+			errMsg := truncateErrorMessage(err.Error())
+			w.persistListingStatus(ctx, ti, func(tx pgx.Tx) {
+				if _, execErr := tx.Exec(ctx,
+					`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
+					l.ListingID, errMsg,
+				); execErr != nil {
+					w.logger.Error("price sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
+				}
+			})
 			continue
 		}
 
@@ -272,33 +283,32 @@ func (w *PriceSyncWorker) syncOneByOne(
 		if _, ok := provider.(integration.AsyncPriceUpdater); ok {
 			syncStatus = "pending"
 		}
-		if syncStatus == "pending" {
-			feedMeta := buildFeedMeta(provider)
-			if feedMeta != nil {
-				_, execErr := tx.Exec(ctx,
+		feedMeta := buildFeedMeta(provider)
+		w.persistListingStatus(ctx, ti, func(tx pgx.Tx) {
+			switch {
+			case syncStatus == "pending" && feedMeta != nil:
+				if _, execErr := tx.Exec(ctx,
 					`UPDATE product_listings SET sync_status = 'pending', error_message = NULL, metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb, updated_at = NOW() WHERE id = $1`,
 					l.ListingID, string(feedMeta),
-				)
-				if execErr != nil {
+				); execErr != nil {
 					w.logger.Error("price sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
 				}
-			} else {
-				_, execErr := tx.Exec(ctx,
+			case syncStatus == "pending":
+				if _, execErr := tx.Exec(ctx,
 					`UPDATE product_listings SET sync_status = 'pending', error_message = NULL, updated_at = NOW() WHERE id = $1`,
 					l.ListingID,
-				)
-				if execErr != nil {
+				); execErr != nil {
+					w.logger.Error("price sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
+				}
+			default:
+				if _, execErr := tx.Exec(ctx,
+					`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
+					l.ListingID,
+				); execErr != nil {
 					w.logger.Error("price sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
 				}
 			}
-		} else {
-			if _, execErr := tx.Exec(ctx,
-				`UPDATE product_listings SET sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
-				l.ListingID,
-			); execErr != nil {
-				w.logger.Error("price sync: failed to update listing sync status", "listing_id", l.ListingID, "error", execErr)
-			}
-		}
+		})
 		w.logger.Info("worker: price synced",
 			"operation", "listing.price_update",
 			"tenant_id", ti.TenantID,
