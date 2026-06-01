@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { useAuthStore } from "@/lib/auth";
 import type { OrderStatusConfig } from "@/types/api";
 
 export const COLOR_PRESETS: Record<string, string> = {
@@ -17,10 +18,12 @@ export const COLOR_PRESETS: Record<string, string> = {
 };
 
 export function useOrderStatuses() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery({
     queryKey: ["order-statuses"],
     queryFn: () => apiClient<OrderStatusConfig>("/v1/order-statuses"),
     staleTime: 5 * 60 * 1000,
+    enabled: isAuthenticated,
   });
 }
 
