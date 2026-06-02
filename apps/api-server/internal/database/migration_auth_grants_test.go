@@ -136,6 +136,56 @@ func TestGetTenantPlanMigrationRedactsSettings(t *testing.T) {
 	require.Contains(t, down, "revoke execute on function public.get_tenant_plan(uuid) from public")
 }
 
+// OPE-490: lock the RLS missing_ok fix. Without missing_ok=true, current_setting throws when
+// app.current_tenant_id is unset, which (depending on policy) can collapse tenant isolation;
+// these late policies must use the NULLIF(current_setting(..., true), ”) form, and the
+// migration self-verifies no policy was left without it.
+func TestLateRLSMigrationUsesMissingOk(t *testing.T) {
+	up := normalizedSQL(readMigrationSQL(t, "000024_fix_late_rls_missing_ok.up.sql"))
+
+	for _, table := range []string{"allegro_parameter_mappings", "message_templates"} {
+		require.Contains(t, up, "alter table public."+table+" enable row level security")
+		require.Contains(t, up, "alter table public."+table+" force row level security")
+	}
+	// Every tenant policy must read the tenant id with missing_ok=true.
+	require.Contains(t, up, "current_setting('app.current_tenant_id', true)")
+	require.NotContains(t, up, "current_setting('app.current_tenant_id')")
+	// The migration self-asserts no policy was left without missing_ok.
+	require.Contains(t, up, "raise exception")
+}
+
+// OPE-490: the checkout-refs SECURITY DEFINER helpers must be granted to every app role
+// (self-hosted openoms, Supabase openoms_app, registration openoms_auth), each guarded by a
+// pg_roles existence check so the migration is portable across environments.
+func TestBillingCheckoutRefsMigrationGrants(t *testing.T) {
+	up := normalizedSQL(readMigrationSQL(t, "000026_billing_checkout_session_refs.up.sql"))
+
+	withRefs := "public.billing_complete_checkout_session_with_refs(text, text, text, text, text, timestamptz, timestamptz, timestamptz)"
+	getRefs := "public.billing_get_checkout_session_with_refs(text)"
+	for _, role := range []string{"openoms", "openoms_app", "openoms_auth"} {
+		require.Contains(t, up, "rolname = '"+role+"'")
+		require.Contains(t, up, "grant execute on function "+withRefs+" to "+role)
+		require.Contains(t, up, "grant execute on function "+getRefs+" to "+role)
+	}
+}
+
+// OPE-490: the self-hosted-role repair migration must (re)grant the billing SECURITY DEFINER
+// functions to openoms_app, guarded by to_regprocedure so it is a no-op where a function is
+// absent and never errors on a partially-migrated database.
+func TestSelfHostedAppRoleGrantsMigration(t *testing.T) {
+	up := normalizedSQL(readMigrationSQL(t, "000028_self_hosted_app_role_grants.up.sql"))
+
+	require.Contains(t, up, "to_regprocedure(")
+	for _, sig := range []string{
+		"public.billing_create_customer(uuid, text)",
+		"public.billing_upsert_subscription(uuid, text, text, text, text, text, timestamptz, timestamptz, timestamptz)",
+		"public.billing_sync_tenant_plan(uuid, jsonb)",
+		"public.billing_claim_checkout_session(text)",
+	} {
+		require.Contains(t, up, "grant execute on function "+sig+" to openoms_app")
+	}
+}
+
 func readMigrationSQL(t *testing.T, file string) string {
 	t.Helper()
 
@@ -151,7 +201,10 @@ func readMigrationSQL(t *testing.T, file string) string {
 		"000029_redact_get_tenant_plan_settings.up.sql",
 		"000029_redact_get_tenant_plan_settings.down.sql",
 		"000030_billing_sync_tenant_plan_targeted_key.up.sql",
-		"000030_billing_sync_tenant_plan_targeted_key.down.sql":
+		"000030_billing_sync_tenant_plan_targeted_key.down.sql",
+		"000024_fix_late_rls_missing_ok.up.sql",
+		"000026_billing_checkout_session_refs.up.sql",
+		"000028_self_hosted_app_role_grants.up.sql":
 	default:
 		t.Fatalf("unexpected migration file %q", file)
 	}
