@@ -21,6 +21,11 @@ spec:
       autoPromotionSeconds: {{ .Values.blueGreen.autoPromotionSeconds }}
       scaleDownDelaySeconds: {{ .Values.blueGreen.scaleDownDelaySeconds }}
       abortScaleDownDelaySeconds: {{ .Values.blueGreen.abortScaleDownDelaySeconds }}
+      {{- if .Values.blueGreen.prePromotionAnalysis }}
+      prePromotionAnalysis:
+        templates:
+          - templateName: {{ include "openoms.fullname" . }}-dashboard-smoke
+      {{- end }}
   template:
     metadata:
       annotations:

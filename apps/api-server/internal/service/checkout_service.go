@@ -293,36 +293,66 @@ func (s *CheckoutService) FinalizeCheckoutClaim(ctx context.Context, stripeSessi
 	return finalErr
 }
 
+// ReconcileCheckoutClaims finds registered checkout sessions whose billing finalization
+// partially failed (no subscription row for the tenant) and re-runs the idempotent
+// finalization for each. scanPool must bypass RLS (the worker pool) because the gap scan
+// spans tenants. Returns counts of reconciled and still-failing sessions; a non-nil error
+// aggregates per-session failures so the caller can alert on a persistent gap.
+func (s *CheckoutService) ReconcileCheckoutClaims(ctx context.Context, scanPool *pgxpool.Pool, limit int) (reconciled int, failed int, err error) {
+	sessions, findErr := s.billingRepo.FindUnreconciledCheckoutSessions(ctx, scanPool, limit)
+	if findErr != nil {
+		return 0, 0, fmt.Errorf("find unreconciled checkout sessions: %w", findErr)
+	}
+
+	var errs error
+	for _, sess := range sessions {
+		if sess.TenantID == nil {
+			continue
+		}
+		if e := s.FinalizeCheckoutClaim(ctx, sess.StripeSessionID, *sess.TenantID, sess.Plan, sess.BillingInterval); e != nil {
+			failed++
+			// Reference only the server-generated tenant UUID, never the raw session ID.
+			errs = errors.Join(errs, fmt.Errorf("reconcile checkout for tenant %s: %w", *sess.TenantID, e))
+			continue
+		}
+		reconciled++
+	}
+	return reconciled, failed, errs
+}
+
 func (s *CheckoutService) checkoutRefsForFinalization(ctx context.Context, stripeSessionID string) (model.CheckoutSessionStripeRefs, error) {
+	// Prefer the refs already persisted by the Stripe webhook at checkout completion. This
+	// avoids a live Stripe API call on every finalization — which matters for the
+	// reconciliation worker, that would otherwise hit Stripe once per unreconciled session
+	// on every run (OPE-506). Only fetch from Stripe when the stored refs are missing or
+	// incomplete (e.g. the webhook hasn't landed yet for an in-flight registration).
+	dbSession, dbErr := s.billingRepo.GetCheckoutSession(ctx, s.pool, stripeSessionID)
+	if dbErr == nil && dbSession != nil {
+		refs := storedCheckoutSessionStripeRefs(dbSession)
+		if refs.StripeCustomerID != "" && refs.StripeSubscriptionID != "" {
+			return refs, nil
+		}
+	}
+
+	// Stored refs absent/incomplete — fall back to a live Stripe fetch.
 	sess, err := s.getCheckoutSession(stripeSessionID, checkoutSessionRetrieveParams())
 	if err == nil {
 		refs := checkoutSessionStripeRefs(sess)
 		if refs.StripeCustomerID != "" && refs.StripeSubscriptionID != "" {
 			return refs, nil
 		}
-		slog.Warn("Stripe checkout session missing billing refs; falling back to stored checkout refs", "session_id", stripeSessionID)
-	} else {
-		slog.Warn("Stripe checkout session fetch failed; falling back to stored checkout refs", "session_id", stripeSessionID, "error", err)
+		slog.Warn("checkout session missing billing refs in both store and Stripe", "session_id", stripeSessionID)
+		return model.CheckoutSessionStripeRefs{}, errors.New("checkout refs are incomplete (Stripe and stored)")
 	}
 
-	dbSession, dbErr := s.billingRepo.GetCheckoutSession(ctx, s.pool, stripeSessionID)
+	slog.Warn("Stripe checkout session fetch failed and stored refs are incomplete", "session_id", stripeSessionID, "error", err)
 	if dbErr != nil {
-		if err != nil {
-			return model.CheckoutSessionStripeRefs{}, errors.Join(
-				fmt.Errorf("stripe get checkout session: %w", err),
-				fmt.Errorf("get stored checkout session: %w", dbErr),
-			)
-		}
-		return model.CheckoutSessionStripeRefs{}, fmt.Errorf("get stored checkout session: %w", dbErr)
+		return model.CheckoutSessionStripeRefs{}, errors.Join(
+			fmt.Errorf("stripe get checkout session: %w", err),
+			fmt.Errorf("get stored checkout session: %w", dbErr),
+		)
 	}
-	refs := storedCheckoutSessionStripeRefs(dbSession)
-	if refs.StripeCustomerID == "" || refs.StripeSubscriptionID == "" {
-		if err != nil {
-			return model.CheckoutSessionStripeRefs{}, fmt.Errorf("stripe get checkout session: %w; stored checkout refs are incomplete", err)
-		}
-		return model.CheckoutSessionStripeRefs{}, errors.New("stored checkout refs are incomplete")
-	}
-	return refs, nil
+	return model.CheckoutSessionStripeRefs{}, fmt.Errorf("stripe get checkout session: %w; stored checkout refs are incomplete", err)
 }
 
 func checkoutSessionRetrieveParams() *stripe.CheckoutSessionParams {

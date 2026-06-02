@@ -2,9 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { useAuthStore } from "@/lib/auth";
 import type { AuditLogEntry, AuditListParams, ListResponse } from "@/types/api";
 
 export function useAuditLog(params: AuditListParams) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery({
     queryKey: ["audit", params],
     queryFn: () => {
@@ -16,5 +18,6 @@ export function useAuditLog(params: AuditListParams) {
       if (params.user_id) query.set("user_id", params.user_id);
       return apiClient<ListResponse<AuditLogEntry>>(`/v1/audit?${query.toString()}`);
     },
+    enabled: isAuthenticated,
   });
 }

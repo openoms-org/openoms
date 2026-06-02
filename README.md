@@ -85,7 +85,7 @@ Carrier rate shopping across all providers.
 - 141 dashboard pages with dark mode, PWA support, keyboard shortcuts
 - **Guided onboarding wizard** for new tenants (company setup, warehouse, integration, team)
 - Registration with invite tokens, license tokens, or payment checkout
-- Background workers (16 registered: order pollers, stock sync, tracking, automation)
+- Background workers (21 registered: order pollers, stock sync, tracking, automation)
 - RBAC with custom roles
 - 2FA / TOTP authentication
 - WebSocket real-time updates
@@ -124,13 +124,13 @@ Carrier rate shopping across all providers.
 |---|---|
 | Go source files | 345 (121 test files) |
 | TypeScript / TSX files | 308 |
-| SQL migrations | 12 (24 up/down files) |
+| SQL migrations | 28 (56 up/down files) |
 | API endpoints | 463 |
 | Dashboard pages | 141 |
 | React components | 96 |
 | Custom hooks | 73 |
 | Handlers / Services / Repos | 85 / 67 / 43 |
-| Background workers | 16 |
+| Background workers | 21 |
 | Middleware | 16 |
 | SDK packages | 27 |
 
@@ -138,7 +138,7 @@ Carrier rate shopping across all providers.
 
 ## Quick Start (Development)
 
-**Prerequisites:** Go 1.25+, Node.js 22+, Docker, [Task](https://taskfile.dev)
+**Prerequisites:** Go 1.25+, Node.js 22+, Docker with Docker Compose, [Task](https://taskfile.dev), [golang-migrate](https://github.com/golang-migrate/migrate)
 
 ```bash
 # 1. Clone
@@ -148,31 +148,40 @@ cd openoms
 # 2. Configure environment
 cp .env.example .env
 
-# 3. Start infrastructure, run migrations, seed data
+# 3. Install dashboard dependencies, start infrastructure, run migrations, seed data
 task setup
 
-# 4. Start the API server (port 8080)
-task run
-
-# 5. In a second terminal -- start the dashboard (port 3000)
+# 4. Start the API server and dashboard
 task dev
 ```
 
-Verify the API is running:
+Verify the API and dashboard are running:
 
 ```bash
 curl http://localhost:8080/health
+# Open http://localhost:3000/login
 ```
+
+Seed login for local development:
+
+| Field | Value |
+|---|---|
+| Organization | `dev` |
+| Email | `admin@dev.local` |
+| Password | `password123` |
+
+This account is created only by `task setup` or `task seed`. Production and other self-hosted deployments should create their own administrator account or use the configured registration/invite flow; no default production password is provided.
 
 ### Development Commands
 
 ```bash
-task setup       # Full setup: containers + migrations + seed
+task setup       # Full setup: dashboard deps + containers + migrations + seed
 task up          # Start PostgreSQL + Redis containers
 task down        # Stop containers
 task run         # Start API server (port 8080)
 task dashboard   # Start dashboard dev server (port 3000)
 task dev         # Start API server + dashboard in parallel
+task dashboard:install  # Install dashboard dependencies
 task migrate     # Run database migrations
 task seed        # Load test data
 task test        # Run all tests (race detection + coverage)
@@ -191,7 +200,7 @@ openoms/
 │   ├── api-server/              # Go backend (ELv2)
 │   │   ├── cmd/server/          # Entrypoint
 │   │   ├── internal/            # Handlers, services, repositories, workers
-│   │   └── migrations/          # 12 migrations (24 SQL files)
+│   │   └── migrations/          # 28 migrations (56 SQL files)
 │   └── dashboard/               # Next.js frontend (ELv2)
 │       └── src/
 ├── packages/                    # 27 standalone SDK libraries (MIT)

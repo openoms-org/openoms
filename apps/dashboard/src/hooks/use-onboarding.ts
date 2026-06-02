@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { useAuthStore } from "@/lib/auth";
 import { integrationQueryKeys } from "./integration-query-keys";
+import type { CompanySettings } from "@/types/api";
 
 interface OnboardingSettings {
   dismissed: boolean;
@@ -40,9 +41,13 @@ export function useOnboarding() {
     enabled: isAuthenticated && canManageSetup,
   });
 
+  // Shares the ["settings", "company"] cache entry with use-settings' useCompanySettings.
+  // Use the same canonical CompanySettings type so the shared entry is type-consistent
+  // (previously an ad-hoc {name?, nip?} shape caused a cache/type bleed — and read a
+  // non-existent `name` field instead of `company_name`, so this step never completed).
   const { data: company } = useQuery({
     queryKey: ["settings", "company"],
-    queryFn: () => apiClient<{ name?: string; nip?: string }>("/v1/settings/company"),
+    queryFn: () => apiClient<CompanySettings>("/v1/settings/company"),
     enabled: isAuthenticated && canManageSetup,
   });
 
@@ -73,7 +78,7 @@ export function useOnboarding() {
       title: "Uzupe\u0142nij dane firmy",
       description: "Dodaj nazw\u0119 firmy i NIP \u2014 potrzebne do faktur i przesy\u0142ek.",
       href: "/settings/company",
-      completed: !!(company?.name && company?.nip),
+      completed: !!(company?.company_name && company?.nip),
     },
     {
       key: "integration",

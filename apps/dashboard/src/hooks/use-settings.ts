@@ -2,12 +2,15 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { useAuthStore } from "@/lib/auth";
 import type { CompanySettings, OrderStatusConfig, CustomFieldsConfig, InventorySettings } from "@/types/api";
 
 export function useCompanySettings() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery({
     queryKey: ["settings", "company"],
     queryFn: () => apiClient<CompanySettings>("/v1/settings/company"),
+    enabled: isAuthenticated,
   });
 }
 
@@ -54,9 +57,11 @@ export function useUpdateCustomFields() {
 }
 
 export function useInventorySettings() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery({
     queryKey: ["settings", "inventory"],
     queryFn: () => apiClient<InventorySettings>("/v1/settings/inventory"),
+    enabled: isAuthenticated,
   });
 }
 

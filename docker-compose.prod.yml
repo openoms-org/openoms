@@ -28,6 +28,25 @@ services:
       retries: 10
       start_period: 10s
 
+  postgres-bootstrap:
+    image: postgres:17-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: openoms
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?Set POSTGRES_APP_PASSWORD in .env}
+      POSTGRES_DB: openoms
+      POSTGRES_HOST: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - ./deploy/docker/postgres/init-app-role.sh:/usr/local/bin/init-app-role.sh:ro
+    networks:
+      - internal
+    entrypoint: ["/bin/sh", "/usr/local/bin/init-app-role.sh"]
+    restart: "no"
+
   # ── Redis ───────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
@@ -52,8 +71,8 @@ services:
       context: .
       dockerfile: deploy/Dockerfile.migrate
     depends_on:
-      postgres:
-        condition: service_healthy
+      postgres-bootstrap:
+        condition: service_completed_successfully
     networks:
       - internal
     command: >
@@ -142,7 +161,13 @@ services:
     ports:
       - "${DASHBOARD_PORT:-3000}:3000"
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      test:
+        [
+          "CMD",
+          "/nodejs/bin/node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/login').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5

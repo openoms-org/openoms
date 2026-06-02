@@ -14,8 +14,12 @@ interface PublicConfig extends PublicConfigData {
   isLoading: boolean;
 }
 
+// Fail-closed fallback used while the public config is loading or when it cannot
+// be fetched (retry: false). It must NEVER default to "open" registration — if
+// the backend is unreachable we assume the most restrictive mode so an outage
+// cannot expose open self-registration. Server-side enforcement is authoritative.
 const defaultConfig: PublicConfigData = {
-  registration_mode: "open",
+  registration_mode: "closed",
   license_enabled: false,
   billing_enabled: false,
 };

@@ -1,16 +1,22 @@
 {
   "help": {
-    "discordCommunity": "Społeczność Discord",
-    "discordDescription": "Dołącz do społeczności, zadawaj pytania, dziel się pomysłami.",
     "faq": "FAQ — Pytania i odpowiedzi",
-    "faqDescription": "Najczęściej zadawane pytania przez sprzedawców.",
-    "needDirectHelp": "Potrzebujesz bezpośredniej pomocy?",
-    "reportBug": "Zgłoś problem",
-    "reportBugDescription": "Znalazłeś błąd? Otwórz issue na GitHubie.",
-    "subtitle": "Zasoby i wsparcie dla użytkowników OpenOMS",
+    "faqDescription": "Odpowiedzi na najczęstsze pytania sprzedawców i zespołów operacyjnych.",
+    "officialSupportCta": "Napisz do supportu",
+    "officialSupportDescription": "Napisz do nas, jeśli potrzebujesz pomocy z kontem, integracją albo procesem obsługi zamówień.",
+    "officialSupportMeta": "Odpowiadamy w oficjalnym kanale obsługi OpenOMS.",
+    "officialSupportTitle": "Pomoc OpenOMS",
+    "ossDescription": "Dla problemów technicznych z publicznym repo lub instalacją self-hosted użyj GitHub Issues.",
+    "ossTitle": "Open-source i self-hosting",
+    "prepareContext": "Moduł, integracja albo numer zamówienia, którego dotyczy problem",
+    "prepareEvidence": "Krótki opis, screenshot albo dokładny komunikat błędu",
+    "prepareTenant": "Nazwa firmy lub organizacji w OpenOMS",
+    "prepareTitle": "Co dołączyć do zgłoszenia",
+    "reportBug": "GitHub Issues",
+    "subtitle": "Skontaktuj się z OpenOMS albo sprawdź sprawdzone materiały dla użytkowników.",
     "title": "Pomoc",
     "userGuide": "Poradnik użytkownika",
-    "userGuideDescription": "Krok po kroku: od rejestracji do pierwszego zamówienia."
+    "userGuideDescription": "Najważniejsze kroki konfiguracji i codziennej pracy w OpenOMS."
   },
   "loyalty": {
     "award": "Przyznaj",

@@ -38,7 +38,7 @@ Funkcja przechodzi na `ready` albo `controlled` dopiero po odhaczeniu:
 |---|---|---|---|---|
 | Pulpit | `/` | `ready` | Pokazać | Dashboard ładuje KPI, onboarding i empty states bez błędów konsoli. |
 | Onboarding pierwszych kroków | `/`, `/onboarding` | `ready` | Pokazać | Firma -> Allegro -> produkt -> zamówienie, bez martwych linków. |
-| Pomoc | `/help` | `ready` | Pokazać | Linki prowadzą do aktualnych instrukcji, bez obietnic beta funkcji. |
+| Pomoc | `/help` | `ready` | Pokazać | Strona jest klientocentryczna: oficjalny kontakt supportu jest główną akcją, materiały self-service są drugorzędne, a ukryty helpdesk/Freshdesk nie jest eksponowany. |
 | Command palette | global | `verify` | Ograniczyć | Musi respektować readiness, bo dziś odkrywa moduły ukrywane w menu. |
 
 ### Sprzedaż
@@ -138,7 +138,7 @@ Funkcja przechodzi na `ready` albo `controlled` dopiero po odhaczeniu:
 | Cenniki | `/settings/price-lists` | `verify` | Ukryć | Price list application in orders/products. |
 | Kontrola magazynowa | `/settings/inventory` | `verify` | Ukryć | Min stock, reservations, warehouse stock. |
 | Waluty | `/settings/currencies` | `verify` | Ukryć | NBP fetch, conversion, stale-rate handling. |
-| Subskrypcja/billing | `/settings/billing` | `controlled` | Ukryć dla pierwszego klienta jeśli nie sprzedajemy self-service | Stripe checkout/subscription/webhook E2E. |
+| Subskrypcja/billing | `/settings/billing` | `controlled` | Ukryte dla pierwszego klienta; dostęp tylko w `full`/operator validation | Stripe checkout/subscription/webhook E2E, manual/enterprise contract copy, statusy inactive/payment, brak linków do ukrytego route z bannerów. |
 | SMS | `/settings/sms`, `/settings/notifications` | `blocked` | Ukryć | Naprawić redirect/copy `Tytuł`/`Hasło DHL`; SMSAPI credential test. |
 | Webhooki | `/settings/webhooks` | `controlled` | Ukryć domyślnie | Signing, SSRF guard, delivery retry, test endpoint. |
 | Dostawy webhooków | `/settings/webhooks/deliveries` | `controlled` | Ukryć domyślnie | Retry, response logging, redaction. |
@@ -146,7 +146,7 @@ Funkcja przechodzi na `ready` albo `controlled` dopiero po odhaczeniu:
 | Dziennik aktywności | `/audit` | `ready` dla admin/operator | Ukryć dla zwykłych userów | Filtrowanie, pagination, brak danych wrażliwych. |
 | KSeF | `/settings/ksef` | `beta` | Zostawić ukryte | Certyfikat/token, test env, status/UPO. |
 | Marketing | `/settings/marketing` | `beta` | Zostawić ukryte | Mailchimp account, campaign flow. |
-| Helpdesk | `/settings/helpdesk` | `beta` | Zostawić ukryte | Freshdesk account, ticket creation, order link. |
+| Helpdesk | `/settings/helpdesk` | `blocked` | Nie eksponować | Ukryty helpdesk/Freshdesk pozostaje zablokowany zgodnie z readiness registry; odblokowanie wymaga pełnego testu Freshdesk, tworzenia ticketów i linkowania z zamówieniami. |
 | Usuwanie tła | `/tools/bg-removal` | `beta` | Ukryć | Provider AI/API, koszty, limity, file handling. |
 | Subskrypcje/recurring orders | `/recurring-orders` | `beta` | Ukryć | Scheduler, generated order, cancellation. |
 | Loyalty | `/loyalty` | `beta` | Ukryć | Rules, customer rewards, order integration. |

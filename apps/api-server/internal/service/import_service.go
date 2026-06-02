@@ -257,12 +257,19 @@ func (s *ImportService) ImportOrders(
 	err = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		statusConfig := s.loadStatusConfig(ctx, tx, tenantID)
 
+		// Enforce the monthly order limit once for the whole batch instead of
+		// re-counting per row (previously an O(n) COUNT(*) + tenant FOR UPDATE
+		// lock on every CSV row). pendingCreatesBeforeCurrent = batchSize-1
+		// rejects iff base+batchSize > max — equivalent to the old per-row check,
+		// which aborted the whole transaction on the row that hit the limit.
+		batchSize := len(records) - 1
+		if err := EnforceMonthlyOrderLimit(ctx, tx, s.orderRepo, tenantID, opts.MaxOrdersMonthly, batchSize-1); err != nil {
+			return err
+		}
+
 		for rowNum := 1; rowNum < len(records); rowNum++ {
 			row := records[rowNum]
-			rowErrors, err := s.importRow(ctx, tx, tenantID, row, fieldToCol, rowNum, result, statusConfig, opts.MaxOrdersMonthly)
-			if err != nil {
-				return err
-			}
+			rowErrors := s.importRow(ctx, tx, tenantID, row, fieldToCol, rowNum, result, statusConfig)
 			if len(rowErrors) > 0 {
 				result.Errors = append(result.Errors, rowErrors...)
 				result.Skipped++
@@ -304,8 +311,7 @@ func (s *ImportService) importRow(
 	rowNum int,
 	result *model.ImportResult,
 	statusConfig *model.OrderStatusConfig,
-	maxOrdersMonthly int,
-) ([]model.ImportError, error) {
+) []model.ImportError {
 	var rowErrors []model.ImportError
 
 	getVal := func(field string) string {
@@ -323,7 +329,7 @@ func (s *ImportService) importRow(
 			Field:   "customer_name",
 			Message: "customer_name is required",
 		})
-		return rowErrors, nil
+		return rowErrors
 	}
 
 	// Parse total_amount
@@ -338,7 +344,7 @@ func (s *ImportService) importRow(
 				Field:   "total_amount",
 				Message: fmt.Sprintf("invalid number: %s", v),
 			})
-			return rowErrors, nil
+			return rowErrors
 		}
 		if parsed < 0 {
 			rowErrors = append(rowErrors, model.ImportError{
@@ -346,7 +352,7 @@ func (s *ImportService) importRow(
 				Field:   "total_amount",
 				Message: "total_amount must be non-negative",
 			})
-			return rowErrors, nil
+			return rowErrors
 		}
 		totalAmount = parsed
 	}
@@ -374,7 +380,7 @@ func (s *ImportService) importRow(
 			Field:   "status",
 			Message: fmt.Sprintf("unknown status %q, not in tenant config", status),
 		})
-		return rowErrors, nil
+		return rowErrors
 	}
 
 	// Payment status
@@ -394,7 +400,7 @@ func (s *ImportService) importRow(
 				Field:   "external_id",
 				Message: fmt.Sprintf("error checking duplicate: %s", err.Error()),
 			})
-			return rowErrors, nil
+			return rowErrors
 		}
 		if existing {
 			rowErrors = append(rowErrors, model.ImportError{
@@ -402,7 +408,7 @@ func (s *ImportService) importRow(
 				Field:   "external_id",
 				Message: fmt.Sprintf("duplicate external_id: %s", externalID),
 			})
-			return rowErrors, nil
+			return rowErrors
 		}
 	}
 
@@ -422,7 +428,7 @@ func (s *ImportService) importRow(
 				Field:   "ordered_at",
 				Message: fmt.Sprintf("invalid date: %s", v),
 			})
-			return rowErrors, nil
+			return rowErrors
 		}
 		orderedAt = &t
 	}
@@ -438,7 +444,7 @@ func (s *ImportService) importRow(
 				Field:   "items",
 				Message: "invalid JSON for items",
 			})
-			return rowErrors, nil
+			return rowErrors
 		}
 	}
 
@@ -492,22 +498,16 @@ func (s *ImportService) importRow(
 		order.PaymentMethod = &paymentMethod
 	}
 
-	// CountThisMonth runs in the same transaction, so it sees orders inserted by
-	// earlier CSV rows. Passing 0 avoids double-counting this import batch.
-	if err := EnforceMonthlyOrderLimit(ctx, tx, s.orderRepo, tenantID, maxOrdersMonthly, 0); err != nil {
-		return nil, err
-	}
-
 	if err := s.orderRepo.Create(ctx, tx, &order); err != nil {
 		rowErrors = append(rowErrors, model.ImportError{
 			Row:     rowNum,
 			Message: fmt.Sprintf("failed to create order: %s", err.Error()),
 		})
-		return rowErrors, nil
+		return rowErrors
 	}
 
 	result.Imported++
-	return nil, nil
+	return nil
 }
 
 func parseImportFloat(s string) (float64, bool) {

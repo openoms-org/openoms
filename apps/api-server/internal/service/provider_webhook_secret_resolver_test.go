@@ -1,9 +1,12 @@
 package service
 
 import (
+	"context"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExtractProviderWebhookSecret(t *testing.T) {
@@ -57,6 +60,30 @@ func TestExtractProviderWebhookSecret(t *testing.T) {
 
 			assert.Equal(t, tt.wantOK, ok)
 			assert.Equal(t, tt.wantSecret, secret)
+		})
+	}
+}
+
+// OPE-490: Resolve must fail closed (never panic, never return an empty secret as valid)
+// when it is not wired to a database — a webhook with no resolvable secret must be rejected.
+func TestProviderWebhookSecretResolverResolveFailsClosedWithoutPool(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name     string
+		resolver *ProviderWebhookSecretResolver
+	}{
+		{name: "nil receiver", resolver: nil},
+		{name: "nil pool", resolver: &ProviderWebhookSecretResolver{}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			secret, scope, err := tc.resolver.Resolve(context.Background(), "inpost", uuid.New())
+
+			require.ErrorIs(t, err, ErrWebhookSecretNotConfigured)
+			assert.Empty(t, secret)
+			assert.Nil(t, scope)
 		})
 	}
 }

@@ -53,7 +53,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ORDER_STATUSES, PAYMENT_STATUSES, SHIPMENT_STATUSES, RETURN_STATUSES, ORDER_PRIORITIES, SHIPMENT_PROVIDERS } from "@/lib/constants";
-import { getSelectableShipmentProviders } from "@/lib/readiness";
+import { getSelectableShipmentProviders, isFeatureVisible } from "@/lib/readiness";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { useCustomFields } from "@/hooks/use-custom-fields";
 import { formatDate, formatCurrency, shortId, cn, sanitizeUrl } from "@/lib/utils";
@@ -143,7 +143,13 @@ export default function OrderDetailPage() {
   const { data: ticketsData, isLoading: isLoadingTickets } = useOrderTickets(params.id);
   const createTicket = useCreateOrderTicket(params.id);
   const duplicateOrder = useDuplicateOrder();
-  const { data: dropshipOrders, isLoading: isLoadingDropship } = useOrderDropshipOrders(params.id);
+  // Dropship is a beta feature; only fetch/render it when visible in the active
+  // surface, otherwise the gated endpoints return feature_not_available 404.
+  const dropshipVisible = isFeatureVisible("dropship");
+  const { data: dropshipOrders, isLoading: isLoadingDropship } = useOrderDropshipOrders(
+    params.id,
+    { enabled: dropshipVisible }
+  );
   const autoRouteDropship = useAutoRouteDropship();
 
   // Calculate total order weight from items for rate shopping
@@ -777,7 +783,8 @@ export default function OrderDetailPage() {
             )}
           </CollapsibleSection>
 
-          {/* Dropshipping */}
+          {/* Dropshipping — beta feature, only rendered when visible in the active surface */}
+          {dropshipVisible && (
           <CollapsibleSection
             title="Dropshipping"
             icon={Factory}
@@ -883,6 +890,7 @@ export default function OrderDetailPage() {
               </div>
             )}
           </CollapsibleSection>
+          )}
 
           {/* Helpdesk Tickets */}
           <CollapsibleSection

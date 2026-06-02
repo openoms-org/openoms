@@ -12,6 +12,9 @@ vi.mock("@sentry/nextjs", () => ({
 
 import DashboardError from "./error";
 
+// next-intl is globally mocked in vitest.setup.ts so useTranslations returns the
+// key as-is; assert on the i18n key the component renders.
+
 describe("DashboardError", () => {
   beforeEach(() => {
     sentryMocks.captureException.mockClear();
@@ -25,7 +28,7 @@ describe("DashboardError", () => {
     await waitFor(() => {
       expect(sentryMocks.captureException).toHaveBeenCalledWith(error);
     });
-    expect(screen.getByText("Cos poszlo nie tak")).toBeInTheDocument();
+    expect(screen.getByText("somethingWentWrong")).toBeInTheDocument();
   });
 
   it("does not report expected dashboard auth errors to Sentry", async () => {

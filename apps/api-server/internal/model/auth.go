@@ -62,7 +62,7 @@ func (r *RegisterRequest) Validate() error {
 	if err := validateEmail(r.Email); err != nil {
 		return err
 	}
-	if err := validatePassword(r.Password); err != nil {
+	if err := ValidatePassword(r.Password); err != nil {
 		return err
 	}
 	if strings.TrimSpace(r.Name) == "" {
@@ -184,7 +184,7 @@ func (r *CreateUserRequest) Validate() error {
 	if strings.TrimSpace(r.Password) == "" {
 		return errors.New("password is required")
 	}
-	if err := validatePassword(r.Password); err != nil {
+	if err := ValidatePassword(r.Password); err != nil {
 		return err
 	}
 	switch r.Role {
@@ -210,7 +210,7 @@ func (r *ChangePasswordRequest) Validate() error {
 	if strings.TrimSpace(r.NewPassword) == "" {
 		return errors.New("new_password is required")
 	}
-	return validatePassword(r.NewPassword)
+	return ValidatePassword(r.NewPassword)
 }
 
 // UpdateUserRequest is the body of PATCH /v1/users/{id}.

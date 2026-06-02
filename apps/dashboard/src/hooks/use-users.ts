@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { useAuthStore } from "@/lib/auth";
 import type {
   User,
   ChangePasswordRequest,
@@ -10,9 +11,11 @@ import type {
 } from "@/types/api";
 
 export function useUsers() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery({
     queryKey: ["users"],
     queryFn: () => apiClient<User[]>("/v1/users"),
+    enabled: isAuthenticated,
   });
 }
 

@@ -13,6 +13,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/readiness"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
@@ -22,14 +23,18 @@ type IntegrationHandler struct {
 	integrationService *service.IntegrationService
 	integrationRepo    repository.IntegrationRepo
 	pool               *pgxpool.Pool
+	surfaceMode        string
 }
 
-// NewIntegrationHandler creates a new IntegrationHandler.
-func NewIntegrationHandler(integrationService *service.IntegrationService, integrationRepo repository.IntegrationRepo, pool *pgxpool.Pool) *IntegrationHandler {
+// NewIntegrationHandler creates a new IntegrationHandler. surfaceMode is the
+// API surface readiness mode (config.APISurfaceMode) used to gate provider
+// selection on create.
+func NewIntegrationHandler(integrationService *service.IntegrationService, integrationRepo repository.IntegrationRepo, pool *pgxpool.Pool, surfaceMode string) *IntegrationHandler {
 	return &IntegrationHandler{
 		integrationService: integrationService,
 		integrationRepo:    integrationRepo,
 		pool:               pool,
+		surfaceMode:        surfaceMode,
 	}
 }
 
@@ -78,6 +83,14 @@ func (h *IntegrationHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req model.CreateIntegrationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	// Gate provider selection by API surface readiness mode. Non-ready providers
+	// are not selectable in client-ready mode. An empty provider falls through to
+	// the service's required-field validation (400).
+	if req.Provider != "" && !readiness.IsProviderEnabled(req.Provider, h.surfaceMode) {
+		writeError(w, http.StatusUnprocessableEntity, "provider_not_available")
 		return
 	}
 

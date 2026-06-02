@@ -14,6 +14,31 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+func TestTokenRevokedByLogout(t *testing.T) {
+	base := time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)
+	// last_logout_at carries sub-second precision (PostgreSQL NOW()).
+	epoch := base.Add(750 * time.Millisecond) // 10:00:00.750
+
+	// A token issued in the SAME second as the epoch: JWT iat is floored to the second
+	// (10:00:00.000). It must NOT be treated as revoked — this is the regression OPE-505 fixes.
+	sameSecond := jwt.NewNumericDate(base)
+	assert.False(t, tokenRevokedByLogout(sameSecond, &epoch),
+		"token issued in the same second as the epoch must not be falsely revoked")
+
+	// A token issued a full second before the epoch IS revoked.
+	prevSecond := jwt.NewNumericDate(base.Add(-time.Second))
+	assert.True(t, tokenRevokedByLogout(prevSecond, &epoch),
+		"token issued before the epoch second must be revoked")
+
+	// A token issued a second after the epoch is valid.
+	nextSecond := jwt.NewNumericDate(base.Add(time.Second))
+	assert.False(t, tokenRevokedByLogout(nextSecond, &epoch))
+
+	// No epoch / no iat → never revoked.
+	assert.False(t, tokenRevokedByLogout(sameSecond, nil))
+	assert.False(t, tokenRevokedByLogout(nil, &epoch))
+}
+
 func TestAuthService_Register_ValidationError_MissingEmail(t *testing.T) {
 	pwdSvc := NewPasswordService()
 	svc := NewAuthService(nil, nil, nil, nil, pwdSvc, nil)

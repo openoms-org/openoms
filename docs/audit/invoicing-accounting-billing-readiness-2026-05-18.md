@@ -23,7 +23,7 @@ Powód jest prosty: te ekrany dotykają faktur, danych firmowych, rozliczeń pod
 | KSeF | `/settings/ksef` | `blocked` | Nie | Zablokowane w każdym trybie | Testowe konto/certyfikat/token, wysyłka, status, UPO, błędy autoryzacji, decyzja prawna i operacyjna. |
 | VAT OSS settings | `/settings/vat-oss` | `beta` | Nie | Ukryte | Kraje UE, waluty, źródło danych faktur, poprawność eksportu i review księgowe. |
 | VAT OSS report | `/reports/vat-oss` | `beta` | Nie | Ukryte | Spójne dane z fakturami i kursami, eksport, puste/error states, weryfikacja z księgowością. |
-| Billing SaaS | `/settings/billing` | `controlled` | Nie | Ukryte dla pierwszego klienta do decyzji OPE-246 | Stripe checkout/subscription/webhook E2E, statusy active/trial/past_due/canceled/manual contract, czytelny UX dla klienta. |
+| Billing SaaS | `/settings/billing` | `controlled` | Nie | Pozostaje ukryte dla pierwszego klienta; self-service billing wróci dopiero po Stripe E2E i decyzji support/recovery | Stripe checkout/subscription/webhook E2E, statusy active/trial/past_due/canceled/unpaid/paused/manual contract, bezpieczne CTA bez linków do ukrytych ekranów, puste/error states, recovery przez operatora. |
 
 ## Zasady odblokowania
 
@@ -44,7 +44,7 @@ Powód jest prosty: te ekrany dotykają faktur, danych firmowych, rozliczeń pod
 
 ## Follow-upy
 
-- OPE-246: decyzja, jak klient ma widzieć billing/subskrypcję w SaaS.
+- OPE-246: domyślna decyzja SaaS v1 to brak customer-facing self-service billing; banner płatności nie może linkować do `/settings/billing`, jeśli route jest ukryty w `client-ready`.
 - Potrzebne przed odblokowaniem Fakturowni: kontrolowane credentiale i smoke flow create/PDF/cancel.
 - Potrzebne przed wFirma/inFakt: osobna certyfikacja providera i decyzja, co robimy z brakiem cancel.
 - Potrzebne przed KSeF/VAT OSS: test env, review księgowe i jasny runbook recovery.

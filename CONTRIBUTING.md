@@ -8,6 +8,7 @@ Thanks for your interest in contributing to OpenOMS! This guide will help you ge
 - **Node.js** 22+
 - **Docker** (with Docker Compose)
 - **[Task](https://taskfile.dev)** (task runner)
+- **[golang-migrate](https://github.com/golang-migrate/migrate)** (database migrations)
 
 ## Development Setup
 
@@ -15,11 +16,21 @@ Thanks for your interest in contributing to OpenOMS! This guide will help you ge
 git clone https://github.com/openoms-org/openoms.git
 cd openoms
 cp .env.example .env
-task setup   # Start containers, run migrations, seed data
+task setup   # Install dashboard deps, start containers, run migrations, seed data
 task dev     # Start API + dashboard in parallel
 ```
 
-The API server runs on `http://localhost:8080` and the dashboard on `http://localhost:3000` by default.
+The API server runs on `http://localhost:8080` and the dashboard login page on `http://localhost:3000/login` by default.
+
+Seed login for local development:
+
+| Field | Value |
+|---|---|
+| Organization | `dev` |
+| Email | `admin@dev.local` |
+| Password | `password123` |
+
+This seeded account exists only after `task setup` or `task seed`. Production deployments do not include default credentials.
 
 ## Project Structure
 

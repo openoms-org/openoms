@@ -114,13 +114,3 @@ func (c *PlanCache) GetOrLoad(ctx context.Context, pool *pgxpool.Pool, tenantID 
 	}
 	return c.LoadFromDB(ctx, pool, tenantID)
 }
-
-// IsPlanActive returns true if the plan allows normal API access.
-func IsPlanActive(plan string) bool {
-	switch plan {
-	case "free", "standard", "plus", "pro":
-		return true
-	default:
-		return false
-	}
-}

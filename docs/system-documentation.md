@@ -177,6 +177,7 @@ Sentry source map upload dla dashboardu uzywa BuildKit secret mount (`sentry_aut
 Sentry release identity jest spinane z tagiem obrazu/SHA commita przez Helm `sentry.release` i runtime env `SENTRY_RELEASE` dla API, workerow oraz dashboardu. Go API przekazuje ten identyfikator do `sentry-go` jako `ClientOptions.Release`. Worker deployment dostaje `SENTRY_DSN` z tego samego `openoms-secrets` co API, zeby panic recovery i worker-level captures trafialy do projektu `openoms-api`.
 API Sentry request context jest scrubowany przed przypieciem do scope oraz ponownie w `BeforeSend`: naglowki auth/cookie/CSRF/API-key, cookies, body, remote address env oraz token/email-like query values nie sa wysylane do Sentry. Failed-login audit entries nie zapisuja plaintext emaila w `audit_log.changes`; zostaje tylko nie-PII marker powodu.
 Release pipeline instaluje przypieta wersje Syft z weryfikacja checksumu release, generuje CycloneDX JSON SBOM-y dla obrazow `openoms-api`, `openoms-dashboard` i `openoms-migrate`, zapisuje digest kazdego wypchnietego obrazu oraz publikuje zweryfikowany artefakt `openoms-sbom-<sha>`. Dashboard SBOM wyklucza metadane Next.js `node_modules/next/dist/compiled/**/package.json`, poniewaz opisuja wewnetrzne bundlowane pakiety bez wersji. Guard release blokuje dashboard SBOM, jesli zawiera komponenty npm z pusta albo `UNKNOWN` wersja. Prywatny import do systemu monitorowania podatnosci i alert routing nalezy do warstwy enterprise.
+Deploy produkcyjny i powiazane artefakty release sa pinowane do niezmiennego SHA commita. Promocja obrazow do tagu `:latest` jest best-effort convenience dla ludzi i narzedzi pomocniczych; jej blad powinien zostac zalogowany jako warning, ale nie moze blokowac dispatcha deployu opartego o tagi SHA.
 Publiczne workflowy GitHub Actions pinują zewnetrzne akcje do pelnych commit SHA zamiast mutowalnych tagow semver. `scripts/validate-github-actions-pinning.sh` jest uruchamiany lokalnie przez `scripts/local-ci.sh` oraz w publicznym CI, zeby blokowac regresje do tagow typu `@v4`/`@v7`.
 
 #### Konfiguracja produkcyjna
@@ -1412,6 +1413,7 @@ Uprawnienia np.:
 | HSTS | Strict-Transport-Security w produkcji |
 | Supply chain | Swagger UI CDN pinned do dokladnej wersji (5.18.2) |
 | Observability PII | Sentry `SendDefaultPII=false`, request scrubber + `BeforeSend` backstop; failed-login audit payload bez plaintext emaila |
+| Ekspozycja niegotowych funkcji | Serwerowy gate gotowosci (`OPENOMS_API_SURFACE`, domyslnie `client-ready`): grupy tras niegotowych funkcji zwracaja `404 feature_not_available`, a tworzenie integracji/przesylek z niegotowym providerem `422 provider_not_available`. Rejestr `internal/readiness/readiness.json` jest jedynym zrodlem prawdy wspoldzielonym z dashboardem; `OPENOMS_API_SURFACE=full` wylacza gating. |
 
 ### Bezpieczenstwo infrastruktury (Kubernetes)
 
@@ -1831,6 +1833,7 @@ DPD uzywa dwoch powierzchni API: DPD Services REST do tworzenia przesylek i etyk
 | RecurringOrderWorker | konfigurowalny | Tworzenie zamowien cyklicznych |
 | RepricingWorker | konfigurowalny | Automatyczna zmiana cen wg regul |
 | ListingSyncWorker | konfigurowalny | Synchronizacja listingow marketplace |
+| BillingReconciliationWorker | 15min | Naprawia sesje checkout, ktore zarejestrowaly tenanta, ale nie utworzyly rekordow billing/subskrypcji (powtarza idempotentna finalizacje); rejestrowany tylko gdy billing jest skonfigurowany |
 
 ### Infrastruktura workerow
 

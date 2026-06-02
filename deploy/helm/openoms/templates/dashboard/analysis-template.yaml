@@ -1,0 +1,64 @@
+{{- if and .Values.blueGreen.enabled .Values.blueGreen.prePromotionAnalysis }}
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: {{ include "openoms.fullname" . }}-dashboard-smoke
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "openoms.labels" . | nindent 4 }}
+    {{- include "openoms.dashboard.selectorLabels" . | nindent 4 }}
+spec:
+  metrics:
+    - name: smoke-test
+      count: 1
+      failureLimit: 0
+      provider:
+        job:
+          spec:
+            backoffLimit: 0
+            template:
+              spec:
+                restartPolicy: Never
+                securityContext:
+                  runAsNonRoot: true
+                  runAsUser: 65534
+                  seccompProfile:
+                    type: RuntimeDefault
+                containers:
+                  - name: smoke
+                    image: curlimages/curl:8.11.1
+                    command:
+                      - /bin/sh
+                      - -c
+                      - |
+                        echo "Waiting for dashboard preview pods to become ready..."
+                        for i in $(seq 1 30); do
+                          # -fsSL: follow redirects (Next.js may 307→/login) and fail on >=400,
+                          # so we confirm the final response is healthy, not a dangling 3xx.
+                          # This is a minimal liveness gate; the authenticated UI smoke (enterprise
+                          # deploy, when secrets are configured) is the correctness gate.
+                          if curl -fsSL --max-time 5 http://{{ include "openoms.fullname" . }}-dashboard-preview:{{ .Values.dashboard.service.port | default 3000 }}/ >/dev/null 2>&1; then
+                            echo "Dashboard ready (attempt $i)"
+                            exit 0
+                          fi
+                          if [ "$i" = "30" ]; then
+                            echo "FAIL: dashboard not ready after 30 attempts (150s)"
+                            exit 1
+                          fi
+                          sleep 5
+                        done
+                    securityContext:
+                      allowPrivilegeEscalation: false
+                      readOnlyRootFilesystem: true
+                      capabilities:
+                        drop: ['ALL']
+                      seccompProfile:
+                        type: RuntimeDefault
+                    resources:
+                      requests:
+                        cpu: 10m
+                        memory: 16Mi
+                      limits:
+                        cpu: 50m
+                        memory: 32Mi
+{{- end }}

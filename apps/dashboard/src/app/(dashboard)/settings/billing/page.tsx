@@ -18,6 +18,10 @@ const STATUS_VARIANTS: Record<string, "default" | "secondary" | "destructive" | 
   past_due: "destructive",
   canceled: "destructive",
   suspended: "destructive",
+  incomplete: "destructive",
+  incomplete_expired: "destructive",
+  unpaid: "destructive",
+  paused: "destructive",
 };
 
 function computeDaysLeft(trialEnd: string): number {
@@ -39,6 +43,10 @@ export default function BillingSettingsPage() {
     past_due: t("statusPastDue"),
     canceled: t("statusCanceled"),
     suspended: t("statusSuspended"),
+    incomplete: t("statusIncomplete"),
+    incomplete_expired: t("statusIncompleteExpired"),
+    unpaid: t("statusUnpaid"),
+    paused: t("statusPaused"),
   };
 
   const INTERVAL_LABELS: Record<string, string> = {

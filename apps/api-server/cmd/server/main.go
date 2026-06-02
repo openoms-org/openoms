@@ -325,8 +325,9 @@ func run() error {
 		shipmentRepo, orderRepo, integrationRepo, auditRepo,
 		warehouseRepo, tenantRepo,
 		pool, encryptionKey, cfg.UploadDir, cfg.BaseURL,
+		objectStorage,
 	)
-	webhookService := service.NewWebhookService(webhookRepo, pool, cfg.AllegroWebhookSecret, cfg.InPostWebhookSecret)
+	webhookService := service.NewWebhookService(webhookRepo, tenantRepo, pool, cfg.AllegroWebhookSecret, cfg.InPostWebhookSecret)
 	providerWebhookSecretResolver := service.NewProviderWebhookSecretResolver(workerPool, encryptionKey)
 	statsService := service.NewStatsService(statsRepo, pool)
 	invoiceService := service.NewInvoiceService(invoiceRepo, orderRepo, tenantRepo, auditRepo, pool, encryptionKey)
@@ -486,13 +487,13 @@ func run() error {
 
 	userHandler := handler.NewUserHandler(userService)
 	orderHandler := handler.NewOrderHandler(orderService, tenantRepo, pool)
-	shipmentHandler := handler.NewShipmentHandler(shipmentService, labelService)
+	shipmentHandler := handler.NewShipmentHandler(shipmentService, labelService, cfg.APISurfaceMode)
 	productImportService := service.NewProductImportService(productRepo, auditRepo, pool)
 	productImportService.SetStockSyncService(stockSyncService)
 	blProductImportService := service.NewBaseLinkerProductImportService(productRepo, variantRepo, productCategoryRepo, auditRepo, pool)
 	imageDownloadService := service.NewImageDownloadService(productRepo, pool, objectStorage)
 	productHandler := handler.NewProductHandler(productService, productImportService, blProductImportService, productCategoryService, imageDownloadService)
-	integrationHandler := handler.NewIntegrationHandler(integrationService, integrationRepo, pool)
+	integrationHandler := handler.NewIntegrationHandler(integrationService, integrationRepo, pool, cfg.APISurfaceMode)
 	returnHandler := handler.NewReturnHandler(returnService)
 	webhookHandler := handler.NewWebhookHandler(webhookService)
 	statsHandler := handler.NewStatsHandler(statsService)
@@ -928,6 +929,9 @@ func run() error {
 	workerMgr.Register(worker.NewRecurringOrderWorker(workerPool, recurringOrderService, slog.Default()))
 	workerMgr.Register(worker.NewRepricingWorker(workerPool, repricingService, slog.Default()))
 	workerMgr.Register(worker.NewListingSyncWorker(workerPool, listingSyncRepo, listingSyncService, slog.Default()))
+	if cfg.BillingEnabled() && checkoutSvc != nil {
+		workerMgr.Register(worker.NewBillingReconciliationWorker(workerPool, checkoutSvc, slog.Default()))
+	}
 	if cfg.WorkersEnabled {
 		go workerMgr.Start(context.Background())
 	}

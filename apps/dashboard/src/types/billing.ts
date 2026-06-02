@@ -36,7 +36,16 @@ export interface CheckoutSessionStatus {
 
 export interface SubscriptionStatus {
   plan: string;
-  status: "trialing" | "active" | "past_due" | "canceled" | "suspended";
+  status:
+    | "trialing"
+    | "active"
+    | "past_due"
+    | "canceled"
+    | "suspended"
+    | "incomplete"
+    | "incomplete_expired"
+    | "unpaid"
+    | "paused";
   billing_interval?: "month" | "year";
   trial_end?: string;
   current_period_end?: string;

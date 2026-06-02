@@ -40,10 +40,10 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+      - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
 
       - name: Build API image for scan
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
         with:
           context: .
           file: apps/api-server/Dockerfile
@@ -65,7 +65,7 @@ jobs:
           ignore-unfixed: true
 
       - name: Upload API Trivy results to Security tab
-        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4
+        uses: github/codeql-action/upload-sarif@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4
         if: always()
         with:
           sarif_file: trivy-openoms-api.sarif
@@ -94,7 +94,7 @@ jobs:
             -o "cyclonedx-json=sbom/openoms-api-${GITHUB_SHA}.cdx.json"
 
       - name: Log in to GHCR
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -138,10 +138,10 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN || '' }}
         run: ./scripts/check-dashboard-release-config.sh
 
-      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+      - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
 
       - name: Build Dashboard image for scan
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
         with:
           context: apps/dashboard
           file: apps/dashboard/Dockerfile
@@ -175,7 +175,7 @@ jobs:
           ignore-unfixed: true
 
       - name: Upload Dashboard Trivy results to Security tab
-        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4
+        uses: github/codeql-action/upload-sarif@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4
         if: always()
         with:
           sarif_file: trivy-openoms-dashboard.sarif
@@ -205,7 +205,7 @@ jobs:
             -o "cyclonedx-json=sbom/openoms-dashboard-${GITHUB_SHA}.cdx.json"
 
       - name: Log in to GHCR
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -241,10 +241,10 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+      - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
 
       - name: Build Migrate image for scan
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f # v7
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7
         with:
           context: .
           file: deploy/Dockerfile.migrate
@@ -266,7 +266,7 @@ jobs:
           ignore-unfixed: true
 
       - name: Upload Migrate Trivy results to Security tab
-        uses: github/codeql-action/upload-sarif@9e0d7b8d25671d64c341c19c0152d693099fb5ba # v4
+        uses: github/codeql-action/upload-sarif@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4
         if: always()
         with:
           sarif_file: trivy-openoms-migrate.sarif
@@ -295,7 +295,7 @@ jobs:
             -o "cyclonedx-json=sbom/openoms-migrate-${GITHUB_SHA}.cdx.json"
 
       - name: Log in to GHCR
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -356,10 +356,10 @@ jobs:
       contents: read
     needs: [release-api, release-dashboard, release-migrate, publish-sbom]
     steps:
-      - uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4
+      - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4
 
       - name: Log in to GHCR
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -367,16 +367,34 @@ jobs:
 
       - name: Promote SHA images to latest
         run: |
-          docker buildx imagetools create --tag "${API_IMAGE}:latest" "${API_IMAGE}:${GITHUB_SHA}"
-          docker buildx imagetools create --tag "${DASHBOARD_IMAGE}:latest" "${DASHBOARD_IMAGE}:${GITHUB_SHA}"
-          docker buildx imagetools create --tag "${MIGRATE_IMAGE}:latest" "${MIGRATE_IMAGE}:${GITHUB_SHA}"
+          failed=0
+
+          promote_latest() {
+            local image="$1"
+
+            if docker buildx imagetools create --tag "${image}:latest" "${image}:${GITHUB_SHA}"; then
+              echo "Promoted ${image}:${GITHUB_SHA} to ${image}:latest"
+              return 0
+            fi
+
+            echo "::warning::Failed to promote ${image}:${GITHUB_SHA} to ${image}:latest"
+            failed=1
+          }
+
+          promote_latest "${API_IMAGE}"
+          promote_latest "${DASHBOARD_IMAGE}"
+          promote_latest "${MIGRATE_IMAGE}"
+
+          if [ "${failed}" -ne 0 ]; then
+            echo "::warning::Latest tag promotion failed for one or more images. SHA images were already published; deploy remains pinned to ${GITHUB_SHA}."
+          fi
 
   notify-deploy:
     name: Trigger Deploy
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    needs: [promote-latest]
+    needs: [release-api, release-dashboard, release-migrate, publish-sbom]
     steps:
       - name: Dispatch to deploy repo
         env:
@@ -396,7 +414,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    needs: [promote-latest]
+    needs: [notify-deploy]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:

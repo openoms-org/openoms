@@ -18,6 +18,12 @@ import (
 // ErrWebhookSignature indicates a Stripe signature verification failure (client error, not retryable).
 var ErrWebhookSignature = errors.New("webhook signature verification failed")
 
+// ErrWebhookUnprocessable indicates a permanent failure to process the event
+// (e.g. a malformed payload). Retrying will never succeed, so the handler
+// returns 4xx to stop Stripe from retrying it for days. Transient failures
+// (e.g. a database blip) return other errors -> 5xx, which Stripe retries.
+var ErrWebhookUnprocessable = errors.New("webhook payload unprocessable")
+
 // StripeWebhookService processes Stripe webhook events.
 type StripeWebhookService struct {
 	webhookSecret string
@@ -61,7 +67,7 @@ func (s *StripeWebhookService) HandleEvent(ctx context.Context, payload []byte, 
 func (s *StripeWebhookService) handleCheckoutCompleted(ctx context.Context, event stripe.Event) error {
 	var sess stripe.CheckoutSession
 	if err := json.Unmarshal(event.Data.Raw, &sess); err != nil {
-		return fmt.Errorf("unmarshal checkout session: %w", err)
+		return fmt.Errorf("%w: unmarshal checkout session: %v", ErrWebhookUnprocessable, err)
 	}
 
 	email := ""
@@ -84,7 +90,7 @@ func (s *StripeWebhookService) handleCheckoutCompleted(ctx context.Context, even
 func (s *StripeWebhookService) handleSubscriptionUpdated(ctx context.Context, event stripe.Event) error {
 	var sub stripe.Subscription
 	if err := json.Unmarshal(event.Data.Raw, &sub); err != nil {
-		return fmt.Errorf("unmarshal subscription: %w", err)
+		return fmt.Errorf("%w: unmarshal subscription: %v", ErrWebhookUnprocessable, err)
 	}
 
 	status := string(sub.Status)
@@ -124,7 +130,7 @@ func (s *StripeWebhookService) handleSubscriptionUpdated(ctx context.Context, ev
 func (s *StripeWebhookService) handleSubscriptionDeleted(ctx context.Context, event stripe.Event) error {
 	var sub stripe.Subscription
 	if err := json.Unmarshal(event.Data.Raw, &sub); err != nil {
-		return fmt.Errorf("unmarshal subscription: %w", err)
+		return fmt.Errorf("%w: unmarshal subscription: %v", ErrWebhookUnprocessable, err)
 	}
 
 	now := time.Now()
@@ -144,7 +150,7 @@ func (s *StripeWebhookService) handleSubscriptionDeleted(ctx context.Context, ev
 func (s *StripeWebhookService) handlePaymentFailed(ctx context.Context, event stripe.Event) error {
 	var invoice stripe.Invoice
 	if err := json.Unmarshal(event.Data.Raw, &invoice); err != nil {
-		return fmt.Errorf("unmarshal invoice: %w", err)
+		return fmt.Errorf("%w: unmarshal invoice: %v", ErrWebhookUnprocessable, err)
 	}
 
 	// In stripe-go v82, subscription is under invoice.Parent.SubscriptionDetails.Subscription
