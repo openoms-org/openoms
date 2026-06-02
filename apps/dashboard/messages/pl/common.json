@@ -132,7 +132,21 @@
     "sessionExpired": "Sesja wygasła. Zaloguj się ponownie.",
     "tooManyRequests": "Zbyt wiele żądań. Poczekaj chwilę i spróbuj ponownie.",
     "unauthorized": "Brak autoryzacji",
-    "unexpected": "Wystąpił nieoczekiwany błąd."
+    "unexpected": "Wystąpił nieoczekiwany błąd.",
+    "somethingWentWrong": "Coś poszło nie tak"
+  },
+  "editor": {
+    "heading1": "Nagłówek 1",
+    "heading2": "Nagłówek 2",
+    "paragraph": "Paragraf",
+    "bulletList": "Lista punktowana",
+    "numberedList": "Lista numerowana",
+    "placeholder": "Wpisz opis produktu...",
+    "aiGenerate": "Generuj opis",
+    "aiImprove": "Popraw opis",
+    "translateToPolish": "Przetłumacz na polski",
+    "translateToEnglish": "Przetłumacz na angielski",
+    "translateToGerman": "Przetłumacz na niemiecki"
   },
   "navigation": {
     "accounting": "Księgowość",
