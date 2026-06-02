@@ -72,7 +72,7 @@ export default function NewIntegrationPage() {
         <CardContent className="pt-6">
           <IntegrationForm
             onSubmit={handleSubmit}
-            isLoading={createIntegration.isPending}
+            isPending={createIntegration.isPending}
           />
         </CardContent>
       </Card>

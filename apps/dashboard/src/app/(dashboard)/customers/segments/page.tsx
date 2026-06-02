@@ -393,7 +393,7 @@ export default function SegmentsPage() {
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteSegment.isPending}
+        isPending={deleteSegment.isPending}
       />
     </>
   );

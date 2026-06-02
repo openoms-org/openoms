@@ -299,7 +299,7 @@ export default function RecurringOrdersPage() {
         confirmLabel="Usun"
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteRecurringOrder.isPending}
+        isPending={deleteRecurringOrder.isPending}
       />
     </>
   );

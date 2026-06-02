@@ -9,7 +9,7 @@ import { useTranslations } from "next-intl";
 interface ShipmentStatusActionsProps {
   currentStatus: string;
   onTransition: (status: string) => void;
-  isLoading?: boolean;
+  isPending?: boolean;
 }
 
 const DESTRUCTIVE_STATUSES = ["failed"];
@@ -17,7 +17,7 @@ const DESTRUCTIVE_STATUSES = ["failed"];
 export function ShipmentStatusActions({
   currentStatus,
   onTransition,
-  isLoading,
+  isPending,
 }: ShipmentStatusActionsProps) {
   const t = useTranslations("shipments");
   const [confirmStatus, setConfirmStatus] = useState<string | null>(null);
@@ -60,7 +60,7 @@ export function ShipmentStatusActions({
               variant={isDestructive ? "destructive" : "outline"}
               size="sm"
               onClick={() => handleClick(status)}
-              disabled={isLoading}
+              disabled={isPending}
             >
               {statusInfo?.label ?? status}
             </Button>
@@ -84,7 +84,7 @@ export function ShipmentStatusActions({
           </>
         }
         isDestructive
-        isPending={isLoading}
+        isPending={isPending}
         onConfirm={handleConfirm}
       />
     </>

@@ -508,7 +508,7 @@ export default function LoyaltyProgramDetailPage() {
         confirmLabel={t("usunProgram")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteProgram.isPending}
+        isPending={deleteProgram.isPending}
       />
     </div>
   );

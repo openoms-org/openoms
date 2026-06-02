@@ -85,7 +85,7 @@ export function DispatchOrderDialog({
       }
       confirmLabel="Zamow kuriera"
       cancelLabel="Anuluj"
-      isLoading={createDispatchOrder.isPending}
+      isPending={createDispatchOrder.isPending}
       onConfirm={handleSubmit}
     >
       <div className="space-y-4">

@@ -182,7 +182,7 @@ export default function MarketplacesPage() {
         confirmLabel={t("deleteAction")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteIntegration.isPending}
+        isPending={deleteIntegration.isPending}
       />
     </AdminGuard>
   );

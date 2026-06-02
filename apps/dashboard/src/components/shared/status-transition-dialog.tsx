@@ -38,7 +38,7 @@ export function StatusTransitionDialog({
       confirmLabel={confirmLabel ?? t("confirm")}
       cancelLabel={cancelLabel ?? t("cancel")}
       variant={isDestructive ? "destructive" : "default"}
-      isLoading={isPending}
+      isPending={isPending}
       onConfirm={onConfirm}
     />
   );

@@ -382,7 +382,7 @@ export default function ReturnDetailPage() {
         confirmLabel={t("deleteReturn")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteReturn.isPending}
+        isPending={deleteReturn.isPending}
       />
     </div>
   );

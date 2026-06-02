@@ -106,7 +106,7 @@ describe("ConfirmDialog", () => {
         description="Description"
         confirmLabel="Yes"
         onConfirm={vi.fn()}
-        isLoading={true}
+        isPending={true}
       />
     );
 
@@ -123,7 +123,7 @@ describe("ConfirmDialog", () => {
         title="Title"
         description="Description"
         onConfirm={vi.fn()}
-        isLoading={true}
+        isPending={true}
       />
     );
 

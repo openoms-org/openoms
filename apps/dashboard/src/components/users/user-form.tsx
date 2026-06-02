@@ -79,7 +79,7 @@ interface UserFormProps {
     role?: "owner" | "admin" | "member";
   };
   onSubmit: (data: UserFormValues) => void;
-  isLoading?: boolean;
+  isPending?: boolean;
   onCancel?: () => void;
 }
 
@@ -87,7 +87,7 @@ export function UserForm({
   mode,
   defaultValues,
   onSubmit,
-  isLoading = false,
+  isPending = false,
   onCancel,
 }: UserFormProps) {
   const t = useTranslations("users");
@@ -201,12 +201,12 @@ export function UserForm({
 
       <div className="flex justify-end gap-3 pt-2">
         {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>
             Anuluj
           </Button>
         )}
-        <Button type="submit" disabled={isLoading}>
-          {isLoading
+        <Button type="submit" disabled={isPending}>
+          {isPending
             ? "Zapisywanie..."
             : isEdit
               ? "Zapisz zmiany"

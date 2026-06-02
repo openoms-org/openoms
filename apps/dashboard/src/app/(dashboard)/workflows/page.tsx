@@ -192,7 +192,7 @@ export default function WorkflowsPage() {
         description={t("deleteConfirmDescription")}
         variant="destructive"
         onConfirm={handleDeleteConfirm}
-        isLoading={deleteRule.isPending}
+        isPending={deleteRule.isPending}
       />
     </AdminGuard>
   );

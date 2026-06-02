@@ -391,7 +391,7 @@ export default function InvoiceDetailPage() {
         confirmLabel={t("anulujFakture")}
         variant="destructive"
         onConfirm={handleCancel}
-        isLoading={cancelInvoice.isPending}
+        isPending={cancelInvoice.isPending}
       />
     </div>
   );

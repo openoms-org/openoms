@@ -194,7 +194,7 @@ export default function UsersPage() {
           <UserForm
             mode="create"
             onSubmit={handleCreate}
-            isLoading={createUser.isPending}
+            isPending={createUser.isPending}
             onCancel={() => setCreateOpen(false)}
           />
         </DialogContent>
@@ -215,7 +215,7 @@ export default function UsersPage() {
                 role: editUser.role,
               }}
               onSubmit={handleEdit}
-              isLoading={updateUser.isPending}
+              isPending={updateUser.isPending}
               onCancel={() => setEditUser(null)}
             />
           )}
@@ -231,7 +231,7 @@ export default function UsersPage() {
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteUser.isPending}
+        isPending={deleteUser.isPending}
       />
     </AdminGuard>
   );

@@ -447,7 +447,7 @@ export default function MessageTemplatesPage() {
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteTemplate.isPending}
+        isPending={deleteTemplate.isPending}
       />
     </AdminGuard>
   );

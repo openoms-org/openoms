@@ -245,7 +245,7 @@ export default function WarehousesPage() {
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteWarehouse.isPending}
+        isPending={deleteWarehouse.isPending}
       />
     </AdminGuard>
   );

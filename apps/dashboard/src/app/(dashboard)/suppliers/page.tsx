@@ -170,7 +170,7 @@ export default function SuppliersPage() {
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteSupplier.isPending}
+        isPending={deleteSupplier.isPending}
       />
     </AdminGuard>
   );

@@ -207,7 +207,7 @@ export default function ShipmentDetailPage() {
             <ShipmentForm
               shipment={shipment}
               onSubmit={handleUpdate}
-              isLoading={updateShipment.isPending}
+              isPending={updateShipment.isPending}
             />
           </CardContent>
         </Card>
@@ -356,7 +356,7 @@ export default function ShipmentDetailPage() {
               <ShipmentStatusActions
                 currentStatus={shipment.status}
                 onTransition={handleStatusTransition}
-                isLoading={transitionStatus.isPending}
+                isPending={transitionStatus.isPending}
               />
             </CardContent>
           </Card>

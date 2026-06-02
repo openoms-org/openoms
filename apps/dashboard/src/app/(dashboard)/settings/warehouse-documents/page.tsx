@@ -216,7 +216,7 @@ export default function WarehouseDocumentsPage() {
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteDocument.isPending}
+        isPending={deleteDocument.isPending}
       />
     </AdminGuard>
   );

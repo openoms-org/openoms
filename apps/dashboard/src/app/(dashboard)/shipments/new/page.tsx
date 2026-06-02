@@ -92,7 +92,7 @@ export default function NewShipmentPage() {
           }
           key={selectedCarrier ?? "default"}
           onSubmit={handleSubmit}
-          isLoading={createShipment.isPending}
+          isPending={createShipment.isPending}
         />
       </FormSection>
     </div>
