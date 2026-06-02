@@ -91,3 +91,22 @@ Secret name to use.
 {{- define "openoms.secretName" -}}
 {{- .Values.secrets.name }}
 {{- end }}
+
+{{/*
+Render a kubelet-managed preStop sleep hook for distroless images.
+Kubernetes runs sleep lifecycle handlers in kubelet, unlike exec hooks which
+require a shell/binary inside the container image. The sleep action is enabled
+by default from Kubernetes 1.30, so older clusters omit the hook and rely on
+SIGTERM graceful shutdown plus terminationGracePeriodSeconds instead.
+Usage: {{ include "openoms.lifecycle.preStopSleep" (dict "root" . "seconds" .Values.apiServer.terminationDrainSeconds) | nindent 10 }}
+*/}}
+{{- define "openoms.lifecycle.preStopSleep" -}}
+{{- $root := .root -}}
+{{- $seconds := int (default 0 .seconds) -}}
+{{- if and (gt $seconds 0) (semverCompare ">=1.30.0-0" $root.Capabilities.KubeVersion.Version) -}}
+lifecycle:
+  preStop:
+    sleep:
+      seconds: {{ $seconds }}
+{{- end -}}
+{{- end -}}
