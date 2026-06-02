@@ -132,7 +132,21 @@
     "sessionExpired": "Session expired. Please log in again.",
     "tooManyRequests": "Too many requests. Please wait a moment and try again.",
     "unauthorized": "Unauthorized",
-    "unexpected": "An unexpected error occurred."
+    "unexpected": "An unexpected error occurred.",
+    "somethingWentWrong": "Something went wrong"
+  },
+  "editor": {
+    "heading1": "Heading 1",
+    "heading2": "Heading 2",
+    "paragraph": "Paragraph",
+    "bulletList": "Bullet list",
+    "numberedList": "Numbered list",
+    "placeholder": "Enter product description...",
+    "aiGenerate": "Generate description",
+    "aiImprove": "Improve description",
+    "translateToPolish": "Translate to Polish",
+    "translateToEnglish": "Translate to English",
+    "translateToGerman": "Translate to German"
   },
   "navigation": {
     "accounting": "Accounting",
