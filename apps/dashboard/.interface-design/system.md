@@ -1,5 +1,8 @@
 # OpenOMS Dashboard — Design System
 
+> Visual design language only. Interaction & code conventions (loading state,
+> buttons, toasts) live in [`conventions.md`](./conventions.md).
+
 ## Direction
 
 Polish e-commerce OMS dashboard. The user is an operations manager or warehouse worker handling orders, shipments, and inventory in a fast-paced fulfillment environment. The interface should feel **dense but calm** — like a well-organized control room. Functional, not decorative.
