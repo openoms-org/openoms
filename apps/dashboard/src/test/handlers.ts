@@ -153,7 +153,6 @@ export const mockEmailSettings = {
 };
 
 export const mockCompanySettings = {
-  name: "Test Company",
   company_name: "Test Company",
   logo_url: "",
   address: "ul. Testowa 1",
