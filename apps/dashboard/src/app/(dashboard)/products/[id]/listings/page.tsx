@@ -193,6 +193,7 @@ const HANDLING_TIME_OPTIONS = [
 // ===================== Main Page =====================
 
 export default function ProductListingsPage() {
+  const tl = useTranslations("listings");
   const params = useParams<{ id: string }>();
   const { data: product } = useProduct(params.id);
   const { data: listings, isLoading } = useProductListings(params.id);
@@ -322,9 +323,9 @@ export default function ProductListingsPage() {
                       onSync={(id) =>
                         syncListing.mutate(id, {
                           onSuccess: () =>
-                            toast.success("Zsynchronizowano"),
+                            toast.success(tl("synced")),
                           onError: () =>
-                            toast.error("Blad synchronizacji"),
+                            toast.error(tl("syncFailed")),
                         })
                       }
                       onToggleSyncMode={(id, mode) =>
@@ -332,18 +333,18 @@ export default function ProductListingsPage() {
                           { listingId: id, mode },
                           {
                             onSuccess: () =>
-                              toast.success(mode === "auto" ? "Tryb automatyczny" : "Tryb reczny"),
+                              toast.success(mode === "auto" ? tl("modeAuto") : tl("modeManual")),
                             onError: () =>
-                              toast.error("Blad zmiany trybu"),
+                              toast.error(tl("modeChangeFailed")),
                           }
                         )
                       }
                       onForcePush={(id) =>
                         forcePush.mutate(id, {
                           onSuccess: () =>
-                            toast.success("Stan wyslany do marketplace"),
+                            toast.success(tl("pushedToMarketplace")),
                           onError: () =>
-                            toast.error("Blad wysylania stanu"),
+                            toast.error(tl("pushFailed")),
                         })
                       }
                       onDelete={() => setDeleteTarget(listing)}
@@ -406,11 +407,11 @@ export default function ProductListingsPage() {
                   if (!deleteTarget) return;
                   deleteListing.mutate(deleteTarget.id, {
                     onSuccess: () => {
-                      toast.success("Oferta dezaktywowana i usunieta");
+                      toast.success(tl("listingDeactivated"));
                       setDeleteTarget(null);
                     },
                     onError: () =>
-                      toast.error("Blad usuwania oferty"),
+                      toast.error(tl("deleteFailed")),
                   });
                 }}
               >
@@ -479,9 +480,9 @@ export default function ProductListingsPage() {
                   setDeletingAll(false);
                   setShowDeleteAll(false);
                   if (failed === 0) {
-                    toast.success("Wszystkie oferty usuniete");
+                    toast.success(tl("allDeleted"));
                   } else {
-                    toast.error(`Nie udalo sie usunac ${failed} z ${listings.length} ofert`);
+                    toast.error(tl("deletePartialFail", { failed, total: listings.length }));
                   }
                 }}
               >
@@ -805,14 +806,14 @@ function CreateWooCommerceListingDialog({
       },
       {
         onSuccess: () => {
-          toast.success("Produkt wystawiony na WooCommerce");
+          toast.success(tl("woo.success"));
           onClose();
         },
         onError: (error) => {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Nie udalo sie wystawic produktu na WooCommerce"
+              : tl("woo.error")
           );
         },
       }
@@ -974,14 +975,14 @@ function CreateEbayListingDialog({
       },
       {
         onSuccess: () => {
-          toast.success("Produkt wystawiony na eBay");
+          toast.success(tl("ebay.success"));
           onClose();
         },
         onError: (error) => {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Nie udalo sie wystawic produktu na eBay"
+              : tl("ebay.error")
           );
         },
       }
@@ -1796,7 +1797,7 @@ function CreateAllegroListingDialog({
       setSelectedCategoryName(catalogProduct.name);
       setAutoApplied(true);
       setStep(2);
-      toast.success("Znaleziono produkt w katalogu Allegro — kategoria i parametry uzupelnione automatycznie");
+      toast.success(tl("allegro.catalogFound"));
       return;
     }
 
@@ -1806,7 +1807,7 @@ function CreateAllegroListingDialog({
       setSelectedCategoryName(listingOffer.name);
       setAutoApplied(true);
       setStep(2);
-      toast.success("Znaleziono oferte na Allegro — kategoria i parametry pobrane automatycznie");
+      toast.success(tl("allegro.offerFound"));
       return;
     }
 
@@ -1817,7 +1818,7 @@ function CreateAllegroListingDialog({
       setSelectedCategoryName(best.name);
       setAutoApplied(true);
       setStep(2);
-      toast.success(`Zasugerowano kategorie: ${best.name}`);
+      toast.success(tl("allegro.categorySuggested", { name: best.name }));
       return;
     }
 
@@ -2190,14 +2191,14 @@ function CreateAllegroListingDialog({
       },
       {
         onSuccess: () => {
-          toast.success("Oferta zostala wystawiona na Allegro");
+          toast.success(tl("allegro.listingCreated"));
           onClose();
         },
         onError: (error) => {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Nie udalo sie wystawic oferty"
+              : tl("allegro.listingFailed")
           );
         },
       }
@@ -2699,6 +2700,7 @@ function Step3DeliveryPolicies({
   setHandlingTime: (v: string) => void;
   product: Product;
 }) {
+  const tl = useTranslations("listings");
   const { data: shippingRatesData } = useAllegroShippingRates();
   const { data: returnPoliciesData } = useAllegroReturnPolicies();
   const { data: warrantiesData } = useAllegroWarranties();
@@ -2725,14 +2727,14 @@ function Step3DeliveryPolicies({
       },
       {
         onSuccess: (data) => {
-          toast.success("Utworzono domyslna polityke zwrotow");
+          toast.success(tl("allegro.defaultPolicyCreated"));
           if (data?.id) setReturnPolicyId(data.id);
         },
         onError: (error) => {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Nie udalo sie utworzyc polityki zwrotow"
+              : tl("allegro.defaultPolicyFailed")
           );
         },
       }
@@ -2748,14 +2750,14 @@ function Step3DeliveryPolicies({
       },
       {
         onSuccess: (data) => {
-          toast.success("Utworzono domyslna rekojmie");
+          toast.success(tl("allegro.defaultWarrantyCreated"));
           if (data?.id) setWarrantyId(data.id);
         },
         onError: (error) => {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Nie udalo sie utworzyc rekojmi"
+              : tl("allegro.defaultWarrantyFailed")
           );
         },
       }
@@ -2804,14 +2806,14 @@ function Step3DeliveryPolicies({
                   },
                   {
                     onSuccess: (data) => {
-                      toast.success("Wygenerowano cennik InPost");
+                      toast.success(tl("allegro.inpostGenerated"));
                       if (data?.id) setShippingRateId(data.id);
                     },
                     onError: (error) => {
                       toast.error(
                         error instanceof Error
                           ? error.message
-                          : "Nie udalo sie wygenerowac cennika"
+                          : tl("allegro.inpostGenerateFailed")
                       );
                     },
                   }
