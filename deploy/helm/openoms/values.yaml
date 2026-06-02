@@ -12,6 +12,9 @@ sentry:
   release: ""
 
 apiServer:
+  # Rendered as a kubelet-managed Kubernetes preStop.sleep on clusters >= 1.30.
+  # Older clusters omit the lifecycle hook because distroless images have no shell/sleep binary.
+  terminationDrainSeconds: 5
   replicaCount: 1
   image:
     repository: ghcr.io/openoms-org/openoms-api
@@ -116,6 +119,8 @@ worker:
       memory: 384Mi
 
 dashboard:
+  # Rendered as a kubelet-managed Kubernetes preStop.sleep on clusters >= 1.30 (see apiServer.terminationDrainSeconds).
+  terminationDrainSeconds: 5
   replicaCount: 1
   image:
     repository: ghcr.io/openoms-org/openoms-dashboard
