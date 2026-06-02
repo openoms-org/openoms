@@ -179,6 +179,16 @@ func (s *UserService) changePasswordInTx(ctx context.Context, tx pgx.Tx, tenantI
 		return err
 	}
 
+	// Revoke every existing session by advancing the user's session-invalidation
+	// epoch (last_logout_at). The refresh path rejects any refresh token issued
+	// before this timestamp, so all outstanding refresh families — including other
+	// devices and any attacker session — can no longer be refreshed and die once
+	// their short-lived (<=1h) access tokens expire. The user re-authenticates with
+	// the new password. (OPE-469)
+	if err := s.userRepo.UpdateLastLogout(ctx, tx, userID); err != nil {
+		return fmt.Errorf("revoke sessions on password change: %w", err)
+	}
+
 	return s.auditRepo.Log(ctx, tx, model.AuditEntry{
 		TenantID:   tenantID,
 		UserID:     actorID,
