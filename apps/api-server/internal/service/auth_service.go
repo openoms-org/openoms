@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/getsentry/sentry-go"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -111,6 +112,19 @@ func NewAuthService(
 func hashRefreshToken(token string) string {
 	h := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(h[:])
+}
+
+// tokenRevokedByLogout reports whether a token issued at iat predates the user's
+// session-invalidation epoch (last_logout_at, advanced by logout and by password change).
+// JWT iat is floored to whole seconds (jwt.NewNumericDate, default 1s precision) while
+// last_logout_at (NOW()) carries sub-second precision, so the epoch is truncated to the same
+// second granularity — otherwise a token legitimately issued in the SAME second as the epoch
+// would be falsely rejected on its first refresh.
+func tokenRevokedByLogout(iat *jwt.NumericDate, lastLogout *time.Time) bool {
+	if lastLogout == nil || iat == nil {
+		return false
+	}
+	return iat.Before(lastLogout.Truncate(time.Second))
 }
 
 // storeRefreshTokenFamily creates a new token family and stores the first token entry.
@@ -860,7 +874,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*model.
 		return nil, "", ErrUserNotFound
 	}
 
-	if user.LastLogoutAt != nil && claims.IssuedAt != nil && claims.IssuedAt.Before(*user.LastLogoutAt) {
+	if tokenRevokedByLogout(claims.IssuedAt, user.LastLogoutAt) {
 		return nil, "", fmt.Errorf("refresh token revoked by logout")
 	}
 	if err := s.applyEffectivePermissions(ctx, user); err != nil {
