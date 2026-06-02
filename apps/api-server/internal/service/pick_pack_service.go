@@ -38,6 +38,14 @@ var (
 	ErrOrderNotProcessing = errors.New("order is not in processing status")
 )
 
+// pickPackCompletedOrderStatus is the order status applied when a pick-pack
+// session is completed. Sessions are created from orders in "processing" status,
+// and the order state machine transitions "processing" -> "ready_to_ship", so a
+// completed session advances its orders to "ready_to_ship". This must be a valid
+// order state-machine status (see model.DefaultOrderStatusConfig); "packed" is
+// not a valid order status.
+const pickPackCompletedOrderStatus = "ready_to_ship"
+
 // PickPackService provides business logic for pick-and-pack workflow.
 type PickPackService struct {
 	pickPackRepo *repository.PickPackRepository
@@ -454,7 +462,8 @@ func (s *PickPackService) MarkItemPacked(ctx context.Context, tenantID, sessionI
 	return item, nil
 }
 
-// CompleteSession completes a session and transitions orders to "packed" status.
+// CompleteSession completes a session and transitions orders to the
+// pickPackCompletedOrderStatus ("ready_to_ship") state.
 func (s *PickPackService) CompleteSession(ctx context.Context, tenantID, sessionID uuid.UUID, userID uuid.UUID, ip string) (*model.PickPackSession, error) {
 	var session *model.PickPackSession
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -483,13 +492,13 @@ func (s *PickPackService) CompleteSession(ctx context.Context, tenantID, session
 			return err
 		}
 
-		// Transition all orders to "packed" status
+		// Transition all orders to the pick-pack completed status (ready_to_ship)
 		orderIDs, err := s.pickPackRepo.GetDistinctOrderIDs(ctx, tx, sessionID)
 		if err != nil {
 			return err
 		}
 		for _, orderID := range orderIDs {
-			if err := s.orderRepo.UpdateStatus(ctx, tx, orderID, "packed", nil, nil); err != nil {
+			if err := s.orderRepo.UpdateStatus(ctx, tx, orderID, pickPackCompletedOrderStatus, nil, nil); err != nil {
 				return fmt.Errorf("update order %s status: %w", orderID, err)
 			}
 		}

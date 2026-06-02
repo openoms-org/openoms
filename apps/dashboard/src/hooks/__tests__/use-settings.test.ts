@@ -11,6 +11,7 @@ import {
   useCompanySettings,
   useInventorySettings,
 } from "@/hooks/use-settings";
+import { useAuthStore } from "@/lib/auth";
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -24,7 +25,11 @@ function createWrapper() {
   };
 }
 
-beforeAll(() => server.listen({ onUnhandledRequest: "bypass" }));
+beforeAll(() => {
+  server.listen({ onUnhandledRequest: "bypass" });
+  // Settings queries now auth-guard (enabled: isAuthenticated); authenticate so they fire.
+  useAuthStore.setState({ isAuthenticated: true });
+});
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 

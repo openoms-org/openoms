@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchAllListItems, useAllListItems } from "@/hooks/use-all-list-items";
+import { useAuthStore } from "@/lib/auth";
 import type { ListResponse } from "@/types/api";
 
 const apiClientMock = vi.hoisted(() => vi.fn());
@@ -11,6 +12,12 @@ const apiClientMock = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/api-client", () => ({
   apiClient: apiClientMock,
 }));
+
+// useAllListItems now auth-guards by default (enabled: isAuthenticated); the hook
+// test must be authenticated for the query to fire.
+beforeEach(() => {
+  useAuthStore.setState({ isAuthenticated: true });
+});
 
 interface Item {
   id: string;

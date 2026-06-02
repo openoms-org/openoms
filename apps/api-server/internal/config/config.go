@@ -21,6 +21,11 @@ type Config struct {
 	BaseURL     string `env:"BASE_URL" envDefault:"http://localhost:8080"`
 	FrontendURL string `env:"FRONTEND_URL" envDefault:"http://localhost:3000"`
 
+	// APISurfaceMode gates non-ready features over the API. "client-ready" (default)
+	// exposes only "ready" features; "full" exposes all except "blocked". Keep this in
+	// sync with the dashboard's NEXT_PUBLIC_OPENOMS_DASHBOARD_SURFACE.
+	APISurfaceMode string `env:"OPENOMS_API_SURFACE" envDefault:"client-ready"`
+
 	// TrustedProxyCIDRs is a comma-separated list of immediate proxy CIDRs
 	// whose X-Forwarded-For / X-Real-IP headers may update r.RemoteAddr.
 	TrustedProxyCIDRs string `env:"TRUSTED_PROXY_CIDRS" envDefault:""`
@@ -177,6 +182,16 @@ func (c *Config) Validate() error {
 		// valid
 	default:
 		return fmt.Errorf("REGISTRATION_MODE must be one of: open, invite, closed, disabled (got %q)", c.RegistrationMode)
+	}
+
+	// APISurfaceMode must be one of the allowed values. Unrecognised values fall
+	// through to client-ready behaviour in readiness.isVisible (fail-secure), which
+	// silently disables the "full" escape hatch — reject them explicitly instead.
+	switch c.APISurfaceMode {
+	case "client-ready", "full":
+		// valid
+	default:
+		return fmt.Errorf("OPENOMS_API_SURFACE must be one of: client-ready, full (got %q)", c.APISurfaceMode)
 	}
 
 	// Warn if registration is open in non-development environments.

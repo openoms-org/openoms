@@ -1413,6 +1413,7 @@ Uprawnienia np.:
 | HSTS | Strict-Transport-Security w produkcji |
 | Supply chain | Swagger UI CDN pinned do dokladnej wersji (5.18.2) |
 | Observability PII | Sentry `SendDefaultPII=false`, request scrubber + `BeforeSend` backstop; failed-login audit payload bez plaintext emaila |
+| Ekspozycja niegotowych funkcji | Serwerowy gate gotowosci (`OPENOMS_API_SURFACE`, domyslnie `client-ready`): grupy tras niegotowych funkcji zwracaja `404 feature_not_available`, a tworzenie integracji/przesylek z niegotowym providerem `422 provider_not_available`. Rejestr `internal/readiness/readiness.json` jest jedynym zrodlem prawdy wspoldzielonym z dashboardem; `OPENOMS_API_SURFACE=full` wylacza gating. |
 
 ### Bezpieczenstwo infrastruktury (Kubernetes)
 
@@ -1837,6 +1838,7 @@ DPD uzywa dwoch powierzchni API: DPD Services REST do tworzenia przesylek i etyk
 | RecurringOrderWorker | konfigurowalny | Tworzenie zamowien cyklicznych |
 | RepricingWorker | konfigurowalny | Automatyczna zmiana cen wg regul |
 | ListingSyncWorker | konfigurowalny | Synchronizacja listingow marketplace |
+| BillingReconciliationWorker | 15min | Naprawia sesje checkout, ktore zarejestrowaly tenanta, ale nie utworzyly rekordow billing/subskrypcji (powtarza idempotentna finalizacje); rejestrowany tylko gdy billing jest skonfigurowany |
 
 Workery zarejestrowane w managerze: 21. Liczba plikow zrodlowych w `internal/worker/`: 25. `AllegroWebhookSyncer` jest podpiety do handlera webhookow Allegro (wyzwalany eventem), a nie rejestrowany w managerze workerow -- dlatego nie liczy sie do 21 cyklicznych workerow.
 

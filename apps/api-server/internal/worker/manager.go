@@ -59,6 +59,13 @@ func workerLockTTL(interval time.Duration) time.Duration {
 	return interval + 30*time.Second
 }
 
+// maxConsecutiveRenewFailures is how many back-to-back lease-renewal errors are
+// tolerated before the worker run is cancelled. The renewal interval is ttl/3,
+// so tolerating up to 2 consecutive transient failures rides out a brief Redis
+// hiccup while still giving up before the lease (set by the last successful
+// renewal) can actually expire and another pod could take over.
+const maxConsecutiveRenewFailures = 2
+
 func workerLockRenewInterval(ttl time.Duration) time.Duration {
 	interval := ttl / 3
 	if interval < 10*time.Millisecond {
@@ -182,6 +189,7 @@ func (m *Manager) renewDistributedLock(
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 
+		failures := 0
 		for {
 			select {
 			case <-ctx.Done():
@@ -193,20 +201,37 @@ func (m *Manager) renewDistributedLock(
 						cancel()
 						return
 					}
-					m.logger.Error("distributed lock renewal failed, cancelling worker run",
+					// Transient Redis error: the lease from the last successful
+					// renewal is still valid, so tolerate a brief hiccup instead
+					// of immediately killing a long-running worker. Give up only
+					// after several consecutive failures (still before expiry).
+					failures++
+					if failures >= maxConsecutiveRenewFailures {
+						m.logger.Error("distributed lock renewal failed repeatedly, cancelling worker run",
+							"worker", workerName,
+							"consecutive_failures", failures,
+							"error", err,
+						)
+						cancel()
+						return
+					}
+					m.logger.Warn("distributed lock renewal hiccup, will retry",
 						"worker", workerName,
+						"consecutive_failures", failures,
 						"error", err,
 					)
-					cancel()
-					return
+					continue
 				}
 				if !ok {
+					// Ownership genuinely lost (another pod holds it / lease
+					// expired): stop immediately, this is not transient.
 					m.logger.Error("distributed lock lost, cancelling worker run",
 						"worker", workerName,
 					)
 					cancel()
 					return
 				}
+				failures = 0
 			}
 		}
 	})

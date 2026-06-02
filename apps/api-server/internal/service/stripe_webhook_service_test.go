@@ -56,6 +56,10 @@ func (f *fakeStripeBillingRepo) GetCheckoutSession(context.Context, *pgxpool.Poo
 	return nil, nil
 }
 
+func (f *fakeStripeBillingRepo) FindUnreconciledCheckoutSessions(context.Context, *pgxpool.Pool, int) ([]model.BillingCheckoutSession, error) {
+	return nil, nil
+}
+
 func (f *fakeStripeBillingRepo) ClaimCheckoutSession(context.Context, *pgxpool.Pool, string) (bool, error) {
 	return false, nil
 }

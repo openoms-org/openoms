@@ -49,6 +49,8 @@ func (h *WebhookHandler) Receive(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusUnauthorized, "invalid signature")
 		case errors.Is(err, service.ErrWebhookSecretNotConfigured):
 			writeError(w, http.StatusUnprocessableEntity, "webhook secret not configured")
+		case errors.Is(err, service.ErrUnknownTenant):
+			writeError(w, http.StatusNotFound, "unknown tenant")
 		default:
 			writeServerError(w, "failed to process webhook", err)
 		}

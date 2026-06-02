@@ -477,6 +477,57 @@ jobs:
           fi
           echo "All migrations are backward-compatible"
 
+      - name: Freeze applied migrations
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'migration:allow-edit') }}
+        run: |
+          # Migrations are immutable once merged: production has already run the old
+          # file content, so editing (or deleting/renaming) a merged migration makes
+          # fresh installs diverge from production. Forward-only — add a NEW migration
+          # instead. (OPE-474)
+          CHANGED=$(git diff --diff-filter=MDR --name-only origin/main... -- 'apps/api-server/migrations/*.sql' 2>/dev/null || true)
+          if [ -n "$CHANGED" ]; then
+            echo "BLOCKED: these already-merged migration files were modified, deleted, or renamed:"
+            printf '  %s\n' $CHANGED
+            echo ""
+            echo "Migrations are frozen once merged. Add a NEW migration to change schema;"
+            echo "never edit migration history (prod ran the old content, fresh installs run the new)."
+            echo "Override (rare — e.g. fixing a migration that was never deployed): add the"
+            echo "'migration:allow-edit' label to the PR."
+            exit 1
+          fi
+          echo "No already-merged migrations were modified"
+
+      - name: Enforce CONCURRENTLY for new indexes
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'migration:index-lock-ok') }}
+        run: |
+          # CREATE INDEX without CONCURRENTLY takes an ACCESS EXCLUSIVE lock and blocks
+          # all writes to the table while the index builds (OPE-474; e.g. 000021 locked
+          # orders). Require CONCURRENTLY on new indexes. Brand-new/empty tables created
+          # in the same migration are exempt via a trailing '-- migrate:index-lock-ok'
+          # comment on the CREATE INDEX line (or the 'migration:index-lock-ok' PR label).
+          ADDED=$(git diff --diff-filter=A --name-only origin/main... -- 'apps/api-server/migrations/*.up.sql' 2>/dev/null || true)
+          BLOCKED=0
+          for f in $ADDED; do
+            [ -f "$f" ] || continue
+            HITS=$(grep -inE 'create[[:space:]]+(unique[[:space:]]+)?index' "$f" \
+                   | grep -viE 'concurrently' \
+                   | grep -viE 'migrate:index-lock-ok' || true)
+            if [ -n "$HITS" ]; then
+              echo "BLOCKED: $f creates an index without CONCURRENTLY:"
+              printf '%s\n' "$HITS"
+              BLOCKED=1
+            fi
+          done
+          if [ "$BLOCKED" = "1" ]; then
+            echo ""
+            echo "Use CREATE INDEX CONCURRENTLY so the build does not lock the table."
+            echo "If the table is brand-new/empty in this same migration (the lock is harmless),"
+            echo "append '-- migrate:index-lock-ok' to the CREATE INDEX line, or add the"
+            echo "'migration:index-lock-ok' label to the PR."
+            exit 1
+          fi
+          echo "All new indexes use CONCURRENTLY (or are marked safe)"
+
   helm-chart:
     name: Helm Chart
     runs-on: ubuntu-latest
@@ -531,6 +582,13 @@ jobs:
       - name: Install dependencies
         working-directory: apps/dashboard
         run: npm ci
+
+      - name: Check readiness registry is in sync
+        working-directory: apps/dashboard
+        run: |
+          npm run sync:readiness
+          git diff --exit-code -- src/lib/readiness.generated.json \
+            || (echo "::error::readiness.generated.json is stale; run 'npm run sync:readiness' in apps/dashboard and commit the result" && exit 1)
 
       - name: Lint
         working-directory: apps/dashboard

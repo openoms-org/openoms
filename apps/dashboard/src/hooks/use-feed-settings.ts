@@ -2,12 +2,15 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { useAuthStore } from "@/lib/auth";
 import type { ProductFeedConfig } from "@/types/api";
 
 export function useFeedSettings() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery({
     queryKey: ["settings", "feeds"],
     queryFn: () => apiClient<ProductFeedConfig>("/v1/settings/feeds"),
+    enabled: isAuthenticated,
   });
 }
 

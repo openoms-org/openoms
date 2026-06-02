@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 import { navItems } from "@/lib/nav-items";
 import { SHIPMENT_PROVIDERS } from "@/lib/constants";
 import {
+  getFeatureReadiness,
   getSelectableCarrierShipmentProviders,
   getSelectableShipmentProviders,
   getRouteReadiness,
   getVisibleNavItems,
   getVisibleProviderKeys,
   getVisibleProvidersByCategory,
+  isFeatureVisible,
   isRouteAccessible,
 } from "@/lib/readiness";
 
@@ -330,5 +332,25 @@ describe("provider readiness", () => {
         mode: "full",
       }),
     ).toEqual(["allegro", "amazon", "olx"]);
+  });
+});
+
+describe("feature visibility (ready pages guarding gated fetches)", () => {
+  it("reads canonical feature states and falls back to verify for unknown ids", () => {
+    expect(getFeatureReadiness("suppliers")).toBe("controlled");
+    expect(getFeatureReadiness("dropship")).toBe("beta");
+    expect(getFeatureReadiness("marketing")).toBe("blocked");
+    expect(getFeatureReadiness("not_a_real_feature")).toBe("verify");
+  });
+
+  it("hides non-ready features in client-ready and reveals non-blocked ones in full", () => {
+    // controlled/beta hidden in client-ready, shown in full
+    expect(isFeatureVisible("suppliers", { mode: "client-ready" })).toBe(false);
+    expect(isFeatureVisible("suppliers", { mode: "full" })).toBe(true);
+    expect(isFeatureVisible("dropship", { mode: "client-ready" })).toBe(false);
+    expect(isFeatureVisible("ai", { mode: "client-ready" })).toBe(false);
+    expect(isFeatureVisible("repricing", { mode: "client-ready" })).toBe(false);
+    // blocked is never visible
+    expect(isFeatureVisible("marketing", { mode: "full" })).toBe(false);
   });
 });

@@ -19,6 +19,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
+	"github.com/openoms-org/openoms/apps/api-server/internal/storage"
 )
 
 var (
@@ -42,6 +43,7 @@ type LabelService struct {
 	encryptionKey   []byte
 	uploadDir       string
 	baseURL         string
+	objectStorage   storage.ObjectStorage
 }
 
 // NewLabelService creates a new LabelService.
@@ -56,6 +58,7 @@ func NewLabelService(
 	encryptionKey []byte,
 	uploadDir string,
 	baseURL string,
+	objectStorage storage.ObjectStorage,
 ) *LabelService {
 	return &LabelService{
 		shipmentRepo:    shipmentRepo,
@@ -68,6 +71,32 @@ func NewLabelService(
 		encryptionKey:   encryptionKey,
 		uploadDir:       uploadDir,
 		baseURL:         baseURL,
+		objectStorage:   objectStorage,
+	}
+}
+
+// carrierProvider builds a carrier provider for the given integration and injects
+// object storage into providers that support it. Some carriers (e.g. GLS) persist
+// generated labels to object storage instead of holding them only in memory; the
+// SetStorage hook is otherwise never called and those labels would be lost.
+func (s *LabelService) carrierProvider(provider string, credentials, settings json.RawMessage) (integration.CarrierProvider, error) {
+	carrier, err := integration.NewCarrierProvider(provider, credentials, settings)
+	if err != nil {
+		return nil, err
+	}
+	injectCarrierStorage(carrier, s.objectStorage)
+	return carrier, nil
+}
+
+// injectCarrierStorage wires object storage into carriers that implement the
+// optional storage-setter hook. No-op for carriers that don't support it or when
+// no storage is configured.
+func injectCarrierStorage(carrier integration.CarrierProvider, store storage.ObjectStorage) {
+	if store == nil {
+		return
+	}
+	if setter, ok := carrier.(interface{ SetStorage(storage.ObjectStorage) }); ok {
+		setter.SetStorage(store)
 	}
 }
 
@@ -224,7 +253,7 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 	}()
 
 	// Outside transaction: use carrier abstraction
-	carrier, err := integration.NewCarrierProvider(shipment.Provider, credJSON, integrationSettings)
+	carrier, err := s.carrierProvider(shipment.Provider, credJSON, integrationSettings)
 	if err != nil {
 		return nil, fmt.Errorf("creating carrier provider: %w", err)
 	}
@@ -418,7 +447,7 @@ func (s *LabelService) GetTracking(ctx context.Context, tenantID, shipmentID uui
 		return []integration.TrackingEvent{}, nil
 	}
 
-	carrier, err := integration.NewCarrierProvider(shipment.Provider, credJSON, integrationSettings)
+	carrier, err := s.carrierProvider(shipment.Provider, credJSON, integrationSettings)
 	if err != nil {
 		return nil, fmt.Errorf("creating carrier provider: %w", err)
 	}
@@ -482,7 +511,7 @@ func (s *LabelService) CreateDispatchOrder(ctx context.Context, tenantID uuid.UU
 	}
 
 	// Create carrier provider and assert DispatchOrderCreator capability
-	carrier, err := integration.NewCarrierProvider(provider, credJSON, integrationSettings)
+	carrier, err := s.carrierProvider(provider, credJSON, integrationSettings)
 	if err != nil {
 		return nil, fmt.Errorf("creating carrier provider: %w", err)
 	}

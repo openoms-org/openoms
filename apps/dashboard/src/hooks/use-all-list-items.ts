@@ -1,6 +1,7 @@
 import { useQuery, type UseQueryOptions } from "@tanstack/react-query";
 
 import { apiClient } from "@/lib/api-client";
+import { useAuthStore } from "@/lib/auth";
 import { buildSearchParams } from "@/lib/search-params";
 import type { ListResponse } from "@/types/api";
 
@@ -64,6 +65,7 @@ export function useAllListItems<
   params: TParams = {} as TParams,
   queryOptions: AllListQueryOptions<TEntity> = {},
 ) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery({
     queryKey,
     queryFn: ({ signal }) =>
@@ -78,5 +80,8 @@ export function useAllListItems<
         );
       }),
     ...queryOptions,
+    // Auth-guard by default so reference lists never fire before login (401 storms),
+    // while still respecting a caller that explicitly disables the query.
+    enabled: isAuthenticated && (queryOptions.enabled ?? true),
   });
 }

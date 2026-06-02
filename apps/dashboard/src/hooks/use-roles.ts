@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { useAuthStore } from "@/lib/auth";
 import { createCrudHooks } from "./create-crud-hooks";
 import type {
   Role,
@@ -28,8 +29,10 @@ export const useUpdateRole = roleHooks.useUpdate;
 export const useDeleteRole = roleHooks.useDelete;
 
 export function usePermissionGroups() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return useQuery({
     queryKey: ["permissions"],
     queryFn: () => apiClient<PermissionGroup[]>("/v1/roles/permissions"),
+    enabled: isAuthenticated,
   });
 }
