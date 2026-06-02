@@ -131,6 +131,8 @@ func TestUserService_ChangePasswordInTx_RejectsWrongCurrentPassword(t *testing.T
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrInvalidCurrentPassword)
 	assert.False(t, userRepo.updateCalled)
+	// A rejected password change must not revoke any sessions.
+	assert.False(t, userRepo.logoutCalled)
 }
 
 func TestUserService_ChangePasswordInTx_UpdatesHashAndAudits(t *testing.T) {
@@ -157,6 +159,10 @@ func TestUserService_ChangePasswordInTx_UpdatesHashAndAudits(t *testing.T) {
 	assert.Equal(t, "user.password_changed", auditRepo.entry.Action)
 	assert.Equal(t, actorID, auditRepo.entry.UserID)
 	assert.Equal(t, userID, auditRepo.entry.EntityID)
+	// A successful password change advances the session-invalidation epoch so all
+	// outstanding refresh tokens (other devices, attacker sessions) are revoked (OPE-469).
+	require.True(t, userRepo.logoutCalled)
+	assert.Equal(t, userID, userRepo.logoutUserID)
 }
 
 type passwordChangeUserRepo struct {
@@ -165,6 +171,8 @@ type passwordChangeUserRepo struct {
 	updateCalled  bool
 	updatedUserID uuid.UUID
 	updatedHash   string
+	logoutCalled  bool
+	logoutUserID  uuid.UUID
 }
 
 func (r *passwordChangeUserRepo) FindPasswordHashByID(context.Context, pgx.Tx, uuid.UUID) (*string, error) {
@@ -175,6 +183,12 @@ func (r *passwordChangeUserRepo) UpdatePassword(_ context.Context, _ pgx.Tx, id 
 	r.updateCalled = true
 	r.updatedUserID = id
 	r.updatedHash = hash
+	return nil
+}
+
+func (r *passwordChangeUserRepo) UpdateLastLogout(_ context.Context, _ pgx.Tx, id uuid.UUID) error {
+	r.logoutCalled = true
+	r.logoutUserID = id
 	return nil
 }
 
