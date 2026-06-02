@@ -213,8 +213,79 @@ func TestCheckoutServiceFinalizeCheckoutClaimUsesStoredStripeRefsWhenStripeFetch
 	assert.Equal(t, trialEnd, *repo.upsertedSubscription.TrialEnd)
 }
 
+func TestCheckoutServiceReconcileCheckoutClaimsHealsGap(t *testing.T) {
+	tenantID := uuid.New()
+	customerID := "cus_stored"
+	subscriptionID := "sub_stored"
+	subscriptionStatus := "active"
+
+	repo := &checkoutFinalizeRepo{
+		// GetCheckoutSession (used by finalization fallback) returns stored Stripe refs.
+		session: &model.BillingCheckoutSession{
+			StripeSessionID:      "cs_gap",
+			Plan:                 "plus",
+			BillingInterval:      "month",
+			Status:               "registered",
+			TenantID:             &tenantID,
+			StripeCustomerID:     &customerID,
+			StripeSubscriptionID: &subscriptionID,
+			SubscriptionStatus:   &subscriptionStatus,
+		},
+		unreconciled: []model.BillingCheckoutSession{
+			{StripeSessionID: "cs_gap", Plan: "plus", BillingInterval: "month", TenantID: &tenantID},
+		},
+	}
+	svc := NewCheckoutService(repo, nil, []config.PlanConfig{{ID: "plus"}})
+	// Force the stored-refs fallback so the test does not hit the Stripe API.
+	svc.getCheckoutSession = func(string, *stripe.CheckoutSessionParams) (*stripe.CheckoutSession, error) {
+		return nil, errors.New("stripe unavailable")
+	}
+
+	reconciled, failed, err := svc.ReconcileCheckoutClaims(context.Background(), nil, 50)
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, reconciled)
+	assert.Equal(t, 0, failed)
+	assert.Equal(t, customerID, repo.createdCustomerID)
+	require.NotNil(t, repo.upsertedSubscription)
+	assert.Equal(t, tenantID, repo.upsertedSubscription.TenantID)
+	assert.Equal(t, subscriptionID, repo.upsertedSubscription.StripeSubscriptionID)
+}
+
+func TestCheckoutServiceReconcileCheckoutClaimsReportsFailure(t *testing.T) {
+	tenantID := uuid.New()
+
+	repo := &checkoutFinalizeRepo{
+		// Stored session carries no Stripe refs, so finalization cannot complete.
+		session: &model.BillingCheckoutSession{
+			StripeSessionID: "cs_gap",
+			Plan:            "plus",
+			BillingInterval: "month",
+			Status:          "registered",
+			TenantID:        &tenantID,
+		},
+		unreconciled: []model.BillingCheckoutSession{
+			{StripeSessionID: "cs_gap", Plan: "plus", BillingInterval: "month", TenantID: &tenantID},
+		},
+	}
+	svc := NewCheckoutService(repo, nil, []config.PlanConfig{{ID: "plus"}})
+	svc.getCheckoutSession = func(string, *stripe.CheckoutSessionParams) (*stripe.CheckoutSession, error) {
+		return nil, errors.New("stripe unavailable")
+	}
+
+	reconciled, failed, err := svc.ReconcileCheckoutClaims(context.Background(), nil, 50)
+
+	require.Error(t, err)
+	assert.Equal(t, 0, reconciled)
+	assert.Equal(t, 1, failed)
+	// The error must reference the tenant for alerting, never the raw session ID.
+	assert.Contains(t, err.Error(), tenantID.String())
+	assert.NotContains(t, err.Error(), "cs_gap")
+}
+
 type checkoutFinalizeRepo struct {
 	session              *model.BillingCheckoutSession
+	unreconciled         []model.BillingCheckoutSession
 	completedSessionID   string
 	completedEmail       string
 	completedRefs        model.CheckoutSessionStripeRefs
@@ -225,6 +296,10 @@ type checkoutFinalizeRepo struct {
 
 func (f *checkoutFinalizeRepo) CreateCheckoutSession(context.Context, *pgxpool.Pool, string, string, string) error {
 	return nil
+}
+
+func (f *checkoutFinalizeRepo) FindUnreconciledCheckoutSessions(context.Context, *pgxpool.Pool, int) ([]model.BillingCheckoutSession, error) {
+	return f.unreconciled, nil
 }
 
 func (f *checkoutFinalizeRepo) CompleteCheckoutSession(_ context.Context, _ *pgxpool.Pool, stripeSessionID, email string, refs model.CheckoutSessionStripeRefs) (bool, error) {
