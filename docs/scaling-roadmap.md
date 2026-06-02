@@ -2,7 +2,7 @@
 
 ## Phase 1: Zero-Downtime Deploy (ASAP — before first real client)
 
-- [ ] preStop hook + graceful shutdown (Go SIGTERM handling)
+- [x] preStop hook + graceful shutdown: API handles SIGTERM via `signal.Notify` + `http.Server.Shutdown`; Helm renders a kubelet-managed `preStop.sleep` on Kubernetes >= 1.30 for distroless-safe termination drain (no shell/node exec).
 - [ ] PodDisruptionBudgets (minAvailable: 1 for API + dashboard)
 - [ ] Pod anti-affinity (spread API/dashboard across nodes)
 - [ ] Deploy workflow concurrency lock (prevent parallel Helm upgrades)
