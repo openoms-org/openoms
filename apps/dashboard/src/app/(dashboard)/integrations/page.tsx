@@ -194,7 +194,7 @@ export default function IntegrationsPage() {
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteIntegration.isPending}
+        isPending={deleteIntegration.isPending}
       />
     </AdminGuard>
   );

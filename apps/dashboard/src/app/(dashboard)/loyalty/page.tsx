@@ -320,7 +320,7 @@ export default function LoyaltyPage() {
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteProgram.isPending}
+        isPending={deleteProgram.isPending}
       />
     </>
   );

@@ -847,7 +847,7 @@ function ConnectedState({
             }
           );
         }}
-        isLoading={updateIntegration.isPending}
+        isPending={updateIntegration.isPending}
       />
     </div>
   );

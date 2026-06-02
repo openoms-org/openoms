@@ -37,14 +37,14 @@ interface ShipmentFormProps {
   defaultValues?: Partial<ShipmentFormValues>;
   shipment?: Shipment;
   onSubmit: (data: ShipmentFormValues) => void;
-  isLoading?: boolean;
+  isPending?: boolean;
 }
 
 export function ShipmentForm({
   defaultValues,
   shipment,
   onSubmit,
-  isLoading,
+  isPending,
 }: ShipmentFormProps) {
   const t = useTranslations("shipments");
   const existingTargetPoint =
@@ -170,8 +170,8 @@ export function ShipmentForm({
 
       <FormActions
         primary={
-          <Button type="submit" disabled={isLoading}>
-            {isLoading ? t("saving") : shipment ? t("saveChanges") : t("createShipment")}
+          <Button type="submit" disabled={isPending}>
+            {isPending ? t("saving") : shipment ? t("saveChanges") : t("createShipment")}
           </Button>
         }
       />

@@ -501,7 +501,7 @@ export default function InvoicingPage() {
         confirmLabel="Usun"
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteIntegration.isPending}
+        isPending={deleteIntegration.isPending}
       />
     </AdminGuard>
   );

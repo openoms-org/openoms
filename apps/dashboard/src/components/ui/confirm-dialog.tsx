@@ -23,7 +23,7 @@ interface ConfirmDialogProps {
   confirmLabel?: string;
   variant?: "destructive" | "default";
   onConfirm: () => void;
-  isLoading?: boolean;
+  isPending?: boolean;
 }
 
 export function ConfirmDialog({
@@ -34,7 +34,7 @@ export function ConfirmDialog({
   confirmLabel,
   variant = "default",
   onConfirm,
-  isLoading = false,
+  isPending = false,
 }: ConfirmDialogProps) {
   const t = useTranslations("common");
 
@@ -46,7 +46,7 @@ export function ConfirmDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoading}>
+          <AlertDialogCancel disabled={isPending}>
             {t("cancel")}
           </AlertDialogCancel>
           <AlertDialogAction
@@ -55,9 +55,9 @@ export function ConfirmDialog({
               e.preventDefault();
               onConfirm();
             }}
-            disabled={isLoading}
+            disabled={isPending}
           >
-            {isLoading ? t("processing") : (confirmLabel ?? t("confirm"))}
+            {isPending ? t("processing") : (confirmLabel ?? t("confirm"))}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

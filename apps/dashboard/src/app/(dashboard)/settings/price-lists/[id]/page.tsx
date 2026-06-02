@@ -495,7 +495,7 @@ export default function PriceListDetailPage() {
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDeleteItem}
-        isLoading={deleteItem.isPending}
+        isPending={deleteItem.isPending}
       />
     </>
   );

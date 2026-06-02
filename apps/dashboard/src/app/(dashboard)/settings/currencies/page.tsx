@@ -290,7 +290,7 @@ export default function CurrenciesPage() {
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteRate.isPending}
+        isPending={deleteRate.isPending}
       />
     </AdminGuard>
   );

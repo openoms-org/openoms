@@ -472,7 +472,7 @@ export default function CustomerDetailPage() {
         confirmLabel={t("usunKlienta")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteCustomer.isPending}
+        isPending={deleteCustomer.isPending}
       />
     </div>
   );

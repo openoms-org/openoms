@@ -624,7 +624,7 @@ function MyProductsTab() {
             },
           });
         }}
-        isLoading={deleteProduct.isPending}
+        isPending={deleteProduct.isPending}
       />
 
       <ConfirmDialog
@@ -656,7 +656,7 @@ function MyProductsTab() {
             toast.warning(t("bulkDeletePartial", { succeeded, failed }));
           }
         }}
-        isLoading={bulkDeleting}
+        isPending={bulkDeleting}
       />
     </>
   );

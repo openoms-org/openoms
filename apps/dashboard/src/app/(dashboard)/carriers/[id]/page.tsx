@@ -258,7 +258,7 @@ export default function CarrierDetailPage() {
                 <IntegrationForm
                   editProvider={integration.provider}
                   existingSettings={integration.settings as Record<string, unknown> | undefined}
-                  isLoading={updateIntegration.isPending}
+                  isPending={updateIntegration.isPending}
                   onSubmit={handleCredentialsUpdate}
                 />
               </CardContent>
@@ -274,7 +274,7 @@ export default function CarrierDetailPage() {
           confirmLabel="Usuń"
           variant="destructive"
           onConfirm={handleDelete}
-          isLoading={deleteIntegration.isPending}
+          isPending={deleteIntegration.isPending}
         />
       </div>
     </AdminGuard>

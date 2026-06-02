@@ -182,7 +182,7 @@ export default function PurchaseOrdersPage() {
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deletePO.isPending}
+        isPending={deletePO.isPending}
       />
     </AdminGuard>
   );

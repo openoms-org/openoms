@@ -50,7 +50,7 @@ export default function NewProductPage() {
         <CardContent>
           <ProductForm
             onSubmit={handleSubmit}
-            isLoading={createProduct.isPending}
+            isPending={createProduct.isPending}
           />
         </CardContent>
       </Card>

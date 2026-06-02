@@ -464,7 +464,7 @@ export default function SegmentDetailPage() {
         confirmLabel={t("usunSegment")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteSegment.isPending}
+        isPending={deleteSegment.isPending}
       />
 
       <ConfirmDialog
@@ -475,7 +475,7 @@ export default function SegmentDetailPage() {
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleRemoveMember}
-        isLoading={removeMember.isPending}
+        isPending={removeMember.isPending}
       />
     </div>
   );

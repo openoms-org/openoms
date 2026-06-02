@@ -219,7 +219,7 @@ export default function CustomersPage() {
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteCustomer.isPending}
+        isPending={deleteCustomer.isPending}
       />
     </>
   );

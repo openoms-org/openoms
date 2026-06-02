@@ -308,7 +308,7 @@ export default function PriceListsPage() {
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deletePriceList.isPending}
+        isPending={deletePriceList.isPending}
       />
     </AdminGuard>
   );

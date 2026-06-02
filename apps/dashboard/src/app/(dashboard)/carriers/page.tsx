@@ -170,7 +170,7 @@ export default function CarriersPage() {
         confirmLabel="Usuń"
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteIntegration.isPending}
+        isPending={deleteIntegration.isPending}
       />
     </AdminGuard>
   );

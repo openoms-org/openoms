@@ -326,7 +326,7 @@ export default function IntegrationDetailPage() {
               <IntegrationForm
                 editProvider={integration.provider}
                 existingSettings={integration.settings as Record<string, unknown> | undefined}
-                isLoading={updateIntegration.isPending}
+                isPending={updateIntegration.isPending}
                 onSubmit={handleCredentialsUpdate}
               />
             </CardContent>
@@ -355,7 +355,7 @@ export default function IntegrationDetailPage() {
               }
             );
           }}
-          isLoading={updateIntegration.isPending}
+          isPending={updateIntegration.isPending}
         />
       )}
 
@@ -371,7 +371,7 @@ export default function IntegrationDetailPage() {
         confirmLabel={t("delete")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteIntegration.isPending}
+        isPending={deleteIntegration.isPending}
       />
     </div>
     </AdminGuard>

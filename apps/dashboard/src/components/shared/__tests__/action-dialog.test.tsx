@@ -70,7 +70,7 @@ describe("ActionDialog", () => {
         onOpenChange={vi.fn()}
         title="Title"
         confirmLabel="Run"
-        isLoading={true}
+        isPending={true}
         onConfirm={vi.fn()}
       />
     );

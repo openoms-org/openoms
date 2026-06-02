@@ -69,14 +69,14 @@ interface MarketplaceShipmentSettingsProps {
   provider: string;
   settings: Record<string, unknown>;
   onSave: (settings: Record<string, unknown>) => void;
-  isLoading: boolean;
+  isPending: boolean;
 }
 
 export function MarketplaceShipmentSettings({
   provider,
   settings,
   onSave,
-  isLoading,
+  isPending,
 }: MarketplaceShipmentSettingsProps) {
   const t = useTranslations("integrations");
   const selectableShipmentProviders = useMemo(
@@ -199,8 +199,8 @@ export function MarketplaceShipmentSettings({
 
         {/* Save button */}
         <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={isLoading}>
-            {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+          <Button onClick={handleSave} disabled={isPending}>
+            {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
             {t("saveShipmentSettings")}
           </Button>
         </div>

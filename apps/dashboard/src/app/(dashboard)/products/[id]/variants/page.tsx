@@ -543,7 +543,7 @@ export default function ProductVariantsPage() {
         confirmLabel={t("delete")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteVariant.isPending}
+        isPending={deleteVariant.isPending}
       />
     </div>
   );

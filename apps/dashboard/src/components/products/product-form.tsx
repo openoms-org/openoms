@@ -22,10 +22,10 @@ import {
 interface ProductFormProps {
   product?: Product;
   onSubmit: (data: CreateProductRequest) => void;
-  isLoading?: boolean;
+  isPending?: boolean;
 }
 
-export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) {
+export function ProductForm({ product, onSubmit, isPending }: ProductFormProps) {
   const t = useTranslations("products");
   const tv = useTranslations("products.validation");
   const tc = useTranslations("common");
@@ -102,7 +102,7 @@ export function ProductForm({ product, onSubmit, isLoading }: ProductFormProps) 
       className="space-y-4"
       submitLabel={product ? t("form.submitUpdate") : t("form.submitCreate")}
       submittingLabel={tc("saving")}
-      isSubmitting={isLoading}
+      isSubmitting={isPending}
       showErrorSummary={false}
     >
       {({ register, setValue, watch, formState: { errors } }) => {

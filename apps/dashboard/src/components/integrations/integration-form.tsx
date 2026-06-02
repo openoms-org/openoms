@@ -23,7 +23,7 @@ interface IntegrationFormProps {
     credentials: Record<string, unknown>;
     settings?: Record<string, unknown>;
   }) => void;
-  isLoading?: boolean;
+  isPending?: boolean;
   /** Edit mode: provider is fixed and fields pre-filled from existing settings */
   editProvider?: string;
   /** Existing settings to pre-fill settings fields (e.g. geowidget_token) */
@@ -49,7 +49,7 @@ export function IntegrationForm({
 
 function IntegrationFormContent({
   onSubmit,
-  isLoading = false,
+  isPending = false,
   editProvider,
   existingSettings,
 }: IntegrationFormProps) {
@@ -148,7 +148,7 @@ function IntegrationFormContent({
       actionsClassName="justify-end"
       submitLabel={isEditMode ? t("saveChanges") : t("create")}
       submittingLabel={isEditMode ? t("updating") : t("creating")}
-      isSubmitting={isLoading}
+      isSubmitting={isPending}
       showErrorSummary={false}
     >
       {({ register, setValue, watch, formState: { errors } }) => {

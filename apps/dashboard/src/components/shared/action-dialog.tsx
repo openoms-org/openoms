@@ -22,7 +22,7 @@ interface ActionDialogProps {
   confirmLabel?: ReactNode;
   cancelLabel?: ReactNode;
   variant?: "default" | "destructive";
-  isLoading?: boolean;
+  isPending?: boolean;
   confirmDisabled?: boolean;
   onConfirm: () => void;
   onCancel?: () => void;
@@ -47,7 +47,7 @@ export function ActionDialog({
   confirmLabel,
   cancelLabel,
   variant = "default",
-  isLoading = false,
+  isPending = false,
   confirmDisabled = false,
   onConfirm,
   onCancel,
@@ -59,10 +59,10 @@ export function ActionDialog({
   hideConfirm = false,
 }: ActionDialogProps) {
   const t = useTranslations("common");
-  const isConfirmDisabled = isLoading || confirmDisabled;
+  const isConfirmDisabled = isPending || confirmDisabled;
 
   const handleCancel = () => {
-    if (isLoading) return;
+    if (isPending) return;
     if (onCancel) {
       onCancel();
       return;
@@ -111,7 +111,7 @@ export function ActionDialog({
                 type="button"
                 variant="outline"
                 onClick={handleCancel}
-                disabled={isLoading}
+                disabled={isPending}
               >
                 {cancelLabel ?? t("cancel")}
               </Button>
@@ -123,8 +123,8 @@ export function ActionDialog({
                 onClick={onConfirm}
                 disabled={isConfirmDisabled}
               >
-                {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                {isLoading ? t("processing") : (confirmLabel ?? t("confirm"))}
+                {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                {isPending ? t("processing") : (confirmLabel ?? t("confirm"))}
               </Button>
             )}
           </DialogFooter>

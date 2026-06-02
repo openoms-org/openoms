@@ -330,7 +330,7 @@ export default function ProductDetailPage() {
             <ProductForm
               product={product}
               onSubmit={handleUpdate}
-              isLoading={updateProduct.isPending}
+              isPending={updateProduct.isPending}
             />
           </CardContent>
         </Card>
@@ -906,7 +906,7 @@ export default function ProductDetailPage() {
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteProduct.isPending}
+        isPending={deleteProduct.isPending}
       />
 
       <AddBundleComponentDialog

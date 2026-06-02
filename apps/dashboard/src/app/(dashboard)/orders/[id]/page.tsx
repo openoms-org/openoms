@@ -575,7 +575,7 @@ export default function OrderDetailPage() {
               <OrderStatusActions
                 currentStatus={order.status}
                 onTransition={handleTransition}
-                isLoading={transitionStatus.isPending}
+                isPending={transitionStatus.isPending}
               />
             </CardContent>
           </Card>
@@ -1119,7 +1119,7 @@ export default function OrderDetailPage() {
         confirmLabel={t("detail.deleteConfirm")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteOrder.isPending}
+        isPending={deleteOrder.isPending}
       />
 
       {/* Split Order Dialog */}

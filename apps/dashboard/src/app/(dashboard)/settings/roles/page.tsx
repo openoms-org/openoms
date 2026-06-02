@@ -250,7 +250,7 @@ export default function RolesPage() {
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteRole.isPending}
+        isPending={deleteRole.isPending}
       />
     </AdminGuard>
   );

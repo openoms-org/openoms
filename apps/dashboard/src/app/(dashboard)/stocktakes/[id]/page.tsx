@@ -542,7 +542,7 @@ export default function StocktakeDetailPage() {
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
-        isLoading={deleteStocktake.isPending}
+        isPending={deleteStocktake.isPending}
       />
 
       {/* Complete confirmation */}
@@ -600,7 +600,7 @@ export default function StocktakeDetailPage() {
         confirmLabel={t("anulujInwentaryzacje")}
         variant="destructive"
         onConfirm={handleCancel}
-        isLoading={cancelStocktake.isPending}
+        isPending={cancelStocktake.isPending}
       />
     </AdminGuard>
   );

@@ -12,7 +12,7 @@ import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 interface OrderStatusActionsProps {
   currentStatus: string;
   onTransition: (newStatus: string, force?: boolean) => void;
-  isLoading?: boolean;
+  isPending?: boolean;
 }
 
 function getButtonVariant(status: string): "default" | "destructive" | "outline" {
@@ -24,7 +24,7 @@ function getButtonVariant(status: string): "default" | "destructive" | "outline"
 export function OrderStatusActions({
   currentStatus,
   onTransition,
-  isLoading = false,
+  isPending = false,
 }: OrderStatusActionsProps) {
   const t = useTranslations("orders");
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -74,7 +74,7 @@ export function OrderStatusActions({
                 variant={getButtonVariant(status)}
                 size="sm"
                 onClick={() => handleClick(status, false)}
-                disabled={isLoading}
+                disabled={isPending}
               >
                 {config?.label || status}
               </Button>
@@ -99,7 +99,7 @@ export function OrderStatusActions({
                   size="sm"
                   className="text-muted-foreground"
                   onClick={() => handleClick(status, true)}
-                  disabled={isLoading}
+                  disabled={isPending}
                 >
                   {config?.label || status}
                 </Button>
@@ -123,7 +123,7 @@ export function OrderStatusActions({
             : t("statusActions.confirmDescription", { status: confirmLabel })
         }
         isDestructive={confirmDialog?.force ?? false}
-        isPending={isLoading}
+        isPending={isPending}
         onConfirm={handleConfirm}
         confirmLabel={confirmDialog?.force ? t("statusActions.forceButton") : t("statusActions.confirmButton")}
       />

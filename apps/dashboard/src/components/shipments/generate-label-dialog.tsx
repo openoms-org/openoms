@@ -112,7 +112,7 @@ export function GenerateLabelDialog({
       title={getDialogTitle(provider, t)}
       description={t("fillShipmentDataToGenerateLabel")}
       confirmLabel={t("generujEtykiete")}
-      isLoading={generateLabel.isPending}
+      isPending={generateLabel.isPending}
       confirmDisabled={isSubmitDisabled}
       onConfirm={handleSubmit}
       contentClassName={isLocker ? "max-w-3xl" : ""}

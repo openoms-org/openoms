@@ -406,7 +406,7 @@ export default function PurchaseOrderDetailPage() {
         confirmLabel={t("anulujZamowienie")}
         variant="destructive"
         onConfirm={handleCancel}
-        isLoading={cancelPO.isPending}
+        isPending={cancelPO.isPending}
       />
     </AdminGuard>
   );
