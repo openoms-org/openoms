@@ -93,6 +93,27 @@ func TestFindTenantBySlugMigrationRedactsSettings(t *testing.T) {
 	require.Contains(t, down, "revoke execute on function public.find_tenant_by_slug(text) from public")
 }
 
+func TestBillingSyncTenantPlanMigrationTargetsSubscriptionStatus(t *testing.T) {
+	up := normalizedSQL(readMigrationSQL(t, "000030_billing_sync_tenant_plan_targeted_key.up.sql"))
+	down := normalizedSQL(readMigrationSQL(t, "000030_billing_sync_tenant_plan_targeted_key.down.sql"))
+
+	require.Contains(t, up, "create or replace function public.billing_sync_tenant_plan(")
+	require.NotContains(t, up, "drop function")
+	require.Contains(t, up, "security definer")
+	// The function must touch ONLY the subscription_status key, never a blanket merge of
+	// the caller's blob into tenants.settings.
+	require.Contains(t, up, "jsonb_set(")
+	require.Contains(t, up, "'{subscription_status}'")
+	require.NotContains(t, up, "|| p_settings")
+	require.Contains(t, up, "revoke execute on function public.billing_sync_tenant_plan(uuid, jsonb) from public")
+	require.Contains(t, up, "grant execute on function public.billing_sync_tenant_plan(uuid, jsonb) to openoms")
+
+	// Rollback restores the shallow-merge body.
+	require.Contains(t, down, "|| p_settings")
+	require.NotContains(t, down, "drop function")
+	require.NotContains(t, down, "jsonb_set(")
+}
+
 func TestGetTenantPlanMigrationRedactsSettings(t *testing.T) {
 	up := normalizedSQL(readMigrationSQL(t, "000029_redact_get_tenant_plan_settings.up.sql"))
 	down := normalizedSQL(readMigrationSQL(t, "000029_redact_get_tenant_plan_settings.down.sql"))
@@ -128,7 +149,9 @@ func readMigrationSQL(t *testing.T, file string) string {
 		"000027_redact_find_tenant_by_slug_settings.up.sql",
 		"000027_redact_find_tenant_by_slug_settings.down.sql",
 		"000029_redact_get_tenant_plan_settings.up.sql",
-		"000029_redact_get_tenant_plan_settings.down.sql":
+		"000029_redact_get_tenant_plan_settings.down.sql",
+		"000030_billing_sync_tenant_plan_targeted_key.up.sql",
+		"000030_billing_sync_tenant_plan_targeted_key.down.sql":
 	default:
 		t.Fatalf("unexpected migration file %q", file)
 	}
