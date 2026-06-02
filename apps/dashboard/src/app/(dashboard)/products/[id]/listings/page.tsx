@@ -233,7 +233,7 @@ export default function ProductListingsPage() {
           <div className="flex-1">
             <h1 className="text-2xl font-bold">Oferty marketplace</h1>
             <p className="text-muted-foreground">
-              {product?.name ?? "Ladowanie..."}
+              {product?.name ?? tl("loading")}
             </p>
           </div>
           <Button onClick={() => setShowCreate(true)}>
@@ -246,27 +246,22 @@ export default function ProductListingsPage() {
         <div className="rounded-lg border bg-muted/50 p-4 flex gap-3">
           <Info className="h-5 w-5 text-primary shrink-0 mt-0.5" />
           <div className="space-y-1 text-sm">
-            <p className="font-medium">Jak wystawic produkt na Allegro?</p>
+            <p className="font-medium">{tl("howToList")}</p>
             <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
               <li>
-                Kliknij &quot;Wystaw na Allegro&quot; i przejdz przez
-                5-krokowy formularz.
+                {tl("howToListSteps.step1")}
               </li>
               <li>
-                Wybierz kategorie Allegro (musisz dotrzec do kategorii koncowej
-                oznaczonej &quot;Lisc&quot;).
+                {tl("howToListSteps.step2")}
               </li>
               <li>
-                Wypelnij wymagane parametry kategorii (np. rozmiar, kolor,
-                marka).
+                {tl("howToListSteps.step3")}
               </li>
               <li>
-                Wybierz cennik wysylki, polityke zwrotow i rekojmie — jesli ich
-                nie masz, utworz je w sekcji Dostawa i Polityki.
+                {tl("howToListSteps.step4")}
               </li>
               <li>
-                Po wystawieniu oferta pojawi sie na Allegro, a stan magazynowy
-                bedzie automatycznie synchronizowany co 5 minut.
+                {tl("howToListSteps.step5")}
               </li>
             </ul>
           </div>
@@ -282,13 +277,13 @@ export default function ProductListingsPage() {
         ) : !listings?.length ? (
           <EmptyState
             icon={Package}
-            title="Brak ofert marketplace"
-            description="Ten produkt nie jest jeszcze wystawiony na zadnym marketplace."
+            title={tl("noListings")}
+            description={tl("noListingsDescription")}
           />
         ) : (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Aktywne oferty ({listings.length})</CardTitle>
+              <CardTitle>{tl("activeListings", { count: listings.length })}</CardTitle>
               {listings.length > 1 && (
                 <Button
                   variant="outline"
@@ -297,7 +292,7 @@ export default function ProductListingsPage() {
                   onClick={() => setShowDeleteAll(true)}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Usun ze wszystkich
+                  {tl("removeFromAll")}
                 </Button>
               )}
             </CardHeader>
@@ -305,12 +300,12 @@ export default function ProductListingsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Platforma</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>ID oferty</TableHead>
-                    <TableHead>Tryb sync</TableHead>
-                    <TableHead>Synchronizacja</TableHead>
-                    <TableHead>Ostatnia synch.</TableHead>
+                    <TableHead>{tl("columns.platform")}</TableHead>
+                    <TableHead>{tl("columns.status")}</TableHead>
+                    <TableHead>{tl("columns.offerId")}</TableHead>
+                    <TableHead>{tl("columns.syncMode")}</TableHead>
+                    <TableHead>{tl("columns.syncStatus")}</TableHead>
+                    <TableHead>{tl("columns.lastSync")}</TableHead>
                     <TableHead className="text-right">Akcje</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -389,8 +384,8 @@ export default function ProductListingsPage() {
                       — oferta nie bedzie juz widoczna dla kupujacych
                     </li>
                     <li>
-                      <span className="font-medium text-foreground">Usunieta z OMS</span>{" "}
-                      — powiazanie z produktem zostanie trwale skasowane
+                      <span className="font-medium text-foreground">{tl("removedFromOms")}</span>{" "}
+                      {tl("removedFromOmsDescription")}
                     </li>
                   </ul>
                   <p className="text-xs text-muted-foreground">
@@ -400,7 +395,7 @@ export default function ProductListingsPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Anuluj</AlertDialogCancel>
+              <AlertDialogCancel>{tl("cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 variant="destructive"
                 onClick={() => {
@@ -416,7 +411,7 @@ export default function ProductListingsPage() {
                 }}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Usun i dezaktywuj
+                {tl("deleteAndDeactivate")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -459,7 +454,7 @@ export default function ProductListingsPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={deletingAll}>Anuluj</AlertDialogCancel>
+              <AlertDialogCancel disabled={deletingAll}>{tl("cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 variant="destructive"
                 disabled={deletingAll}
@@ -491,7 +486,7 @@ export default function ProductListingsPage() {
                 ) : (
                   <Trash2 className="mr-2 h-4 w-4" />
                 )}
-                {deletingAll ? "Usuwanie..." : "Usun wszystkie"}
+                {deletingAll ? tl("deleting") : tl("deleteAll")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -834,7 +829,7 @@ function CreateWooCommerceListingDialog({
           {/* Price */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Cena (PLN)</Label>
+              <Label>{tl("woo.price")}</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -847,7 +842,7 @@ function CreateWooCommerceListingDialog({
               </p>
             </div>
             <div className="space-y-2">
-              <Label>Stan magazynowy</Label>
+              <Label>{tl("woo.stock")}</Label>
               <Input
                 type="number"
                 min="0"
@@ -866,20 +861,20 @@ function CreateWooCommerceListingDialog({
             <DescriptionEditor
               value={description}
               onChange={setDescription}
-              placeholder="Opis produktu..."
+              placeholder={tl("woo.descriptionPlaceholder")}
             />
           </div>
 
           {/* Categories */}
           <div className="space-y-2">
-            <Label>Kategorie WooCommerce</Label>
+            <Label>{tl("woo.categories")}</Label>
             <Input
               value={categories}
               onChange={(e) => setCategories(e.target.value)}
-              placeholder="np. Czesci samochodowe, Oleje (oddzielone przecinkami)"
+              placeholder={tl("woo.categoriesPlaceholder")}
             />
             <p className="text-xs text-muted-foreground">
-              Nazwy kategorii oddzielone przecinkami. Jesli kategoria nie istnieje, zostanie utworzona.
+              {tl("woo.categoriesHint")}
             </p>
           </div>
 
@@ -890,17 +885,17 @@ function CreateWooCommerceListingDialog({
               {product.ean || product.sku || "---"}
             </p>
             <p>
-              <span className="text-muted-foreground">Zdjecia:</span>{" "}
+              <span className="text-muted-foreground">{tl("woo.images")}:</span>{" "}
               {(product.images?.length ?? 0) > 0
-                ? `${product.images!.length} zdjec`
-                : "Brak"}
+                ? tl("woo.imageCount", { count: product.images!.length })
+                : tl("woo.noImages")}
             </p>
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Anuluj
+            {tl("cancel")}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -1002,11 +997,11 @@ function CreateEbayListingDialog({
         <div className="space-y-4 py-2">
           {/* Category ID */}
           <div className="space-y-2">
-            <Label>Kategoria eBay *</Label>
+            <Label>{tl("ebay.category")}</Label>
             <Input
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
-              placeholder="np. 9355"
+              placeholder={tl("ebay.categoryPlaceholder")}
             />
             <p className="text-xs text-muted-foreground">
               Numer kategorii eBay (np. 9355 dla czesci samochodowych)
@@ -1016,7 +1011,7 @@ function CreateEbayListingDialog({
           {/* Marketplace + Condition */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Marketplace</Label>
+              <Label>{tl("ebay.marketplace")}</Label>
               <Select value={marketplaceId} onValueChange={setMarketplaceId}>
                 <SelectTrigger>
                   <SelectValue />
@@ -1031,7 +1026,7 @@ function CreateEbayListingDialog({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Stan</Label>
+              <Label>{tl("ebay.condition")}</Label>
               <Select value={condition} onValueChange={setCondition}>
                 <SelectTrigger>
                   <SelectValue />
@@ -1051,16 +1046,16 @@ function CreateEbayListingDialog({
           {policiesLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Ladowanie polityk eBay...
+              {tl("ebay.loadingPolicies")}
             </div>
           ) : (
             <div className="space-y-4">
               {/* Fulfillment Policy */}
               <div className="space-y-2">
-                <Label>Polityka wysylki *</Label>
+                <Label>{tl("ebay.fulfillmentPolicy")}</Label>
                 <Select value={fulfillmentPolicyId} onValueChange={setFulfillmentPolicyId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Wybierz polityke wysylki" />
+                    <SelectValue placeholder={tl("ebay.fulfillmentPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     {policies?.fulfillment?.map((p) => (
@@ -1074,10 +1069,10 @@ function CreateEbayListingDialog({
 
               {/* Return Policy */}
               <div className="space-y-2">
-                <Label>Polityka zwrotow *</Label>
+                <Label>{tl("ebay.returnPolicy")}</Label>
                 <Select value={returnPolicyId} onValueChange={setReturnPolicyId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Wybierz polityke zwrotow" />
+                    <SelectValue placeholder={tl("ebay.returnPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     {policies?.return?.map((p) => (
@@ -1091,10 +1086,10 @@ function CreateEbayListingDialog({
 
               {/* Payment Policy */}
               <div className="space-y-2">
-                <Label>Polityka platnosci</Label>
+                <Label>{tl("ebay.paymentPolicy")}</Label>
                 <Select value={paymentPolicyId} onValueChange={setPaymentPolicyId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Opcjonalnie" />
+                    <SelectValue placeholder={tl("ebay.optionalPlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     {policies?.payment?.map((p) => (
@@ -1110,7 +1105,7 @@ function CreateEbayListingDialog({
 
           {/* Title */}
           <div className="space-y-2">
-            <Label>Tytul oferty</Label>
+            <Label>{tl("ebay.offerTitle")}</Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -1123,11 +1118,11 @@ function CreateEbayListingDialog({
 
           {/* Description */}
           <div className="space-y-2">
-            <Label>Opis</Label>
+            <Label>{tl("woo.descriptionLabel")}</Label>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Opcjonalny opis oferty..."
+              placeholder={tl("ebay.descriptionPlaceholder")}
               rows={3}
             />
           </div>
@@ -1135,7 +1130,7 @@ function CreateEbayListingDialog({
           {/* Price + Stock */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Cena</Label>
+              <Label>{tl("ebay.price")}</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -1149,7 +1144,7 @@ function CreateEbayListingDialog({
               </p>
             </div>
             <div className="space-y-2">
-              <Label>Stan magazynowy</Label>
+              <Label>{tl("woo.stock")}</Label>
               <Input
                 type="number"
                 min="0"
@@ -1170,17 +1165,17 @@ function CreateEbayListingDialog({
               {product.ean || product.sku || "---"}
             </p>
             <p>
-              <span className="text-muted-foreground">Zdjecia:</span>{" "}
+              <span className="text-muted-foreground">{tl("woo.images")}:</span>{" "}
               {(product.images?.length ?? 0) > 0
-                ? `${product.images!.length} zdjec`
-                : "Brak"}
+                ? tl("woo.imageCount", { count: product.images!.length })
+                : tl("woo.noImages")}
             </p>
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Anuluj
+            {tl("cancel")}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -1615,7 +1610,7 @@ function CreateOLXListingDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Opis</Label>
+            <Label>{tl("woo.descriptionLabel")}</Label>
             <textarea
               className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y"
               value={description}
@@ -1626,7 +1621,7 @@ function CreateOLXListingDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Cena (PLN)</Label>
+            <Label>{tl("woo.price")}</Label>
             <Input
               type="number"
               step="0.01"
@@ -2252,7 +2247,7 @@ function CreateAllegroListingDialog({
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Wyszukaj kategorie, np. olej silnikowy..."
+                placeholder={tl("allegro.searchCategory")}
                 value={categorySearchInput}
                 onChange={(e) => setCategorySearchInput(e.target.value)}
                 className="pl-9"
@@ -2270,7 +2265,7 @@ function CreateAllegroListingDialog({
                   </div>
                 ) : !searchResults?.matchingCategories?.length ? (
                   <p className="py-4 text-center text-muted-foreground text-sm">
-                    Brak pasujacych kategorii dla &quot;{categorySearchQuery}&quot;
+                    {tl("allegro.noMatchingCategories", { query: categorySearchQuery })}
                   </p>
                 ) : (
                   <div className="space-y-1">
@@ -2341,12 +2336,12 @@ function CreateAllegroListingDialog({
                 ) : categoriesError ? (
                   <div className="rounded-md border border-destructive/50 bg-destructive/5 p-4 text-center space-y-2">
                     <p className="text-sm text-destructive font-medium">
-                      Nie udalo sie pobrac kategorii Allegro
+                      {tl("allegro.fetchCategoriesError")}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {categoriesErrorObj instanceof Error
                         ? categoriesErrorObj.message
-                        : "Sprawdz czy integracja Allegro jest skonfigurowana i autoryzowana."}
+                        : tl("allegro.checkIntegration")}
                     </p>
                     <Button
                       variant="outline"
@@ -2360,7 +2355,7 @@ function CreateAllegroListingDialog({
                   </div>
                 ) : !categoriesData?.categories?.length ? (
                   <p className="py-4 text-center text-muted-foreground">
-                    Brak kategorii do wyswietlenia
+                    {tl("allegro.noCategoriesToShow")}
                   </p>
                 ) : (
                   <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
@@ -2400,7 +2395,7 @@ function CreateAllegroListingDialog({
             {selectedCategoryId && (
               <div className="rounded-md border border-primary/30 bg-primary/5 p-3">
                 <p className="text-sm">
-                  <span className="font-medium">Wybrana kategoria:</span>{" "}
+                  <span className="font-medium">{tl("allegro.selectedCategory")}</span>{" "}
                   {selectedCategoryName}{" "}
                   <span className="text-muted-foreground">
                     (ID: {selectedCategoryId})
@@ -2422,7 +2417,7 @@ function CreateAllegroListingDialog({
               </div>
             ) : !paramsData?.parameters?.length ? (
               <p className="py-4 text-center text-muted-foreground">
-                Brak parametrow dla tej kategorii. Mozesz przejsc dalej.
+                {tl("allegro.noParamsForCategory")}
               </p>
             ) : (
               <div className="space-y-4">
@@ -2461,15 +2456,15 @@ function CreateAllegroListingDialog({
         {step === 3 && (
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-medium">Opis oferty</h3>
+              <h3 className="text-lg font-medium">{tl("allegro.descriptionTitle")}</h3>
               <p className="text-sm text-muted-foreground">
-                Edytuj opis przed wystawieniem. Dozwolone: naglowki, paragrafy, listy.
+                {tl("allegro.descriptionHint")}
               </p>
             </div>
             <DescriptionEditor
               value={descriptionHTML}
               onChange={setDescriptionHTML}
-              placeholder="Wpisz opis oferty..."
+              placeholder={tl("allegro.descriptionPlaceholder")}
               onAiGenerate={async () => {
                 setAiLoading(true);
                 try {
@@ -2560,7 +2555,7 @@ function CreateAllegroListingDialog({
             {/* Price & Stock */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Cena (PLN)</Label>
+                <Label>{tl("woo.price")}</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -2573,7 +2568,7 @@ function CreateAllegroListingDialog({
                 </p>
               </div>
               <div className="space-y-2">
-                <Label>Stan magazynowy</Label>
+                <Label>{tl("woo.stock")}</Label>
                 <Input
                   type="number"
                   min="0"
@@ -2593,15 +2588,15 @@ function CreateAllegroListingDialog({
               <p className="text-sm font-medium">Lokalizacja przedmiotu</p>
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label>Miasto</Label>
+                  <Label>{tl("city")}</Label>
                   <Input
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    placeholder="np. Warszawa"
+                    placeholder={tl("allegro.cityPlaceholder")}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Kod pocztowy</Label>
+                  <Label>{tl("allegro.postCode")}</Label>
                   <Input
                     value={postCode}
                     onChange={(e) => setPostCode(e.target.value)}
@@ -2610,7 +2605,7 @@ function CreateAllegroListingDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Wojewodztwo</Label>
+                  <Label>{tl("allegro.province")}</Label>
                   <Select value={province} onValueChange={setProvince}>
                     <SelectTrigger>
                       <SelectValue />
@@ -2642,7 +2637,7 @@ function CreateAllegroListingDialog({
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose}>
-              Anuluj
+              {tl("cancel")}
             </Button>
             {step < 5 ? (
               <Button
@@ -2774,7 +2769,7 @@ function Step3DeliveryPolicies({
         {shippingRatesData?.shippingRates?.length ? (
           <Select value={shippingRateId} onValueChange={setShippingRateId}>
             <SelectTrigger>
-              <SelectValue placeholder="Wybierz cennik wysylki" />
+              <SelectValue placeholder={tl("allegro.selectShippingRate")} />
             </SelectTrigger>
             <SelectContent>
               {shippingRatesData.shippingRates.map((rate) => (
@@ -2786,11 +2781,11 @@ function Step3DeliveryPolicies({
           </Select>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Brak cennikow wysylki.
+            {tl("allegro.noShippingRates")}
           </p>
         )}
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span>Nie masz cennika?</span>
+          <span>{tl("allegro.noShippingRateQuestion")}</span>
           {product.weight && product.weight > 0 ? (
             <Button
               variant="outline"
@@ -2832,7 +2827,7 @@ function Step3DeliveryPolicies({
             className="text-primary hover:underline"
             target="_blank"
           >
-            Utworz recznie
+            {tl("allegro.createManually")}
           </Link>
         </div>
       </div>
@@ -2847,7 +2842,7 @@ function Step3DeliveryPolicies({
         {returnPoliciesData?.returnPolicies?.length ? (
           <Select value={returnPolicyId} onValueChange={setReturnPolicyId}>
             <SelectTrigger>
-              <SelectValue placeholder="Wybierz polityke zwrotow" />
+              <SelectValue placeholder={tl("ebay.returnPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
               {returnPoliciesData.returnPolicies.map((policy) => (
@@ -2860,7 +2855,7 @@ function Step3DeliveryPolicies({
         ) : (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              Brak polityk zwrotow.
+              {tl("allegro.noReturnPolicies")}
             </p>
             <Button
               variant="outline"
@@ -2871,7 +2866,7 @@ function Step3DeliveryPolicies({
               {createReturnPolicy.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Utworz domyslna polityke
+              {tl("allegro.createDefaultPolicy")}
             </Button>
           </div>
         )}
@@ -2882,7 +2877,7 @@ function Step3DeliveryPolicies({
             className="text-primary hover:underline"
             target="_blank"
           >
-            Utworz nowa polityke zwrotow
+            {tl("allegro.createNewReturnPolicy")}
           </Link>
         </p>
       </div>
@@ -2897,7 +2892,7 @@ function Step3DeliveryPolicies({
         {warrantiesData?.impliedWarranties?.length ? (
           <Select value={warrantyId} onValueChange={setWarrantyId}>
             <SelectTrigger>
-              <SelectValue placeholder="Wybierz rekojmie" />
+              <SelectValue placeholder={tl("allegro.selectWarranty")} />
             </SelectTrigger>
             <SelectContent>
               {warrantiesData.impliedWarranties.map((warranty) => (
@@ -2910,7 +2905,7 @@ function Step3DeliveryPolicies({
         ) : (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              Brak rekojmi.
+              {tl("allegro.noWarranties")}
             </p>
             <Button
               variant="outline"
@@ -2921,7 +2916,7 @@ function Step3DeliveryPolicies({
               {createWarranty.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Utworz domyslna rekojmie
+              {tl("allegro.createDefaultWarranty")}
             </Button>
           </div>
         )}
@@ -2932,7 +2927,7 @@ function Step3DeliveryPolicies({
             className="text-primary hover:underline"
             target="_blank"
           >
-            Utworz nowa rekojmie
+            {tl("allegro.createNewWarranty")}
           </Link>
         </p>
       </div>
@@ -2941,7 +2936,7 @@ function Step3DeliveryPolicies({
 
       {/* Handling time */}
       <div className="space-y-2">
-        <Label>Czas realizacji</Label>
+        <Label>{tl("allegro.handlingTime")}</Label>
         <Select value={handlingTime} onValueChange={setHandlingTime}>
           <SelectTrigger>
             <SelectValue />
@@ -2986,6 +2981,7 @@ function ParameterField({
   value?: { valuesIds?: string[]; values?: string[] };
   onChange: (value: string) => void;
 }) {
+  const tl = useTranslations("listings");
   const currentValue =
     value?.valuesIds?.[0] ?? value?.values?.[0] ?? "";
 
@@ -3021,7 +3017,7 @@ function ParameterField({
         </Label>
         <Select value={currentValue} onValueChange={onChange}>
           <SelectTrigger>
-            <SelectValue placeholder={`Wybierz ${param.name.toLowerCase()}`} />
+            <SelectValue placeholder={tl("paramSelect", { name: param.name.toLowerCase() })} />
           </SelectTrigger>
           <SelectContent>
             {param.dictionary.map((d) => (
@@ -3076,6 +3072,7 @@ function DictionaryCombobox({
   currentValue: string;
   onChange: (value: string) => void;
 }) {
+  const tl = useTranslations("listings");
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -3123,7 +3120,7 @@ function DictionaryCombobox({
             className="w-full justify-between font-normal"
           >
             <span className="truncate">
-              {selectedLabel || `Wybierz ${param.name.toLowerCase()}`}
+              {selectedLabel || tl("paramSelect", { name: param.name.toLowerCase() })}
             </span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
@@ -3136,7 +3133,7 @@ function DictionaryCombobox({
               onValueChange={setSearch}
             />
             <CommandList>
-              <CommandEmpty>Brak wynikow</CommandEmpty>
+              <CommandEmpty>{tl("noResults")}</CommandEmpty>
               <CommandGroup>
                 {filteredItems.map((d) => (
                   <CommandItem
@@ -3158,7 +3155,7 @@ function DictionaryCombobox({
                 ))}
                 {!search.trim() && totalCount > MAX_VISIBLE_ITEMS && (
                   <p className="py-2 px-3 text-xs text-muted-foreground text-center">
-                    Wpisz tekst, aby wyszukac wsrod {totalCount} opcji
+                    {tl("typeToSearch", { count: totalCount })}
                   </p>
                 )}
               </CommandGroup>
