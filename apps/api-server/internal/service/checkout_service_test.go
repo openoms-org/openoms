@@ -213,6 +213,41 @@ func TestCheckoutServiceFinalizeCheckoutClaimUsesStoredStripeRefsWhenStripeFetch
 	assert.Equal(t, trialEnd, *repo.upsertedSubscription.TrialEnd)
 }
 
+func TestCheckoutServiceFinalizeSkipsStripeWhenStoredRefsComplete(t *testing.T) {
+	tenantID := uuid.New()
+	customerID := "cus_stored"
+	subscriptionID := "sub_stored"
+	subscriptionStatus := "active"
+
+	repo := &checkoutFinalizeRepo{
+		session: &model.BillingCheckoutSession{
+			StripeSessionID:      "cs_test",
+			Plan:                 "plus",
+			BillingInterval:      "month",
+			Status:               "registered",
+			TenantID:             &tenantID,
+			StripeCustomerID:     &customerID,
+			StripeSubscriptionID: &subscriptionID,
+			SubscriptionStatus:   &subscriptionStatus,
+		},
+	}
+	svc := NewCheckoutService(repo, nil, []config.PlanConfig{{ID: "plus"}})
+	// OPE-506: with complete stored refs, finalization must NOT hit the Stripe API.
+	stripeCalled := false
+	svc.getCheckoutSession = func(string, *stripe.CheckoutSessionParams) (*stripe.CheckoutSession, error) {
+		stripeCalled = true
+		return nil, errors.New("Stripe must not be called when stored refs are complete")
+	}
+
+	err := svc.FinalizeCheckoutClaim(context.Background(), "cs_test", tenantID, "plus", "month")
+
+	require.NoError(t, err)
+	assert.False(t, stripeCalled, "Stripe API must not be called when stored refs are complete")
+	assert.Equal(t, customerID, repo.createdCustomerID)
+	require.NotNil(t, repo.upsertedSubscription)
+	assert.Equal(t, subscriptionID, repo.upsertedSubscription.StripeSubscriptionID)
+}
+
 func TestCheckoutServiceReconcileCheckoutClaimsHealsGap(t *testing.T) {
 	tenantID := uuid.New()
 	customerID := "cus_stored"
