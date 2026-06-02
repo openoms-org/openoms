@@ -74,7 +74,7 @@ describe("useOnboarding", () => {
     await waitFor(() => expect(result.current.steps).toHaveLength(4));
   });
 
-  it("marks company step as completed when name and NIP exist", async () => {
+  it("marks company step as completed when company_name and NIP exist", async () => {
     const { result } = renderHook(() => useOnboarding(), {
       wrapper: createWrapper(),
     });
@@ -87,7 +87,7 @@ describe("useOnboarding", () => {
     });
   });
 
-  it("marks company step as incomplete when name is missing", async () => {
+  it("marks company step as incomplete when company_name is missing", async () => {
     server.use(
       http.get(`${API_BASE}/settings/company`, () => {
         return HttpResponse.json({ nip: "1234567890" });
