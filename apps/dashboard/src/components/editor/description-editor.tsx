@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 interface DescriptionEditorProps {
   value: string;
@@ -36,13 +37,14 @@ interface DescriptionEditorProps {
 export function DescriptionEditor({
   value,
   onChange,
-  placeholder = "Wpisz opis produktu...",
+  placeholder,
   onAiGenerate,
   onAiImprove,
   onAiTranslate,
   aiLoading = false,
   className,
 }: DescriptionEditorProps) {
+  const t = useTranslations("editor");
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -55,7 +57,7 @@ export function DescriptionEditor({
         horizontalRule: false,
         hardBreak: false,
       }),
-      Placeholder.configure({ placeholder }),
+      Placeholder.configure({ placeholder: placeholder ?? t("placeholder") }),
     ],
     content: value,
     onUpdate: ({ editor }) => {
@@ -74,31 +76,31 @@ export function DescriptionEditor({
   const toolbarButtons = [
     {
       icon: Heading1,
-      label: "Naglowek 1",
+      label: t("heading1"),
       action: () => editor.chain().focus().toggleHeading({ level: 1 }).run(),
       active: editor.isActive("heading", { level: 1 }),
     },
     {
       icon: Heading2,
-      label: "Naglowek 2",
+      label: t("heading2"),
       action: () => editor.chain().focus().toggleHeading({ level: 2 }).run(),
       active: editor.isActive("heading", { level: 2 }),
     },
     {
       icon: Pilcrow,
-      label: "Paragraf",
+      label: t("paragraph"),
       action: () => editor.chain().focus().setParagraph().run(),
       active: editor.isActive("paragraph") && !editor.isActive("heading"),
     },
     {
       icon: List,
-      label: "Lista punktowana",
+      label: t("bulletList"),
       action: () => editor.chain().focus().toggleBulletList().run(),
       active: editor.isActive("bulletList"),
     },
     {
       icon: ListOrdered,
-      label: "Lista numerowana",
+      label: t("numberedList"),
       action: () => editor.chain().focus().toggleOrderedList().run(),
       active: editor.isActive("orderedList"),
     },
@@ -142,14 +144,14 @@ export function DescriptionEditor({
               <DropdownMenuContent align="end">
                 {onAiGenerate && (
                   <DropdownMenuItem onClick={onAiGenerate}>
-                    Generuj opis
+                    {t("aiGenerate")}
                   </DropdownMenuItem>
                 )}
                 {onAiImprove && (
                   <DropdownMenuItem
                     onClick={() => onAiImprove(editor.getHTML())}
                   >
-                    Popraw opis
+                    {t("aiImprove")}
                   </DropdownMenuItem>
                 )}
                 {onAiTranslate && (
@@ -157,17 +159,17 @@ export function DescriptionEditor({
                     <DropdownMenuItem
                       onClick={() => onAiTranslate(editor.getHTML(), "pl")}
                     >
-                      Przetlumacz na polski
+                      {t("translateToPolish")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => onAiTranslate(editor.getHTML(), "en")}
                     >
-                      Translate to English
+                      {t("translateToEnglish")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => onAiTranslate(editor.getHTML(), "de")}
                     >
-                      Auf Deutsch übersetzen
+                      {t("translateToGerman")}
                     </DropdownMenuItem>
                   </>
                 )}

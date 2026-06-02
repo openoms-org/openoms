@@ -293,6 +293,33 @@ func (s *CheckoutService) FinalizeCheckoutClaim(ctx context.Context, stripeSessi
 	return finalErr
 }
 
+// ReconcileCheckoutClaims finds registered checkout sessions whose billing finalization
+// partially failed (no subscription row for the tenant) and re-runs the idempotent
+// finalization for each. scanPool must bypass RLS (the worker pool) because the gap scan
+// spans tenants. Returns counts of reconciled and still-failing sessions; a non-nil error
+// aggregates per-session failures so the caller can alert on a persistent gap.
+func (s *CheckoutService) ReconcileCheckoutClaims(ctx context.Context, scanPool *pgxpool.Pool, limit int) (reconciled int, failed int, err error) {
+	sessions, findErr := s.billingRepo.FindUnreconciledCheckoutSessions(ctx, scanPool, limit)
+	if findErr != nil {
+		return 0, 0, fmt.Errorf("find unreconciled checkout sessions: %w", findErr)
+	}
+
+	var errs error
+	for _, sess := range sessions {
+		if sess.TenantID == nil {
+			continue
+		}
+		if e := s.FinalizeCheckoutClaim(ctx, sess.StripeSessionID, *sess.TenantID, sess.Plan, sess.BillingInterval); e != nil {
+			failed++
+			// Reference only the server-generated tenant UUID, never the raw session ID.
+			errs = errors.Join(errs, fmt.Errorf("reconcile checkout for tenant %s: %w", *sess.TenantID, e))
+			continue
+		}
+		reconciled++
+	}
+	return reconciled, failed, errs
+}
+
 func (s *CheckoutService) checkoutRefsForFinalization(ctx context.Context, stripeSessionID string) (model.CheckoutSessionStripeRefs, error) {
 	sess, err := s.getCheckoutSession(stripeSessionID, checkoutSessionRetrieveParams())
 	if err == nil {

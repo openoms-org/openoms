@@ -929,6 +929,9 @@ func run() error {
 	workerMgr.Register(worker.NewRecurringOrderWorker(workerPool, recurringOrderService, slog.Default()))
 	workerMgr.Register(worker.NewRepricingWorker(workerPool, repricingService, slog.Default()))
 	workerMgr.Register(worker.NewListingSyncWorker(workerPool, listingSyncRepo, listingSyncService, slog.Default()))
+	if cfg.BillingEnabled() && checkoutSvc != nil {
+		workerMgr.Register(worker.NewBillingReconciliationWorker(workerPool, checkoutSvc, slog.Default()))
+	}
 	if cfg.WorkersEnabled {
 		go workerMgr.Start(context.Background())
 	}
