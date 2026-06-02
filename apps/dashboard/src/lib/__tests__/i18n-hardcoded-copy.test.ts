@@ -22,6 +22,7 @@ const auditedFiles = [
   "app/(dashboard)/error.tsx",
   "app/(public)/error.tsx",
   "components/editor/description-editor.tsx",
+  "app/(dashboard)/products/[id]/listings/page.tsx",
 ];
 
 const forbiddenPhrases = [
@@ -52,6 +53,11 @@ const forbiddenPhrases = [
   "Generuj opis",
   "Popraw opis",
   "Przetlumacz na polski",
+  "Brak ofert marketplace",
+  "Wybierz cennik wysylki",
+  "Utworz domyslna polityke",
+  "Polityka wysylki",
+  "Stan magazynowy",
 ];
 
 describe("dashboard audited copy", () => {
