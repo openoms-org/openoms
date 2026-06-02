@@ -1833,6 +1833,7 @@ DPD uzywa dwoch powierzchni API: DPD Services REST do tworzenia przesylek i etyk
 | RecurringOrderWorker | konfigurowalny | Tworzenie zamowien cyklicznych |
 | RepricingWorker | konfigurowalny | Automatyczna zmiana cen wg regul |
 | ListingSyncWorker | konfigurowalny | Synchronizacja listingow marketplace |
+| BillingReconciliationWorker | 15min | Naprawia sesje checkout, ktore zarejestrowaly tenanta, ale nie utworzyly rekordow billing/subskrypcji (powtarza idempotentna finalizacje); rejestrowany tylko gdy billing jest skonfigurowany |
 
 ### Infrastruktura workerow
 

@@ -514,6 +514,10 @@ type BillingRepo interface {
 	GetCheckoutSession(ctx context.Context, pool *pgxpool.Pool, stripeSessionID string) (*model.BillingCheckoutSession, error)
 	ClaimCheckoutSession(ctx context.Context, pool *pgxpool.Pool, stripeSessionID string) (bool, error)
 	UpdateClaimedCheckoutTenant(ctx context.Context, pool *pgxpool.Pool, stripeSessionID string, tenantID uuid.UUID) error
+	// FindUnreconciledCheckoutSessions returns registered checkout sessions that have a
+	// tenant but no subscription row — i.e. finalization partially failed. Must be called
+	// with a pool that bypasses RLS (the worker pool), as it spans tenants.
+	FindUnreconciledCheckoutSessions(ctx context.Context, pool *pgxpool.Pool, limit int) ([]model.BillingCheckoutSession, error)
 
 	// Billing customers
 	CreateBillingCustomer(ctx context.Context, pool *pgxpool.Pool, tenantID uuid.UUID, stripeCustomerID string) error

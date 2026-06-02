@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/getsentry/sentry-go"
+
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
@@ -215,10 +217,13 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Finalize checkout claim: set tenant_id, create billing customer + subscription records
+	// Finalize checkout claim: set tenant_id, create billing customer + subscription records.
+	// On failure the tenant is registered but has no billing records; alert (Sentry) so it
+	// is visible, and the billing reconciliation worker re-runs the idempotent finalization.
 	if checkoutSessionID != "" && h.checkoutSvc != nil {
 		if err := h.checkoutSvc.FinalizeCheckoutClaim(r.Context(), checkoutSessionID, resp.Tenant.ID, req.Plan, req.CheckoutSessionInterval); err != nil {
 			slog.Error("failed to finalize checkout claim after registration", "tenant_id", resp.Tenant.ID, "error", err) //nolint:gosec // G706: static message; tenant_id is server-generated UUID, no raw checkout session or request text is logged from the handler.
+			sentry.CaptureException(err)
 		}
 	}
 

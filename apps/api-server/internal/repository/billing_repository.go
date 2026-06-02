@@ -89,6 +89,40 @@ func (r *BillingRepository) UpdateClaimedCheckoutTenant(ctx context.Context, poo
 	return nil
 }
 
+// FindUnreconciledCheckoutSessions returns registered checkout sessions whose tenant has
+// no subscription row — the signature of a partially-failed finalization. This is a
+// cross-tenant scan, so it must be called with an RLS-bypassing pool (the worker pool);
+// it queries the tables directly rather than via a tenant-scoped SECURITY DEFINER function.
+func (r *BillingRepository) FindUnreconciledCheckoutSessions(ctx context.Context, pool *pgxpool.Pool, limit int) ([]model.BillingCheckoutSession, error) {
+	rows, err := pool.Query(ctx,
+		`SELECT s.stripe_session_id, s.plan, s.billing_interval, s.tenant_id
+		   FROM billing_checkout_sessions s
+		  WHERE s.status = 'registered'
+		    AND s.tenant_id IS NOT NULL
+		    AND NOT EXISTS (
+		          SELECT 1 FROM billing_subscriptions bs WHERE bs.tenant_id = s.tenant_id
+		        )
+		  ORDER BY s.created_at
+		  LIMIT $1`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("find unreconciled checkout sessions: %w", err)
+	}
+	defer rows.Close()
+
+	var sessions []model.BillingCheckoutSession
+	for rows.Next() {
+		var s model.BillingCheckoutSession
+		if err := rows.Scan(&s.StripeSessionID, &s.Plan, &s.BillingInterval, &s.TenantID); err != nil {
+			return nil, fmt.Errorf("scan unreconciled checkout session: %w", err)
+		}
+		sessions = append(sessions, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate unreconciled checkout sessions: %w", err)
+	}
+	return sessions, nil
+}
+
 // CreateBillingCustomer stores a tenant ↔ Stripe customer mapping (SECURITY DEFINER, upserts on conflict).
 func (r *BillingRepository) CreateBillingCustomer(ctx context.Context, pool *pgxpool.Pool, tenantID uuid.UUID, stripeCustomerID string) error {
 	_, err := pool.Exec(ctx,
