@@ -119,6 +119,8 @@ type RouterDeps struct { //nolint:revive
 	ErliListings               *handler.ErliListingsHandler
 	OLXListings                *handler.OLXListingsHandler
 	EbayListings               *handler.EbayListingsHandler
+	Platform                   *handler.PlatformHandler
+	PlatformAdmin              middleware.PlatformAdminLookup
 }
 
 // New constructs the chi router with all routes registered.
@@ -295,6 +297,26 @@ func New(deps RouterDeps) *chi.Mux {
 	// WebSocket endpoint — auth via query param ticket, must be before JWT middleware
 	r.With(middleware.RateLimitWith(deps.RateLimiter, 30, 1*time.Minute)).
 		Get("/v1/ws", deps.WS.ServeWS)
+
+	// Platform-admin routes — JWT required + platform-admin authorization.
+	// Isolated from tenant routing: mounted as a sibling of /v1 so it does NOT
+	// inherit TenantPlanGuard or any tenant RBAC. Backend middleware is
+	// authoritative; frontend visibility is never trusted as authorization.
+	// Fail loud on a half-wired boundary rather than silently dropping the guard.
+	if (deps.PlatformAdmin == nil) != (deps.Platform == nil) {
+		panic("router: PlatformAdmin and Platform must both be set or both be nil")
+	}
+	if deps.PlatformAdmin != nil && deps.Platform != nil {
+		r.Route("/v1/platform", func(r chi.Router) {
+			r.Use(middleware.RateLimitWith(deps.RateLimiter, 60, 1*time.Minute))
+			r.Use(middleware.JWTAuth(deps.TokenSvc, deps.TokenBlacklist))
+			r.Use(middleware.MaxBodySize(1 << 20))
+			r.Use(middleware.RequirePlatformAdmin(deps.PlatformAdmin))
+			r.Get("/me", deps.Platform.Me)
+			// OPE-405+: provider registry endpoints, each additionally guarded
+			// by middleware.RequirePlatformPermission(model.PermPlatformProviders*).
+		})
+	}
 
 	// Authenticated routes — JWT required
 	r.Route("/v1", func(r chi.Router) {

@@ -803,6 +803,11 @@ func run() error {
 	// Prometheus metrics collector
 	metricsCollector := middleware.NewMetricsCollector()
 
+	// Platform-admin boundary (OPE-404): separate from tenant RBAC, not tenant-scoped.
+	platformAdminRepo := repository.NewPlatformAdminRepository(pool)
+	platformAuditRepo := repository.NewPlatformAuditRepository(pool)
+	platformHandler := handler.NewPlatformHandler(platformAuditRepo)
+
 	// Setup router
 	r := router.New(router.RouterDeps{
 		Pool:                       pool,
@@ -902,6 +907,8 @@ func run() error {
 		ErliListings:               erliListingsHandler,
 		OLXListings:                olxListingsHandler,
 		EbayListings:               ebayListingsHandler,
+		Platform:                   platformHandler,
+		PlatformAdmin:              platformAdminRepo,
 	})
 
 	// Start background workers (use workerPool for cross-tenant queries).

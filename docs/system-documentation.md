@@ -1391,6 +1391,28 @@ Uprawnienia np.:
   users.manage
 ```
 
+### Platform-Admin Boundary (OPE-404)
+
+Warstwa platform-admin (administracja providerami, międzytenantowa) jest **całkowicie oddzielona od tenant-RBAC** — fundament pod Provider Integration Studio (OPE-405+).
+
+```
+Tożsamość:   tabela platform_admins (user_id UNIQUE -> users, ON DELETE RESTRICT),
+             BEZ tenant_id i BEZ RLS (platform transcenduje tenanty).
+Uprawnienia: providers:read, providers:write, providers:validate, providers:publish,
+             providers:secrets (styl z dwukropkiem — NIGDY nadawane przez role tenanta).
+Middleware:  RequirePlatformAdmin (po JWTAuth; fail-closed: 403 przy braku/niedostępności
+             wpisu, 401 bez usera) + RequirePlatformPermission(perm). NIE reużywa
+             tenant RequireRole/RequirePermission.
+Routing:     grupa /v1/platform/* zamontowana jako rodzeństwo /v1 — NIE dziedziczy
+             TenantPlanGuard ani tenant-RBAC. Backend jest autorytatywny; widoczność
+             we frontendzie nigdy nie jest autoryzacją. Rate-limit 60/min.
+Endpoint:    GET /v1/platform/me (whoami: user_id + permissions).
+Audyt:       dedykowana tabela platform_audit_log (actor_user_id ON DELETE SET NULL,
+             append-only) — osobny strumień od tenantowego audit_log.
+Auth:        platform-admin loguje się istniejącym loginem (JWT -> user_id); oddzielona
+             jest wyłącznie AUTORYZACJA, nie uwierzytelnianie.
+```
+
 ### Zabezpieczenia
 
 | Zagrozenie | Mitygacja |
