@@ -37,7 +37,11 @@
       "packing": "Packing",
       "picking": "Picking"
     },
-    "title": "Pick & Pack"
+    "title": "Pick & Pack",
+    "movedToPacking": "Moved to packing phase",
+    "itemPacked": "Item packed",
+    "sessionCompleted": "Session completed - orders marked as packed",
+    "sessionCancelled": "Session cancelled"
   },
   "stocktakes": {
     "all": "All",

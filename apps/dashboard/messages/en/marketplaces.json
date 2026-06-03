@@ -70,7 +70,8 @@
           "updated": "Size table updated"
         },
         "sizeTables": {
-          "deleteError": "Failed to delete table"
+          "deleteError": "Failed to delete table",
+          "sizeTableDeleted": "Size table deleted"
         },
         "warrantyDialog": {
           "createError": "Failed to create warranty",

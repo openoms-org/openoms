@@ -72,7 +72,7 @@ export default function InvoiceDetailPage() {
   const handleCheckKSeFStatus = async () => {
     try {
       await checkKSeFStatus.mutateAsync(params.id);
-      toast.success("Status KSeF zaktualizowany");
+      toast.success(t("ksefStatusUpdated"));
       refetch();
     } catch (error) {
       toast.error(getErrorMessage(error));

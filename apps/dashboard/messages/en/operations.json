@@ -204,11 +204,16 @@
     "zamowienieZostaloWyslaneDoDostawcy": "Order has been sent to supplier",
     "zamowiono": "Ordered",
     "zapiszIWyslij": "Save and send",
-    "zarzadzajZamowieniamiZakupuDoDostawcow": "Manage purchase orders to suppliers"
+    "zarzadzajZamowieniamiZakupuDoDostawcow": "Manage purchase orders to suppliers",
+    "supplierNameRequired": "Supplier name is required"
   },
   "recurringOrders": {
     "utworzPierwszaSubskrypcjeAbyAutomatycznieGenerowac": "Create your first subscription to automatically generate recurring orders.",
-    "wrocDoListy": "Back to list"
+    "wrocDoListy": "Back to list",
+    "subscriptionDeleted": "Subscription deleted",
+    "subscriptionPaused": "Subscription paused",
+    "subscriptionResumed": "Subscription resumed",
+    "subscriptionCancelled": "Subscription cancelled"
   },
   "repricing": {
     "activate": "Activate",

@@ -70,7 +70,8 @@
           "updated": "Tabela rozmiarów zaktualizowana"
         },
         "sizeTables": {
-          "deleteError": "Nie udało się usunąć tabeli"
+          "deleteError": "Nie udało się usunąć tabeli",
+          "sizeTableDeleted": "Tabela rozmiarów usunięta"
         },
         "warrantyDialog": {
           "createError": "Nie udało się utworzyć rękojmi",

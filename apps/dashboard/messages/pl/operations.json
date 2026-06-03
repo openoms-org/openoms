@@ -204,11 +204,16 @@
     "zamowienieZostaloWyslaneDoDostawcy": "Zamówienie zostało wysłane do dostawcy",
     "zamowiono": "Zamówiono",
     "zapiszIWyslij": "Zapisz i wyślij",
-    "zarzadzajZamowieniamiZakupuDoDostawcow": "Zarządzaj zamówieniami zakupu do dostawców"
+    "zarzadzajZamowieniamiZakupuDoDostawcow": "Zarządzaj zamówieniami zakupu do dostawców",
+    "supplierNameRequired": "Nazwa dostawcy jest wymagana"
   },
   "recurringOrders": {
     "utworzPierwszaSubskrypcjeAbyAutomatycznieGenerowac": "Utwórz pierwsza subskrypcje, aby automatycznie generowac zamowienia cykliczne.",
-    "wrocDoListy": "Wróc do listy"
+    "wrocDoListy": "Wróc do listy",
+    "subscriptionDeleted": "Subskrypcja została usunięta",
+    "subscriptionPaused": "Subskrypcja została wstrzymana",
+    "subscriptionResumed": "Subskrypcja została wznowiona",
+    "subscriptionCancelled": "Subskrypcja została anulowana"
   },
   "repricing": {
     "activate": "Aktywuj",

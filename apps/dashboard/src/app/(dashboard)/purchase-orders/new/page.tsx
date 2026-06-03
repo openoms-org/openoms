@@ -117,7 +117,7 @@ export default function NewPurchaseOrderPage() {
 
   const handleSubmit = (sendAfterCreate: boolean) => {
     if (!supplierName.trim()) {
-      toast.error("Nazwa dostawcy jest wymagana");
+      toast.error(t("supplierNameRequired"));
       return;
     }
     if (items.length === 0) {

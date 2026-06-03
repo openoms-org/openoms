@@ -733,7 +733,7 @@ function SizeTablesTab() {
   const handleDelete = (table: AllegroSizeTable) => {
     if (!confirm(`Czy na pewno chcesz usunac tabele "${table.name}"?`)) return;
     deleteMutation.mutate(table.id, {
-      onSuccess: () => toast.success("Tabela rozmiarow usunieta"),
+      onSuccess: () => toast.success(t("sizeTableDeleted")),
       onError: () => toast.error(t("deleteError")),
     });
   };
