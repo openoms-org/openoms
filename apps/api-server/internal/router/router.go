@@ -121,6 +121,7 @@ type RouterDeps struct { //nolint:revive
 	EbayListings               *handler.EbayListingsHandler
 	Platform                   *handler.PlatformHandler
 	PlatformAdmin              middleware.PlatformAdminLookup
+	Provider                   *handler.ProviderHandler
 }
 
 // New constructs the chi router with all routes registered.
@@ -313,8 +314,29 @@ func New(deps RouterDeps) *chi.Mux {
 			r.Use(middleware.MaxBodySize(1 << 20))
 			r.Use(middleware.RequirePlatformAdmin(deps.PlatformAdmin))
 			r.Get("/me", deps.Platform.Me)
-			// OPE-405+: provider registry endpoints, each additionally guarded
-			// by middleware.RequirePlatformPermission(model.PermPlatformProviders*).
+
+			// Provider Integration Studio registry (OPE-405). Each route is
+			// additionally guarded by a specific platform permission.
+			if deps.Provider != nil {
+				rpp := middleware.RequirePlatformPermission
+				r.Route("/providers", func(r chi.Router) {
+					r.With(rpp(model.PermPlatformProvidersRead)).Get("/", deps.Provider.ListDefinitions)
+					r.With(rpp(model.PermPlatformProvidersWrite)).Post("/", deps.Provider.CreateDefinition)
+					r.Route("/{id}", func(r chi.Router) {
+						r.With(rpp(model.PermPlatformProvidersRead)).Get("/", deps.Provider.GetDefinition)
+						r.With(rpp(model.PermPlatformProvidersWrite)).Patch("/", deps.Provider.PatchDefinition)
+						r.With(rpp(model.PermPlatformProvidersRead)).Get("/versions", deps.Provider.ListVersions)
+						r.With(rpp(model.PermPlatformProvidersWrite)).Post("/versions", deps.Provider.CreateVersion)
+						r.Route("/versions/{version_id}", func(r chi.Router) {
+							r.With(rpp(model.PermPlatformProvidersRead)).Get("/", deps.Provider.GetVersion)
+							r.With(rpp(model.PermPlatformProvidersRead)).Get("/publication-events", deps.Provider.ListPublicationEvents)
+							r.With(rpp(model.PermPlatformProvidersPublish)).Post("/publish", deps.Provider.Publish)
+							r.With(rpp(model.PermPlatformProvidersPublish)).Post("/disable", deps.Provider.EmergencyDisable)
+							r.With(rpp(model.PermPlatformProvidersPublish)).Post("/enable-tenant", deps.Provider.EnableTenant)
+						})
+					})
+				})
+			}
 		})
 	}
 
