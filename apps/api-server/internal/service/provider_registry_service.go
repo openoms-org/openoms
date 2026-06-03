@@ -124,7 +124,7 @@ func (s *ProviderRegistryService) CreateGap(ctx context.Context, versionID uuid.
 	if !model.IsValidGapType(gapType) || !model.IsValidGapSeverity(severity) {
 		return nil, ErrInvalidGap
 	}
-	return s.caps.CreateGap(ctx, versionID, gapType, severity, description)
+	return s.caps.CreateGap(ctx, s.pool, versionID, gapType, severity, description)
 }
 
 // ListGaps returns the gaps for a version.
