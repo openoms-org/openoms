@@ -197,6 +197,13 @@
       },
       "subtitle": "Połącz swoje konto Amazon Seller, aby synchronizować zamówienia",
       "title": "Konfiguracja Amazon SP-API"
+    },
+    "marketplaceAdded": "Marketplace został dodany",
+    "setup": {
+      "allFieldsRequired": "Wszystkie pola są wymagane",
+      "prestaShopConfigured": "Integracja PrestaShop została skonfigurowana",
+      "shoperConfigured": "Integracja Shoper została skonfigurowana",
+      "shopifyConfigured": "Integracja Shopify została skonfigurowana"
     }
   }
 }

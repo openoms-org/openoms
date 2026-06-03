@@ -213,7 +213,8 @@
     "subscriptionDeleted": "Subscription deleted",
     "subscriptionPaused": "Subscription paused",
     "subscriptionResumed": "Subscription resumed",
-    "subscriptionCancelled": "Subscription cancelled"
+    "subscriptionCancelled": "Subscription cancelled",
+    "subscriptionCreated": "Subscription created"
   },
   "repricing": {
     "activate": "Activate",

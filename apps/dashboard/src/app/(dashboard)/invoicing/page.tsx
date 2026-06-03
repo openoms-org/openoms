@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { KeyRound, Receipt, Trash2, Loader2, Save } from "lucide-react";
 import { AdminGuard } from "@/components/shared/admin-guard";
@@ -64,6 +65,7 @@ const DEFAULT_SETTINGS: InvoicingSettings = {
 
 export default function InvoicingPage() {
   const router = useRouter();
+  const t = useTranslations("invoices");
 
   // ── Integrations ──
   const { invoicing, isLoading, isError, refetch } =
@@ -91,10 +93,10 @@ export default function InvoicingPage() {
   const handleSave = async () => {
     try {
       await updateSettings.mutateAsync(form);
-      toast.success("Ustawienia fakturowania zapisane");
+      toast.success(t("invoicingSettingsSaved"));
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Nie udalo sie zapisac ustawien";
+        err instanceof Error ? err.message : t("invoicingSettingsSaveFailed");
       toast.error(message);
     }
   };
@@ -103,7 +105,7 @@ export default function InvoicingPage() {
     if (!deleteId) return;
     deleteIntegration.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Dostawca faktur zostal usuniety");
+        toast.success(t("invoicingProviderDeleted"));
         setDeleteId(null);
       },
       onError: (error) => {

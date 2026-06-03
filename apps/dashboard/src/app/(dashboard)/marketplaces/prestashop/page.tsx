@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { DevelopmentBanner } from "@/components/shared/development-banner";
@@ -24,12 +25,13 @@ export default function PrestaShopSetupPage() {
   const [apiKey, setApiKey] = useState("");
 
   const setupMutation = useSetupPrestaShop();
+  const t = useTranslations("marketplaces");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!shopUrl || !apiKey) {
-      toast.error("Wszystkie pola sa wymagane");
+      toast.error(t("setup.allFieldsRequired"));
       return;
     }
 
@@ -40,7 +42,7 @@ export default function PrestaShopSetupPage() {
       },
       {
         onSuccess: () => {
-          toast.success("Integracja PrestaShop zostala skonfigurowana");
+          toast.success(t("setup.prestaShopConfigured"));
         },
         onError: (err) => {
           toast.error(getErrorMessage(err));

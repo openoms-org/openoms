@@ -213,7 +213,8 @@
     "subscriptionDeleted": "Subskrypcja została usunięta",
     "subscriptionPaused": "Subskrypcja została wstrzymana",
     "subscriptionResumed": "Subskrypcja została wznowiona",
-    "subscriptionCancelled": "Subskrypcja została anulowana"
+    "subscriptionCancelled": "Subskrypcja została anulowana",
+    "subscriptionCreated": "Subskrypcja została utworzona"
   },
   "repricing": {
     "activate": "Aktywuj",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { DevelopmentBanner } from "@/components/shared/development-banner";
@@ -25,12 +26,13 @@ export default function ShoperSetupPage() {
   const [clientSecret, setClientSecret] = useState("");
 
   const setupMutation = useSetupShoper();
+  const t = useTranslations("marketplaces");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!shopUrl || !clientId || !clientSecret) {
-      toast.error("Wszystkie pola sa wymagane");
+      toast.error(t("setup.allFieldsRequired"));
       return;
     }
 
@@ -42,7 +44,7 @@ export default function ShoperSetupPage() {
       },
       {
         onSuccess: () => {
-          toast.success("Integracja Shoper zostala skonfigurowana");
+          toast.success(t("setup.shoperConfigured"));
         },
         onError: (err) => {
           toast.error(getErrorMessage(err));

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { useCreateRecurringOrder } from "@/hooks/use-recurring-orders";
@@ -50,6 +51,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function NewRecurringOrderPage() {
   const router = useRouter();
+  const t = useTranslations("recurringOrders");
   const createRecurringOrder = useCreateRecurringOrder();
 
   const {
@@ -100,7 +102,7 @@ export default function NewRecurringOrderPage() {
 
     createRecurringOrder.mutate(payload, {
       onSuccess: () => {
-        toast.success("Subskrypcja zostala utworzona");
+        toast.success(t("subscriptionCreated"));
         router.push("/recurring-orders");
       },
       onError: (error) => {

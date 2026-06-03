@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -38,6 +39,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function CarrierDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const t = useTranslations("carriers");
   const { data: integration, isLoading } = useIntegration(params.id);
   const updateIntegration = useUpdateIntegration(params.id);
   const deleteIntegration = useDeleteIntegration();
@@ -71,7 +73,7 @@ export default function CarrierDetailPage() {
       { status: newStatus as "active" | "inactive" | "error" },
       {
         onSuccess: () => {
-          toast.success("Status kuriera został zmieniony");
+          toast.success(t("carrierStatusChanged"));
         },
         onError: (error) => {
           toast.error(getErrorMessage(error));
@@ -94,13 +96,13 @@ export default function CarrierDetailPage() {
     }
 
     if (Object.keys(payload).length === 0) {
-      toast.info("Nie wprowadzono żadnych zmian");
+      toast.info(t("noChanges"));
       return;
     }
 
     updateIntegration.mutate(payload, {
       onSuccess: () => {
-        toast.success("Dane kuriera zostały zaktualizowane");
+        toast.success(t("carrierUpdated"));
       },
       onError: (error) => {
         toast.error(getErrorMessage(error));
@@ -111,7 +113,7 @@ export default function CarrierDetailPage() {
   const handleDelete = () => {
     deleteIntegration.mutate(params.id, {
       onSuccess: () => {
-        toast.success("Kurier został usunięty");
+        toast.success(t("carrierDeleted"));
         router.push("/carriers");
       },
       onError: (error) => {

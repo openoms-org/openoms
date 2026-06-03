@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useIntegrations } from "@/hooks/use-integrations";
@@ -37,6 +38,7 @@ const PROVIDER_LABELS: Record<string, string> = {
 
 export default function NewListingSyncPage() {
   const router = useRouter();
+  const t = useTranslations("listings");
   const { data: integrations, isLoading: loadingIntegrations } = useIntegrations();
   const createConfig = useCreateListingSyncConfig();
 
@@ -51,7 +53,7 @@ export default function NewListingSyncPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!integrationId) {
-      toast.error("Wybierz integracje");
+      toast.error(t("sync.integrationRequired"));
       return;
     }
 
@@ -65,7 +67,7 @@ export default function NewListingSyncPage() {
         price_modifier: priceModifier,
         stock_buffer: stockBuffer,
       });
-      toast.success("Konfiguracja synchronizacji utworzona");
+      toast.success(t("sync.configCreated"));
       router.push(`/listing-sync/${config.id}`);
     } catch (err) {
       toast.error(getErrorMessage(err));

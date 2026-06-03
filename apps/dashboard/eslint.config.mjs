@@ -23,13 +23,13 @@ const eslintConfig = defineConfig([
       // TypeScript strict rules — must pass for auto-merge.
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-empty-object-type": "error",
-      // OPE-167: toast messages must be localized via t(), not hardcoded string
-      // literals. `warn` (does not block CI/auto-merge — CI runs `eslint` without
-      // --max-warnings) until existing violations are cleared, then promote to
-      // `error`. Template-literal toasts are caught by the i18n-hardcoded-copy
-      // vitest regression test instead. See .interface-design/conventions.md.
+      // OPE-167 / OPE-508: toast messages must be localized via t(), not hardcoded
+      // string literals. All existing violations have been cleared (OPE-508), so this
+      // is now `error` to block any regression at CI/auto-merge. Template-literal
+      // toasts are caught by the i18n-hardcoded-copy vitest regression test instead.
+      // See .interface-design/conventions.md.
       "no-restricted-syntax": [
-        "warn",
+        "error",
         {
           selector:
             "CallExpression[callee.type='MemberExpression'][callee.object.name='toast'] > Literal",

@@ -45,7 +45,10 @@
     "subtitle": "Lista wystawionych faktur",
     "title": "Faktury",
     "wyslijDoKsef": "Wyślij do KSeF",
-    "ksefStatusUpdated": "Status KSeF zaktualizowany"
+    "ksefStatusUpdated": "Status KSeF zaktualizowany",
+    "invoicingSettingsSaved": "Ustawienia fakturowania zapisane",
+    "invoicingSettingsSaveFailed": "Nie udało się zapisać ustawień",
+    "invoicingProviderDeleted": "Dostawca faktur został usunięty"
   },
   "ksef": {
     "authData": "Dane autoryzacyjne",

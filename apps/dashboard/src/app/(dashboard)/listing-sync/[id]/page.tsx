@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -88,6 +89,7 @@ const DIRECTION_LABELS: Record<string, string> = {
 export default function ListingSyncDetailPage() {
   const params = useParams();
   const configId = params.id as string;
+  const t = useTranslations("listings");
 
   const { data: config, isLoading, isError } = useListingSyncConfig(configId);
   const updateConfig = useUpdateListingSyncConfig(configId);
@@ -137,7 +139,7 @@ export default function ListingSyncDetailPage() {
         sync_interval_minutes: syncInterval,
       });
       setFormDirty(false);
-      toast.success("Konfiguracja zapisana");
+      toast.success(t("sync.configSaved"));
     } catch (err) {
       toast.error(getErrorMessage(err));
     }
@@ -147,7 +149,7 @@ export default function ListingSyncDetailPage() {
     try {
       await updateConfig.mutateAsync({ auto_sync: checked });
       toast.success(
-        checked ? "Auto-synchronizacja wlaczona" : "Auto-synchronizacja wylaczona"
+        checked ? t("sync.autoSyncEnabled") : t("sync.autoSyncDisabled")
       );
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -161,8 +163,8 @@ export default function ListingSyncDetailPage() {
       await updateConfig.mutateAsync({ status: newStatus });
       toast.success(
         newStatus === "active"
-          ? "Synchronizacja aktywowana"
-          : "Synchronizacja wstrzymana"
+          ? t("sync.syncActivated")
+          : t("sync.syncPaused")
       );
     } catch (err) {
       toast.error(getErrorMessage(err));

@@ -249,7 +249,12 @@
       "subtitle": "Zarządzaj synchronizacją produktów i ofert z platformami marketplace",
       "syncButton": "Synchronizuj",
       "title": "Synchronizacja ofert",
-      "unknownProvider": "Nieznany"
+      "unknownProvider": "Nieznany",
+      "integrationRequired": "Wybierz integrację",
+      "configCreated": "Konfiguracja synchronizacji utworzona",
+      "configSaved": "Konfiguracja zapisana",
+      "syncActivated": "Synchronizacja aktywowana",
+      "syncPaused": "Synchronizacja wstrzymana"
     },
     "syncAuto": "Auto",
     "syncError": "Błąd",
