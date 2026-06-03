@@ -655,6 +655,44 @@ jobs:
       - name: Validate GitHub Actions pinning
         run: scripts/validate-github-actions-pinning.sh
 
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: openoms
+          POSTGRES_PASSWORD: openoms_dev
+          POSTGRES_DB: openoms_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U openoms"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      DATABASE_URL: postgres://openoms:openoms_dev@localhost:5432/openoms_dev?sslmode=disable
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      # The DB-bound integration harness (tests/integration, build tag `integration`)
+      # applies migrations via the golang-migrate CLI. Install it (postgres driver)
+      # and expose it under the `golang-migrate` name the harness/Taskfile use.
+      - name: Install golang-migrate
+        run: |
+          go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1
+          ln -sf "$(go env GOPATH)/bin/migrate" "$(go env GOPATH)/bin/golang-migrate"
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Integration tests (DB-bound RLS / tenant isolation)
+        working-directory: apps/api-server
+        run: go test -tags integration -count=1 ./tests/integration/...
+
   auto-merge-gate:
     name: Auto-Merge Gate
     runs-on: ubuntu-latest
