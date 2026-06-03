@@ -44,7 +44,8 @@
     "sprawdzStatus": "Sprawdź status",
     "subtitle": "Lista wystawionych faktur",
     "title": "Faktury",
-    "wyslijDoKsef": "Wyślij do KSeF"
+    "wyslijDoKsef": "Wyślij do KSeF",
+    "ksefStatusUpdated": "Status KSeF zaktualizowany"
   },
   "ksef": {
     "authData": "Dane autoryzacyjne",

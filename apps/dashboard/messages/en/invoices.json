@@ -44,7 +44,8 @@
     "sprawdzStatus": "Check status",
     "subtitle": "List of issued invoices",
     "title": "Invoices",
-    "wyslijDoKsef": "Send to KSeF"
+    "wyslijDoKsef": "Send to KSeF",
+    "ksefStatusUpdated": "KSeF status updated"
   },
   "ksef": {
     "authData": "Authentication data",

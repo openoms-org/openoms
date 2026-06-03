@@ -37,7 +37,11 @@
       "packing": "Pakowanie",
       "picking": "Kompletowanie"
     },
-    "title": "Pick & Pack"
+    "title": "Pick & Pack",
+    "movedToPacking": "Przejście do fazy pakowania",
+    "itemPacked": "Pozycja spakowana",
+    "sessionCompleted": "Sesja zakończona - zamówienia oznaczone jako spakowane",
+    "sessionCancelled": "Sesja anulowana"
   },
   "stocktakes": {
     "all": "Wszystkie",

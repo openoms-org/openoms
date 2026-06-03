@@ -88,7 +88,7 @@ export default function RecurringOrdersPage() {
     if (!deleteId) return;
     deleteRecurringOrder.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Subskrypcja zostala usunieta");
+        toast.success(t("subscriptionDeleted"));
         setDeleteId(null);
       },
       onError: (error) => {
@@ -100,7 +100,7 @@ export default function RecurringOrdersPage() {
   const handlePause = (id: string) => {
     pauseRecurringOrder.mutate(id, {
       onSuccess: () => {
-        toast.success("Subskrypcja zostala wstrzymana");
+        toast.success(t("subscriptionPaused"));
         refetch();
       },
       onError: (error) => toast.error(getErrorMessage(error)),
@@ -110,7 +110,7 @@ export default function RecurringOrdersPage() {
   const handleResume = (id: string) => {
     resumeRecurringOrder.mutate(id, {
       onSuccess: () => {
-        toast.success("Subskrypcja zostala wznowiona");
+        toast.success(t("subscriptionResumed"));
         refetch();
       },
       onError: (error) => toast.error(getErrorMessage(error)),
@@ -120,7 +120,7 @@ export default function RecurringOrdersPage() {
   const handleCancel = (id: string) => {
     cancelRecurringOrder.mutate(id, {
       onSuccess: () => {
-        toast.success("Subskrypcja zostala anulowana");
+        toast.success(t("subscriptionCancelled"));
         refetch();
       },
       onError: (error) => toast.error(getErrorMessage(error)),

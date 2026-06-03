@@ -85,7 +85,7 @@ export default function RecurringOrderDetailPage({
   const handlePause = () => {
     pauseRecurringOrder.mutate(id, {
       onSuccess: () => {
-        toast.success("Subskrypcja zostala wstrzymana");
+        toast.success(t("subscriptionPaused"));
         refetch();
       },
       onError: (error) => toast.error(getErrorMessage(error)),
@@ -95,7 +95,7 @@ export default function RecurringOrderDetailPage({
   const handleResume = () => {
     resumeRecurringOrder.mutate(id, {
       onSuccess: () => {
-        toast.success("Subskrypcja zostala wznowiona");
+        toast.success(t("subscriptionResumed"));
         refetch();
       },
       onError: (error) => toast.error(getErrorMessage(error)),
@@ -105,7 +105,7 @@ export default function RecurringOrderDetailPage({
   const handleCancel = () => {
     cancelRecurringOrder.mutate(id, {
       onSuccess: () => {
-        toast.success("Subskrypcja zostala anulowana");
+        toast.success(t("subscriptionCancelled"));
         refetch();
       },
       onError: (error) => toast.error(getErrorMessage(error)),

@@ -144,7 +144,7 @@ export default function PickPackSessionPage() {
   const handleMoveToPacking = async () => {
     try {
       await moveToPacking.mutateAsync();
-      toast.success("Przejscie do fazy pakowania");
+      toast.success(t("movedToPacking"));
     } catch (err) {
       toast.error(getErrorMessage(err));
     }
@@ -156,7 +156,7 @@ export default function PickPackSessionPage() {
         itemId,
         data: { quantity: remaining },
       });
-      toast.success("Pozycja spakowana");
+      toast.success(t("itemPacked"));
     } catch (err) {
       toast.error(getErrorMessage(err));
     }
@@ -165,7 +165,7 @@ export default function PickPackSessionPage() {
   const handleComplete = async () => {
     try {
       await completeSession.mutateAsync();
-      toast.success("Sesja zakonczona - zamowienia oznaczone jako spakowane");
+      toast.success(t("sessionCompleted"));
       router.push("/pick-pack");
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -175,7 +175,7 @@ export default function PickPackSessionPage() {
   const handleCancel = async () => {
     try {
       await cancelSession.mutateAsync();
-      toast.info("Sesja anulowana");
+      toast.info(t("sessionCancelled"));
       router.push("/pick-pack");
     } catch (err) {
       toast.error(getErrorMessage(err));
