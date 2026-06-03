@@ -927,7 +927,7 @@ export default function ProductDetailPage() {
             }
           );
         }}
-        isLoading={addComponent.isPending}
+        isPending={addComponent.isPending}
       />
     </div>
   );
@@ -938,13 +938,13 @@ function AddBundleComponentDialog({
   onOpenChange,
   bundleProductId,
   onAdd,
-  isLoading,
+  isPending,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   bundleProductId: string;
   onAdd: (componentId: string, quantity: number) => void;
-  isLoading: boolean;
+  isPending: boolean;
 }) {
   const t = useTranslations("products.detail.addComponentDialog");
   const tc = useTranslations("common");
@@ -1005,9 +1005,9 @@ function AddBundleComponentDialog({
           </Button>
           <Button
             onClick={() => onAdd(selectedProductId, quantity)}
-            disabled={!selectedProductId || isLoading}
+            disabled={!selectedProductId || isPending}
           >
-            {isLoading ? t("adding") : t("addComponent" as Parameters<typeof t>[0])}
+            {isPending ? t("adding") : t("addComponent" as Parameters<typeof t>[0])}
           </Button>
         </DialogFooter>
       </DialogContent>

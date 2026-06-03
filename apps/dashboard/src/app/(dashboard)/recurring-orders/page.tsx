@@ -64,6 +64,7 @@ const frequencyLabels: Record<string, string> = {
 
 export default function RecurringOrdersPage() {
   const t = useTranslations("recurringOrders");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [pagination, setPagination] = useState({ limit: DEFAULT_LIMIT, offset: 0 });
@@ -251,7 +252,7 @@ export default function RecurringOrdersPage() {
                           <Button
                             variant="ghost"
                             size="icon-xs"
-                            title="Anuluj"
+                            title={tc("cancel")}
                             onClick={() => handleCancel(order.id)}
                           >
                             <XCircle className="h-4 w-4 text-red-500" />

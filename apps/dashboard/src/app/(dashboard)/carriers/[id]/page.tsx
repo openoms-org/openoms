@@ -40,6 +40,7 @@ export default function CarrierDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const t = useTranslations("carriers");
+  const tc = useTranslations("common");
   const { data: integration, isLoading } = useIntegration(params.id);
   const updateIntegration = useUpdateIntegration(params.id);
   const deleteIntegration = useDeleteIntegration();
@@ -150,7 +151,7 @@ export default function CarrierDetailPage() {
               size="sm"
               onClick={() => setShowDeleteDialog(true)}
             >
-              Usun
+              {tc("delete")}
             </Button>
           </div>
         </div>
@@ -273,7 +274,7 @@ export default function CarrierDetailPage() {
           onOpenChange={setShowDeleteDialog}
           title="Usuń kuriera"
           description="Czy na pewno chcesz usunąć tego kuriera? Ta operacja jest nieodwracalna."
-          confirmLabel="Usuń"
+          confirmLabel={tc("delete")}
           variant="destructive"
           onConfirm={handleDelete}
           isPending={deleteIntegration.isPending}

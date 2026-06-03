@@ -1137,7 +1137,7 @@ export default function OrderDetailPage() {
               toast.error(getErrorMessage(error));
             }
           }}
-          isLoading={splitOrder.isPending}
+          isPending={splitOrder.isPending}
         />
       )}
 
@@ -1173,7 +1173,7 @@ export default function OrderDetailPage() {
             toast.error(getErrorMessage(error));
           }
         }}
-        isLoading={createTicket.isPending}
+        isPending={createTicket.isPending}
       />
 
       {/* Add Package Dialog */}
@@ -1189,7 +1189,7 @@ export default function OrderDetailPage() {
             toast.error(getErrorMessage(error));
           }
         }}
-        isLoading={createOrderShipment.isPending}
+        isPending={createOrderShipment.isPending}
       />
     </div>
   );
@@ -1200,13 +1200,13 @@ function CreateTicketDialog({
   onOpenChange,
   customerEmail,
   onSubmit,
-  isLoading,
+  isPending,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customerEmail: string;
   onSubmit: (data: { subject: string; description: string; email: string }) => void;
-  isLoading: boolean;
+  isPending: boolean;
 }) {
   const t = useTranslations("orders");
   const tc = useTranslations("common");
@@ -1261,9 +1261,9 @@ function CreateTicketDialog({
           </Button>
           <Button
             onClick={() => onSubmit({ subject, description, email })}
-            disabled={!subject || !description || !email || isLoading}
+            disabled={!subject || !description || !email || isPending}
           >
-            {isLoading ? (
+            {isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : null}
             {t("detail.createTicket")}
@@ -1279,13 +1279,13 @@ function SplitOrderDialog({
   onOpenChange,
   order,
   onSplit,
-  isLoading,
+  isPending,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   order: { items?: { name: string; sku?: string; quantity: number; price: number }[]; currency: string };
   onSplit: (splits: { items: { name: string; sku?: string; quantity: number; price: number }[] }[]) => void;
-  isLoading: boolean;
+  isPending: boolean;
 }) {
   const t = useTranslations("orders");
   const tc = useTranslations("common");
@@ -1366,9 +1366,9 @@ function SplitOrderDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={isLoading || split1Items.length === 0 || split2Items.length === 0}
+            disabled={isPending || split1Items.length === 0 || split2Items.length === 0}
           >
-            {isLoading ? t("split.splitting") : t("split.splitButton")}
+            {isPending ? t("split.splitting") : t("split.splitButton")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1380,7 +1380,7 @@ function AddPackageDialog({
   open,
   onOpenChange,
   onSubmit,
-  isLoading,
+  isPending,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -1393,7 +1393,7 @@ function AddPackageDialog({
     height?: number;
     notes?: string;
   }) => void;
-  isLoading: boolean;
+  isPending: boolean;
 }) {
   const [provider, setProvider] = useEffectSyncedState("manual", open);
   const [trackingNumber, setTrackingNumber] = useEffectSyncedState("", open);
@@ -1510,8 +1510,8 @@ function AddPackageDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {tc("cancel")}
           </Button>
-          <Button onClick={handleSubmit} disabled={!provider || isLoading}>
-            {isLoading ? (
+          <Button onClick={handleSubmit} disabled={!provider || isPending}>
+            {isPending ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <Plus className="mr-2 h-4 w-4" />

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useCreateDispatchOrder } from "@/hooks/use-shipments";
 import { useCompanySettings } from "@/hooks/use-settings";
+import { useTranslations } from "next-intl";
 
 interface DispatchOrderDialogProps {
   shipmentIds: string[];
@@ -22,6 +23,8 @@ export function DispatchOrderDialog({
 }: DispatchOrderDialogProps) {
   const createDispatchOrder = useCreateDispatchOrder();
   const { data: company } = useCompanySettings();
+  const t = useTranslations("shipments");
+  const tc = useTranslations("common");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -62,7 +65,7 @@ export function DispatchOrderDialog({
       },
       {
         onSuccess: (data) => {
-          toast.success(`Zlecenie odbioru #${data.id} utworzone (status: ${data.status})`);
+          toast.success(t("dispatchOrderCreatedSuccess", { id: data.id, status: data.status }));
           onOpenChange(false);
         },
         onError: (error) => {
@@ -84,7 +87,7 @@ export function DispatchOrderDialog({
         </>
       }
       confirmLabel="Zamow kuriera"
-      cancelLabel="Anuluj"
+      cancelLabel={tc("cancel")}
       isPending={createDispatchOrder.isPending}
       onConfirm={handleSubmit}
     >

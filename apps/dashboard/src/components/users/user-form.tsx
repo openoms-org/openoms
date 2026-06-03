@@ -91,6 +91,7 @@ export function UserForm({
   onCancel,
 }: UserFormProps) {
   const t = useTranslations("users");
+  const tc = useTranslations("common");
   const isEdit = mode === "edit";
 
   const {
@@ -202,12 +203,12 @@ export function UserForm({
       <div className="flex justify-end gap-3 pt-2">
         {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel} disabled={isPending}>
-            Anuluj
+            {tc("cancel")}
           </Button>
         )}
         <Button type="submit" disabled={isPending}>
           {isPending
-            ? "Zapisywanie..."
+            ? tc("saving")
             : isEdit
               ? "Zapisz zmiany"
               : t("utworzUzytkownika")}

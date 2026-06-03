@@ -205,7 +205,8 @@
     "zamowiono": "Ordered",
     "zapiszIWyslij": "Save and send",
     "zarzadzajZamowieniamiZakupuDoDostawcow": "Manage purchase orders to suppliers",
-    "supplierNameRequired": "Supplier name is required"
+    "supplierNameRequired": "Supplier name is required",
+    "saveAsDraft": "Save as draft"
   },
   "recurringOrders": {
     "utworzPierwszaSubskrypcjeAbyAutomatycznieGenerowac": "Create your first subscription to automatically generate recurring orders.",
@@ -214,7 +215,8 @@
     "subscriptionPaused": "Subscription paused",
     "subscriptionResumed": "Subscription resumed",
     "subscriptionCancelled": "Subscription cancelled",
-    "subscriptionCreated": "Subscription created"
+    "subscriptionCreated": "Subscription created",
+    "createSubscription": "Create subscription"
   },
   "repricing": {
     "activate": "Activate",

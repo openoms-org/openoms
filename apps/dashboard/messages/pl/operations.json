@@ -205,7 +205,8 @@
     "zamowiono": "Zamówiono",
     "zapiszIWyslij": "Zapisz i wyślij",
     "zarzadzajZamowieniamiZakupuDoDostawcow": "Zarządzaj zamówieniami zakupu do dostawców",
-    "supplierNameRequired": "Nazwa dostawcy jest wymagana"
+    "supplierNameRequired": "Nazwa dostawcy jest wymagana",
+    "saveAsDraft": "Zapisz jako szkic"
   },
   "recurringOrders": {
     "utworzPierwszaSubskrypcjeAbyAutomatycznieGenerowac": "Utwórz pierwsza subskrypcje, aby automatycznie generowac zamowienia cykliczne.",
@@ -214,7 +215,8 @@
     "subscriptionPaused": "Subskrypcja została wstrzymana",
     "subscriptionResumed": "Subskrypcja została wznowiona",
     "subscriptionCancelled": "Subskrypcja została anulowana",
-    "subscriptionCreated": "Subskrypcja została utworzona"
+    "subscriptionCreated": "Subskrypcja została utworzona",
+    "createSubscription": "Utwórz subskrypcję"
   },
   "repricing": {
     "activate": "Aktywuj",

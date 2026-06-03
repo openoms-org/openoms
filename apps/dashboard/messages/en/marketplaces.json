@@ -204,6 +204,7 @@
       "prestaShopConfigured": "PrestaShop integration has been configured",
       "shoperConfigured": "Shoper integration has been configured",
       "shopifyConfigured": "Shopify integration has been configured"
-    }
+    },
+    "addMarketplace": "Add marketplace"
   }
 }

@@ -177,13 +177,15 @@
     "wartoscUbezpieczeniaPln": "Wartość ubezpieczenia (PLN)",
     "weight": "Waga",
     "weightKg": "Waga (kg)",
-    "zplThermalPrinter": "Drukarka termiczna ZPL"
+    "zplThermalPrinter": "Drukarka termiczna ZPL",
+    "dispatchOrderCreatedSuccess": "Zlecenie odbioru #{id} utworzone (status: {status})"
   },
   "carriers": {
     "carrierDeleted": "Kurier został usunięty",
     "carrierAdded": "Kurier został dodany",
     "carrierStatusChanged": "Status kuriera został zmieniony",
     "noChanges": "Nie wprowadzono żadnych zmian",
-    "carrierUpdated": "Dane kuriera zostały zaktualizowane"
+    "carrierUpdated": "Dane kuriera zostały zaktualizowane",
+    "addCarrier": "Dodaj kuriera"
   }
 }

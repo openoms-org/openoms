@@ -34,6 +34,7 @@ type Step = "select" | "configure";
 export default function NewCarrierPage() {
   const router = useRouter();
   const t = useTranslations("carriers");
+  const tc = useTranslations("common");
   const createIntegration = useCreateIntegration();
 
   const [step, setStep] = useState<Step>("select");
@@ -291,7 +292,7 @@ export default function NewCarrierPage() {
                 }
                 primary={
                   <Button type="submit" disabled={createIntegration.isPending}>
-                    {createIntegration.isPending ? "Tworzenie..." : "Dodaj kuriera"}
+                    {createIntegration.isPending ? tc("creating") : t("addCarrier")}
                   </Button>
                 }
               />

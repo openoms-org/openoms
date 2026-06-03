@@ -406,21 +406,21 @@ export default function NewPurchaseOrderPage() {
             variant="outline"
             onClick={() => router.push("/purchase-orders")}
           >
-            Anuluj
+            {tc("cancel")}
           </Button>
           <Button
             variant="secondary"
             disabled={createPO.isPending}
             onClick={() => handleSubmit(false)}
           >
-            {createPO.isPending ? "Tworzenie..." : "Zapisz jako szkic"}
+            {createPO.isPending ? tc("creating") : t("saveAsDraft")}
           </Button>
           <Button
             disabled={createPO.isPending || sendPO.isPending}
             onClick={() => handleSubmit(true)}
           >
             {createPO.isPending || sendPO.isPending
-              ? "Tworzenie..."
+              ? tc("creating")
               : t("zapiszIWyslij")}
           </Button>
         </div>
