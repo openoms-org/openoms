@@ -197,6 +197,13 @@
       },
       "subtitle": "Connect your Amazon Seller account to synchronize orders",
       "title": "Amazon SP-API Configuration"
+    },
+    "marketplaceAdded": "Marketplace added",
+    "setup": {
+      "allFieldsRequired": "All fields are required",
+      "prestaShopConfigured": "PrestaShop integration has been configured",
+      "shoperConfigured": "Shoper integration has been configured",
+      "shopifyConfigured": "Shopify integration has been configured"
     }
   }
 }

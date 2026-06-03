@@ -178,5 +178,12 @@
     "weight": "Weight",
     "weightKg": "Weight Kg",
     "zplThermalPrinter": "Zpl Thermal Printer"
+  },
+  "carriers": {
+    "carrierDeleted": "Carrier has been deleted",
+    "carrierAdded": "Carrier has been added",
+    "carrierStatusChanged": "Carrier status has been changed",
+    "noChanges": "No changes were made",
+    "carrierUpdated": "Carrier data has been updated"
   }
 }

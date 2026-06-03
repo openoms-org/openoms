@@ -178,5 +178,12 @@
     "weight": "Waga",
     "weightKg": "Waga (kg)",
     "zplThermalPrinter": "Drukarka termiczna ZPL"
+  },
+  "carriers": {
+    "carrierDeleted": "Kurier został usunięty",
+    "carrierAdded": "Kurier został dodany",
+    "carrierStatusChanged": "Status kuriera został zmieniony",
+    "noChanges": "Nie wprowadzono żadnych zmian",
+    "carrierUpdated": "Dane kuriera zostały zaktualizowane"
   }
 }

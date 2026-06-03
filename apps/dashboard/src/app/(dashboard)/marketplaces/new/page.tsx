@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
@@ -36,6 +37,7 @@ const DEDICATED_PROVIDERS = ["allegro", "amazon", "olx", "shoper", "prestashop",
 export default function NewMarketplacePage() {
   const router = useRouter();
   const createIntegration = useCreateIntegration();
+  const t = useTranslations("marketplaces");
 
   const [step, setStep] = useState<Step>("select");
   const [selectedProvider, setSelectedProvider] = useState<string>("");
@@ -133,7 +135,7 @@ export default function NewMarketplacePage() {
       },
       {
         onSuccess: () => {
-          toast.success("Marketplace został dodany");
+          toast.success(t("marketplaceAdded"));
           router.push("/marketplaces");
         },
         onError: (error) => {

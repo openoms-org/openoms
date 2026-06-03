@@ -249,7 +249,12 @@
       "subtitle": "Manage product and offer synchronization with marketplace platforms",
       "syncButton": "Sync now",
       "title": "Listing sync",
-      "unknownProvider": "Unknown"
+      "unknownProvider": "Unknown",
+      "integrationRequired": "Select an integration",
+      "configCreated": "Sync configuration created",
+      "configSaved": "Configuration saved",
+      "syncActivated": "Sync activated",
+      "syncPaused": "Sync paused"
     },
     "syncAuto": "Auto",
     "syncError": "Error",

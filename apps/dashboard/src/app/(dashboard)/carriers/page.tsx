@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { KeyRound, Truck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
@@ -29,6 +30,7 @@ import {
 
 export default function CarriersPage() {
   const router = useRouter();
+  const t = useTranslations("carriers");
   const { carriers, isLoading, isError, refetch } = useIntegrationsByCategory();
   const deleteIntegration = useDeleteIntegration();
 
@@ -48,7 +50,7 @@ export default function CarriersPage() {
     if (!deleteId) return;
     deleteIntegration.mutate(deleteId, {
       onSuccess: () => {
-        toast.success("Kurier został usunięty");
+        toast.success(t("carrierDeleted"));
         setDeleteId(null);
       },
       onError: (error) => {

@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
@@ -32,6 +33,7 @@ type Step = "select" | "configure";
 
 export default function NewCarrierPage() {
   const router = useRouter();
+  const t = useTranslations("carriers");
   const createIntegration = useCreateIntegration();
 
   const [step, setStep] = useState<Step>("select");
@@ -126,7 +128,7 @@ export default function NewCarrierPage() {
       },
       {
         onSuccess: () => {
-          toast.success("Kurier został dodany");
+          toast.success(t("carrierAdded"));
           router.push("/carriers");
         },
         onError: (error) => {
