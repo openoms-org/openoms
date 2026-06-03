@@ -23,6 +23,7 @@ type fakeProviderRegistry struct {
 	createVer  func(uuid.UUID, string) (*model.ProviderVersion, error)
 	transition func(uuid.UUID, string) (*model.ProviderVersion, error)
 	enableTen  func(uuid.UUID, uuid.UUID) (*model.ProviderTenantEnable, error)
+	setSchema  func(uuid.UUID, []model.ProviderFieldGroup) (*model.ProviderFieldSchema, error)
 }
 
 func (f *fakeProviderRegistry) CreateDefinition(_ context.Context, in service.CreateProviderDefinitionInput) (*model.ProviderDefinition, error) {
@@ -57,6 +58,12 @@ func (f *fakeProviderRegistry) EnableTenant(_ context.Context, versionID, tenant
 }
 func (f *fakeProviderRegistry) ListPublicationEvents(context.Context, uuid.UUID) ([]model.ProviderPublicationEvent, error) {
 	return []model.ProviderPublicationEvent{}, nil
+}
+func (f *fakeProviderRegistry) SetSchema(_ context.Context, versionID uuid.UUID, groups []model.ProviderFieldGroup) (*model.ProviderFieldSchema, error) {
+	return f.setSchema(versionID, groups)
+}
+func (f *fakeProviderRegistry) GetSchema(_ context.Context, versionID uuid.UUID) (*model.ProviderFieldSchema, error) {
+	return &model.ProviderFieldSchema{ProviderVersionID: versionID, Groups: []model.ProviderFieldGroup{}}, nil
 }
 
 func provReq(method, target, body string, params map[string]string) *http.Request {
@@ -145,4 +152,41 @@ func TestProviderHandler_EnableTenant_BadTenant_400(t *testing.T) {
 	h.EnableTenant(rr, provReq(http.MethodPost, "/enable-tenant", `{"tenant_id":"nope"}`,
 		map[string]string{"version_id": uuid.New().String()}))
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestProviderHandler_UpdateSchema_Invalid_422(t *testing.T) {
+	f := &fakeProviderRegistry{setSchema: func(uuid.UUID, []model.ProviderFieldGroup) (*model.ProviderFieldSchema, error) {
+		return nil, service.ErrInvalidFieldSchema
+	}}
+	h := NewProviderHandler(f, &fakePlatformAudit{})
+	rr := httptest.NewRecorder()
+	h.UpdateSchema(rr, provReq(http.MethodPatch, "/schema", `{"groups":[]}`,
+		map[string]string{"version_id": uuid.New().String()}))
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+}
+
+func TestProviderHandler_UpdateSchema_Frozen_422(t *testing.T) {
+	f := &fakeProviderRegistry{setSchema: func(uuid.UUID, []model.ProviderFieldGroup) (*model.ProviderFieldSchema, error) {
+		return nil, service.ErrProviderVersionFrozen
+	}}
+	h := NewProviderHandler(f, &fakePlatformAudit{})
+	rr := httptest.NewRecorder()
+	h.UpdateSchema(rr, provReq(http.MethodPatch, "/schema", `{"groups":[]}`,
+		map[string]string{"version_id": uuid.New().String()}))
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+}
+
+func TestProviderHandler_UpdateSchema_Success_Audits(t *testing.T) {
+	audit := &fakePlatformAudit{}
+	f := &fakeProviderRegistry{setSchema: func(versionID uuid.UUID, groups []model.ProviderFieldGroup) (*model.ProviderFieldSchema, error) {
+		return &model.ProviderFieldSchema{ProviderVersionID: versionID, Groups: groups}, nil
+	}}
+	h := NewProviderHandler(f, audit)
+	rr := httptest.NewRecorder()
+	h.UpdateSchema(rr, provReq(http.MethodPatch, "/schema",
+		`{"groups":[{"key":"settings","label":"S","fields":[{"key":"region","label":"R","type":"string"}]}]}`,
+		map[string]string{"version_id": uuid.New().String()}))
+	require.Equal(t, http.StatusOK, rr.Code)
+	require.Len(t, audit.entries, 1)
+	assert.Equal(t, "platform.provider.version.schema_updated", audit.entries[0].Action)
 }

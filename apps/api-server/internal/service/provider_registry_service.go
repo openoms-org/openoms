@@ -24,6 +24,7 @@ var (
 	ErrProviderDisableStateInvalid = errors.New("only available or private_beta versions can be emergency-disabled")
 	ErrInvalidProviderType         = errors.New("invalid provider type")
 	ErrInvalidPublicationState     = errors.New("invalid publication state")
+	ErrInvalidFieldSchema          = errors.New("invalid provider field schema")
 )
 
 // ProviderRegistryService owns the provider registry, lifecycle transitions,
@@ -33,10 +34,11 @@ var (
 // version-state change, the latest-published pointer, and the audit event
 // commit atomically and concurrent transitions on one provider serialize.
 type ProviderRegistryService struct {
-	pool *pgxpool.Pool
-	defs *repository.ProviderDefinitionRepository
-	vers *repository.ProviderVersionRepository
-	pub  *repository.ProviderPublicationRepository
+	pool    *pgxpool.Pool
+	defs    *repository.ProviderDefinitionRepository
+	vers    *repository.ProviderVersionRepository
+	pub     *repository.ProviderPublicationRepository
+	schemas *repository.ProviderSchemaRepository
 }
 
 // NewProviderRegistryService wires the service to the pool and its repositories.
@@ -45,8 +47,42 @@ func NewProviderRegistryService(
 	defs *repository.ProviderDefinitionRepository,
 	vers *repository.ProviderVersionRepository,
 	pub *repository.ProviderPublicationRepository,
+	schemas *repository.ProviderSchemaRepository,
 ) *ProviderRegistryService {
-	return &ProviderRegistryService{pool: pool, defs: defs, vers: vers, pub: pub}
+	return &ProviderRegistryService{pool: pool, defs: defs, vers: vers, pub: pub, schemas: schemas}
+}
+
+// SetSchema stores the credential/settings field schema for a version. Rejected
+// once the version is published (frozen), or when the schema is structurally
+// invalid.
+func (s *ProviderRegistryService) SetSchema(ctx context.Context, versionID uuid.UUID, groups []model.ProviderFieldGroup) (*model.ProviderFieldSchema, error) {
+	v, err := s.GetVersion(ctx, versionID)
+	if err != nil {
+		return nil, err
+	}
+	if model.IsPublishedState(v.PublicationState) {
+		return nil, ErrProviderVersionFrozen
+	}
+	if err := model.ValidateFieldSchema(groups); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidFieldSchema, err.Error())
+	}
+	return s.schemas.Upsert(ctx, versionID, groups)
+}
+
+// GetSchema returns the field schema for a version. If the version exists but
+// has no schema yet, an empty schema is returned (not an error).
+func (s *ProviderRegistryService) GetSchema(ctx context.Context, versionID uuid.UUID) (*model.ProviderFieldSchema, error) {
+	if _, err := s.GetVersion(ctx, versionID); err != nil {
+		return nil, err
+	}
+	schema, err := s.schemas.GetByVersion(ctx, versionID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return &model.ProviderFieldSchema{ProviderVersionID: versionID, Groups: []model.ProviderFieldGroup{}}, nil
+		}
+		return nil, err
+	}
+	return schema, nil
 }
 
 func (s *ProviderRegistryService) inTx(ctx context.Context, fn func(pgx.Tx) error) error {

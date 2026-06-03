@@ -812,7 +812,8 @@ func run() error {
 	providerDefinitionRepo := repository.NewProviderDefinitionRepository(pool)
 	providerVersionRepo := repository.NewProviderVersionRepository(pool)
 	providerPublicationRepo := repository.NewProviderPublicationRepository(pool)
-	providerRegistryService := service.NewProviderRegistryService(pool, providerDefinitionRepo, providerVersionRepo, providerPublicationRepo)
+	providerSchemaRepo := repository.NewProviderSchemaRepository(pool)
+	providerRegistryService := service.NewProviderRegistryService(pool, providerDefinitionRepo, providerVersionRepo, providerPublicationRepo, providerSchemaRepo)
 	providerHandler := handler.NewProviderHandler(providerRegistryService, platformAuditRepo)
 
 	// Setup router
