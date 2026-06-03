@@ -24,6 +24,9 @@ type fakeProviderRegistry struct {
 	transition func(uuid.UUID, string) (*model.ProviderVersion, error)
 	enableTen  func(uuid.UUID, uuid.UUID) (*model.ProviderTenantEnable, error)
 	setSchema  func(uuid.UUID, []model.ProviderFieldGroup) (*model.ProviderFieldSchema, error)
+	setCaps    func([]model.ProviderCapability) ([]model.ProviderCapability, error)
+	setMaps    func([]model.ProviderStatusMapping) ([]model.ProviderStatusMapping, error)
+	createGap  func(uuid.UUID, string, string) (*model.ProviderIntegrationGap, error)
 }
 
 func (f *fakeProviderRegistry) CreateDefinition(_ context.Context, in service.CreateProviderDefinitionInput) (*model.ProviderDefinition, error) {
@@ -64,6 +67,27 @@ func (f *fakeProviderRegistry) SetSchema(_ context.Context, versionID uuid.UUID,
 }
 func (f *fakeProviderRegistry) GetSchema(_ context.Context, versionID uuid.UUID) (*model.ProviderFieldSchema, error) {
 	return &model.ProviderFieldSchema{ProviderVersionID: versionID, Groups: []model.ProviderFieldGroup{}}, nil
+}
+func (f *fakeProviderRegistry) SetCapabilities(_ context.Context, _ uuid.UUID, caps []model.ProviderCapability) ([]model.ProviderCapability, error) {
+	return f.setCaps(caps)
+}
+func (f *fakeProviderRegistry) GetCapabilities(context.Context, uuid.UUID) ([]model.ProviderCapability, error) {
+	return []model.ProviderCapability{}, nil
+}
+func (f *fakeProviderRegistry) SetStatusMappings(_ context.Context, _ uuid.UUID, m []model.ProviderStatusMapping) ([]model.ProviderStatusMapping, error) {
+	return f.setMaps(m)
+}
+func (f *fakeProviderRegistry) GetStatusMappings(context.Context, uuid.UUID) ([]model.ProviderStatusMapping, error) {
+	return []model.ProviderStatusMapping{}, nil
+}
+func (f *fakeProviderRegistry) CreateGap(_ context.Context, versionID uuid.UUID, gapType, severity, _ string) (*model.ProviderIntegrationGap, error) {
+	return f.createGap(versionID, gapType, severity)
+}
+func (f *fakeProviderRegistry) ListGaps(context.Context, uuid.UUID) ([]model.ProviderIntegrationGap, error) {
+	return []model.ProviderIntegrationGap{}, nil
+}
+func (f *fakeProviderRegistry) UpdateGapStatus(_ context.Context, gapID uuid.UUID, status string) (*model.ProviderIntegrationGap, error) {
+	return &model.ProviderIntegrationGap{ID: gapID, Status: status}, nil
 }
 
 func provReq(method, target, body string, params map[string]string) *http.Request {
@@ -172,6 +196,53 @@ func TestProviderHandler_UpdateSchema_Frozen_422(t *testing.T) {
 	h := NewProviderHandler(f, &fakePlatformAudit{})
 	rr := httptest.NewRecorder()
 	h.UpdateSchema(rr, provReq(http.MethodPatch, "/schema", `{"groups":[]}`,
+		map[string]string{"version_id": uuid.New().String()}))
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+}
+
+func TestProviderHandler_UpdateCapabilities_Invalid_422(t *testing.T) {
+	f := &fakeProviderRegistry{setCaps: func([]model.ProviderCapability) ([]model.ProviderCapability, error) {
+		return nil, service.ErrInvalidCapability
+	}}
+	h := NewProviderHandler(f, &fakePlatformAudit{})
+	rr := httptest.NewRecorder()
+	h.UpdateCapabilities(rr, provReq(http.MethodPatch, "/capabilities", `{"capabilities":[]}`,
+		map[string]string{"version_id": uuid.New().String()}))
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+}
+
+func TestProviderHandler_UpdateStatusMappings_Frozen_422(t *testing.T) {
+	f := &fakeProviderRegistry{setMaps: func([]model.ProviderStatusMapping) ([]model.ProviderStatusMapping, error) {
+		return nil, service.ErrProviderVersionFrozen
+	}}
+	h := NewProviderHandler(f, &fakePlatformAudit{})
+	rr := httptest.NewRecorder()
+	h.UpdateStatusMappings(rr, provReq(http.MethodPatch, "/status-mappings", `{"status_mappings":[]}`,
+		map[string]string{"version_id": uuid.New().String()}))
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+}
+
+func TestProviderHandler_CreateGap_Success_Audits(t *testing.T) {
+	audit := &fakePlatformAudit{}
+	f := &fakeProviderRegistry{createGap: func(versionID uuid.UUID, gapType, severity string) (*model.ProviderIntegrationGap, error) {
+		return &model.ProviderIntegrationGap{ID: uuid.New(), ProviderVersionID: versionID, GapType: gapType, Severity: severity, Status: model.GapStatusOpen}, nil
+	}}
+	h := NewProviderHandler(f, audit)
+	rr := httptest.NewRecorder()
+	h.CreateGap(rr, provReq(http.MethodPost, "/gaps", `{"gap_type":"missing_status_mapping","severity":"warning"}`,
+		map[string]string{"version_id": uuid.New().String()}))
+	require.Equal(t, http.StatusCreated, rr.Code)
+	require.Len(t, audit.entries, 1)
+	assert.Equal(t, "platform.provider.gap.created", audit.entries[0].Action)
+}
+
+func TestProviderHandler_CreateGap_Invalid_422(t *testing.T) {
+	f := &fakeProviderRegistry{createGap: func(uuid.UUID, string, string) (*model.ProviderIntegrationGap, error) {
+		return nil, service.ErrInvalidGap
+	}}
+	h := NewProviderHandler(f, &fakePlatformAudit{})
+	rr := httptest.NewRecorder()
+	h.CreateGap(rr, provReq(http.MethodPost, "/gaps", `{"gap_type":"bogus","severity":"warning"}`,
 		map[string]string{"version_id": uuid.New().String()}))
 	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
 }

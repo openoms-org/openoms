@@ -25,6 +25,10 @@ var (
 	ErrInvalidProviderType         = errors.New("invalid provider type")
 	ErrInvalidPublicationState     = errors.New("invalid publication state")
 	ErrInvalidFieldSchema          = errors.New("invalid provider field schema")
+	ErrInvalidCapability           = errors.New("invalid provider capability profile")
+	ErrInvalidStatusMapping        = errors.New("invalid provider status mapping")
+	ErrInvalidGap                  = errors.New("invalid provider integration gap")
+	ErrProviderGapNotFound         = errors.New("provider integration gap not found")
 )
 
 // ProviderRegistryService owns the provider registry, lifecycle transitions,
@@ -39,6 +43,7 @@ type ProviderRegistryService struct {
 	vers    *repository.ProviderVersionRepository
 	pub     *repository.ProviderPublicationRepository
 	schemas *repository.ProviderSchemaRepository
+	caps    *repository.ProviderCapabilityRepository
 }
 
 // NewProviderRegistryService wires the service to the pool and its repositories.
@@ -48,8 +53,101 @@ func NewProviderRegistryService(
 	vers *repository.ProviderVersionRepository,
 	pub *repository.ProviderPublicationRepository,
 	schemas *repository.ProviderSchemaRepository,
+	caps *repository.ProviderCapabilityRepository,
 ) *ProviderRegistryService {
-	return &ProviderRegistryService{pool: pool, defs: defs, vers: vers, pub: pub, schemas: schemas}
+	return &ProviderRegistryService{pool: pool, defs: defs, vers: vers, pub: pub, schemas: schemas, caps: caps}
+}
+
+// SetCapabilities replaces the capability profile set of a version (frozen once
+// published; structurally validated). Atomic DELETE+INSERT.
+func (s *ProviderRegistryService) SetCapabilities(ctx context.Context, versionID uuid.UUID, caps []model.ProviderCapability) ([]model.ProviderCapability, error) {
+	v, err := s.GetVersion(ctx, versionID)
+	if err != nil {
+		return nil, err
+	}
+	if model.IsPublishedState(v.PublicationState) {
+		return nil, ErrProviderVersionFrozen
+	}
+	if err := model.ValidateCapabilities(caps); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidCapability, err.Error())
+	}
+	if err := s.inTx(ctx, func(tx pgx.Tx) error {
+		return s.caps.ReplaceCapabilities(ctx, tx, versionID, caps)
+	}); err != nil {
+		return nil, err
+	}
+	return s.caps.ListCapabilities(ctx, versionID)
+}
+
+// GetCapabilities returns a version's capability profiles.
+func (s *ProviderRegistryService) GetCapabilities(ctx context.Context, versionID uuid.UUID) ([]model.ProviderCapability, error) {
+	if _, err := s.GetVersion(ctx, versionID); err != nil {
+		return nil, err
+	}
+	return s.caps.ListCapabilities(ctx, versionID)
+}
+
+// SetStatusMappings replaces the status-mapping set of a version (frozen once
+// published; structurally validated). Atomic DELETE+INSERT.
+func (s *ProviderRegistryService) SetStatusMappings(ctx context.Context, versionID uuid.UUID, mappings []model.ProviderStatusMapping) ([]model.ProviderStatusMapping, error) {
+	v, err := s.GetVersion(ctx, versionID)
+	if err != nil {
+		return nil, err
+	}
+	if model.IsPublishedState(v.PublicationState) {
+		return nil, ErrProviderVersionFrozen
+	}
+	if err := model.ValidateStatusMappings(mappings); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidStatusMapping, err.Error())
+	}
+	if err := s.inTx(ctx, func(tx pgx.Tx) error {
+		return s.caps.ReplaceStatusMappings(ctx, tx, versionID, mappings)
+	}); err != nil {
+		return nil, err
+	}
+	return s.caps.ListStatusMappings(ctx, versionID)
+}
+
+// GetStatusMappings returns a version's status mappings.
+func (s *ProviderRegistryService) GetStatusMappings(ctx context.Context, versionID uuid.UUID) ([]model.ProviderStatusMapping, error) {
+	if _, err := s.GetVersion(ctx, versionID); err != nil {
+		return nil, err
+	}
+	return s.caps.ListStatusMappings(ctx, versionID)
+}
+
+// CreateGap records an integration gap for a version.
+func (s *ProviderRegistryService) CreateGap(ctx context.Context, versionID uuid.UUID, gapType, severity, description string) (*model.ProviderIntegrationGap, error) {
+	if _, err := s.GetVersion(ctx, versionID); err != nil {
+		return nil, err
+	}
+	if !model.IsValidGapType(gapType) || !model.IsValidGapSeverity(severity) {
+		return nil, ErrInvalidGap
+	}
+	return s.caps.CreateGap(ctx, versionID, gapType, severity, description)
+}
+
+// ListGaps returns the gaps for a version.
+func (s *ProviderRegistryService) ListGaps(ctx context.Context, versionID uuid.UUID) ([]model.ProviderIntegrationGap, error) {
+	if _, err := s.GetVersion(ctx, versionID); err != nil {
+		return nil, err
+	}
+	return s.caps.ListGaps(ctx, versionID)
+}
+
+// UpdateGapStatus changes a gap's lifecycle status.
+func (s *ProviderRegistryService) UpdateGapStatus(ctx context.Context, gapID uuid.UUID, status string) (*model.ProviderIntegrationGap, error) {
+	if !model.IsValidGapStatus(status) {
+		return nil, ErrInvalidGap
+	}
+	g, err := s.caps.UpdateGapStatus(ctx, gapID, status)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrProviderGapNotFound
+		}
+		return nil, err
+	}
+	return g, nil
 }
 
 // SetSchema stores the credential/settings field schema for a version. Rejected

@@ -30,6 +30,13 @@ type ProviderRegistry interface {
 	ListPublicationEvents(ctx context.Context, versionID uuid.UUID) ([]model.ProviderPublicationEvent, error)
 	SetSchema(ctx context.Context, versionID uuid.UUID, groups []model.ProviderFieldGroup) (*model.ProviderFieldSchema, error)
 	GetSchema(ctx context.Context, versionID uuid.UUID) (*model.ProviderFieldSchema, error)
+	SetCapabilities(ctx context.Context, versionID uuid.UUID, caps []model.ProviderCapability) ([]model.ProviderCapability, error)
+	GetCapabilities(ctx context.Context, versionID uuid.UUID) ([]model.ProviderCapability, error)
+	SetStatusMappings(ctx context.Context, versionID uuid.UUID, mappings []model.ProviderStatusMapping) ([]model.ProviderStatusMapping, error)
+	GetStatusMappings(ctx context.Context, versionID uuid.UUID) ([]model.ProviderStatusMapping, error)
+	CreateGap(ctx context.Context, versionID uuid.UUID, gapType, severity, description string) (*model.ProviderIntegrationGap, error)
+	ListGaps(ctx context.Context, versionID uuid.UUID) ([]model.ProviderIntegrationGap, error)
+	UpdateGapStatus(ctx context.Context, gapID uuid.UUID, status string) (*model.ProviderIntegrationGap, error)
 }
 
 // ProviderHandler serves the Provider Integration Studio registry endpoints
@@ -75,7 +82,8 @@ func (h *ProviderHandler) logAudit(r *http.Request, action, targetType, targetID
 
 func (h *ProviderHandler) writeServiceError(w http.ResponseWriter, err error) {
 	switch {
-	case errors.Is(err, service.ErrProviderDefinitionNotFound), errors.Is(err, service.ErrProviderVersionNotFound):
+	case errors.Is(err, service.ErrProviderDefinitionNotFound), errors.Is(err, service.ErrProviderVersionNotFound),
+		errors.Is(err, service.ErrProviderGapNotFound):
 		writeError(w, http.StatusNotFound, err.Error())
 	case errors.Is(err, service.ErrIllegalProviderTransition),
 		errors.Is(err, service.ErrProviderVersionFrozen),
@@ -83,7 +91,10 @@ func (h *ProviderHandler) writeServiceError(w http.ResponseWriter, err error) {
 		errors.Is(err, service.ErrProviderDisableStateInvalid),
 		errors.Is(err, service.ErrInvalidProviderType),
 		errors.Is(err, service.ErrInvalidPublicationState),
-		errors.Is(err, service.ErrInvalidFieldSchema):
+		errors.Is(err, service.ErrInvalidFieldSchema),
+		errors.Is(err, service.ErrInvalidCapability),
+		errors.Is(err, service.ErrInvalidStatusMapping),
+		errors.Is(err, service.ErrInvalidGap):
 		writeError(w, http.StatusUnprocessableEntity, err.Error())
 	default:
 		writeServerError(w, "provider registry error", err)
@@ -405,4 +416,157 @@ func (h *ProviderHandler) UpdateSchema(w http.ResponseWriter, r *http.Request) {
 	}
 	h.logAudit(r, "platform.provider.version.schema_updated", "provider_version", versionID.String(), nil)
 	writeJSON(w, http.StatusOK, schema)
+}
+
+// ---- Capabilities ----
+
+type setCapabilitiesRequest struct {
+	Capabilities []model.ProviderCapability `json:"capabilities"`
+}
+
+// GetCapabilities returns a version's capability profiles.
+func (h *ProviderHandler) GetCapabilities(w http.ResponseWriter, r *http.Request) {
+	versionID, ok := pathUUID(r, "version_id")
+	if !ok {
+		writeError(w, http.StatusBadRequest, "invalid version id")
+		return
+	}
+	caps, err := h.svc.GetCapabilities(r.Context(), versionID)
+	if err != nil {
+		h.writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"capabilities": caps})
+}
+
+// UpdateCapabilities replaces a version's capability profiles.
+func (h *ProviderHandler) UpdateCapabilities(w http.ResponseWriter, r *http.Request) {
+	versionID, ok := pathUUID(r, "version_id")
+	if !ok {
+		writeError(w, http.StatusBadRequest, "invalid version id")
+		return
+	}
+	var req setCapabilitiesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	caps, err := h.svc.SetCapabilities(r.Context(), versionID, req.Capabilities)
+	if err != nil {
+		h.writeServiceError(w, err)
+		return
+	}
+	h.logAudit(r, "platform.provider.version.capabilities_updated", "provider_version", versionID.String(), nil)
+	writeJSON(w, http.StatusOK, map[string]any{"capabilities": caps})
+}
+
+// ---- Status mappings ----
+
+type setStatusMappingsRequest struct {
+	StatusMappings []model.ProviderStatusMapping `json:"status_mappings"`
+}
+
+// GetStatusMappings returns a version's status mappings.
+func (h *ProviderHandler) GetStatusMappings(w http.ResponseWriter, r *http.Request) {
+	versionID, ok := pathUUID(r, "version_id")
+	if !ok {
+		writeError(w, http.StatusBadRequest, "invalid version id")
+		return
+	}
+	mappings, err := h.svc.GetStatusMappings(r.Context(), versionID)
+	if err != nil {
+		h.writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status_mappings": mappings})
+}
+
+// UpdateStatusMappings replaces a version's status mappings.
+func (h *ProviderHandler) UpdateStatusMappings(w http.ResponseWriter, r *http.Request) {
+	versionID, ok := pathUUID(r, "version_id")
+	if !ok {
+		writeError(w, http.StatusBadRequest, "invalid version id")
+		return
+	}
+	var req setStatusMappingsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	mappings, err := h.svc.SetStatusMappings(r.Context(), versionID, req.StatusMappings)
+	if err != nil {
+		h.writeServiceError(w, err)
+		return
+	}
+	h.logAudit(r, "platform.provider.version.status_mappings_updated", "provider_version", versionID.String(), nil)
+	writeJSON(w, http.StatusOK, map[string]any{"status_mappings": mappings})
+}
+
+// ---- Integration gaps ----
+
+type createGapRequest struct {
+	GapType     string `json:"gap_type"`
+	Severity    string `json:"severity"`
+	Description string `json:"description"`
+}
+
+// ListGaps returns a version's integration gaps.
+func (h *ProviderHandler) ListGaps(w http.ResponseWriter, r *http.Request) {
+	versionID, ok := pathUUID(r, "version_id")
+	if !ok {
+		writeError(w, http.StatusBadRequest, "invalid version id")
+		return
+	}
+	gaps, err := h.svc.ListGaps(r.Context(), versionID)
+	if err != nil {
+		h.writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"gaps": gaps})
+}
+
+// CreateGap records an integration gap for a version.
+func (h *ProviderHandler) CreateGap(w http.ResponseWriter, r *http.Request) {
+	versionID, ok := pathUUID(r, "version_id")
+	if !ok {
+		writeError(w, http.StatusBadRequest, "invalid version id")
+		return
+	}
+	var req createGapRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	gap, err := h.svc.CreateGap(r.Context(), versionID, req.GapType, req.Severity, req.Description)
+	if err != nil {
+		h.writeServiceError(w, err)
+		return
+	}
+	h.logAudit(r, "platform.provider.gap.created", "provider_integration_gap", gap.ID.String(), map[string]string{"gap_type": gap.GapType, "severity": gap.Severity})
+	writeJSON(w, http.StatusCreated, gap)
+}
+
+type updateGapRequest struct {
+	Status string `json:"status"`
+}
+
+// UpdateGap changes an integration gap's lifecycle status.
+func (h *ProviderHandler) UpdateGap(w http.ResponseWriter, r *http.Request) {
+	gapID, ok := pathUUID(r, "gap_id")
+	if !ok {
+		writeError(w, http.StatusBadRequest, "invalid gap id")
+		return
+	}
+	var req updateGapRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	gap, err := h.svc.UpdateGapStatus(r.Context(), gapID, req.Status)
+	if err != nil {
+		h.writeServiceError(w, err)
+		return
+	}
+	h.logAudit(r, "platform.provider.gap.updated", "provider_integration_gap", gap.ID.String(), map[string]string{"status": gap.Status})
+	writeJSON(w, http.StatusOK, gap)
 }

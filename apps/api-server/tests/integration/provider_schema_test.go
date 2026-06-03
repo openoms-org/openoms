@@ -22,6 +22,7 @@ func newRegistryService() *service.ProviderRegistryService {
 		repository.NewProviderVersionRepository(appPool),
 		repository.NewProviderPublicationRepository(appPool),
 		repository.NewProviderSchemaRepository(appPool),
+		repository.NewProviderCapabilityRepository(appPool),
 	)
 }
 
