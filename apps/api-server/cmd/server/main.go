@@ -820,6 +820,25 @@ func run() error {
 	providerValidationService := service.NewProviderValidationService(pool, providerVersionRepo, providerCapabilityRepo, providerValidationRepo)
 	providerValidationHandler := handler.NewProviderValidationHandler(providerValidationService, platformAuditRepo)
 
+	// Provider registry seed (OPE-412): idempotently create draft registry
+	// definitions for existing providers. Additive — tenant integrations untouched.
+	if cfg.SeedProviders {
+		seedCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		res, err := service.NewProviderRegistrySeeder(providerRegistryService).Seed(seedCtx, service.ProviderRegistryCatalog())
+		cancel()
+		if err != nil {
+			if cfg.IsDevelopment() {
+				slog.Warn("provider registry seed failed", "error", err)
+			} else {
+				slog.Error("provider registry seed failed", "error", err)
+				wsCancel()
+				return fmt.Errorf("provider registry seed: %w", err)
+			}
+		} else {
+			slog.Info("provider registry seeded", "created", res.Created, "skipped", res.Skipped)
+		}
+	}
+
 	// Setup router
 	r := router.New(router.RouterDeps{
 		Pool:                       pool,

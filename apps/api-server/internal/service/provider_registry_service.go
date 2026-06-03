@@ -241,6 +241,19 @@ func (s *ProviderRegistryService) GetDefinition(ctx context.Context, id uuid.UUI
 	return d, nil
 }
 
+// GetDefinitionByKey returns a definition by its provider_key, or
+// ErrProviderDefinitionNotFound.
+func (s *ProviderRegistryService) GetDefinitionByKey(ctx context.Context, key string) (*model.ProviderDefinition, error) {
+	d, err := s.defs.GetByKey(ctx, key)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrProviderDefinitionNotFound
+		}
+		return nil, err
+	}
+	return d, nil
+}
+
 // UpdateDefinitionMetadata updates editable definition fields.
 func (s *ProviderRegistryService) UpdateDefinitionMetadata(ctx context.Context, in model.ProviderDefinition) (*model.ProviderDefinition, error) {
 	if !model.IsValidProviderType(in.ProviderType) {
