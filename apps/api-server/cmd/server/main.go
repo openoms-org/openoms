@@ -816,6 +816,9 @@ func run() error {
 	providerCapabilityRepo := repository.NewProviderCapabilityRepository(pool)
 	providerRegistryService := service.NewProviderRegistryService(pool, providerDefinitionRepo, providerVersionRepo, providerPublicationRepo, providerSchemaRepo, providerCapabilityRepo)
 	providerHandler := handler.NewProviderHandler(providerRegistryService, platformAuditRepo)
+	providerValidationRepo := repository.NewProviderValidationRepository(pool)
+	providerValidationService := service.NewProviderValidationService(pool, providerVersionRepo, providerCapabilityRepo, providerValidationRepo)
+	providerValidationHandler := handler.NewProviderValidationHandler(providerValidationService, platformAuditRepo)
 
 	// Setup router
 	r := router.New(router.RouterDeps{
@@ -919,6 +922,7 @@ func run() error {
 		Platform:                   platformHandler,
 		PlatformAdmin:              platformAdminRepo,
 		Provider:                   providerHandler,
+		ProviderValidation:         providerValidationHandler,
 	})
 
 	// Start background workers (use workerPool for cross-tenant queries).

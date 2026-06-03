@@ -114,10 +114,12 @@ func (r *ProviderCapabilityRepository) ListStatusMappings(ctx context.Context, v
 
 const providerGapColumns = `id, provider_version_id, gap_type, severity, status, description, created_at, updated_at, resolved_at`
 
-// CreateGap records an integration gap for a version.
-func (r *ProviderCapabilityRepository) CreateGap(ctx context.Context, versionID uuid.UUID, gapType, severity, description string) (*model.ProviderIntegrationGap, error) {
+// CreateGap records an integration gap for a version, using the given querier
+// (the pool, or a caller's transaction so gap creation can be atomic with other
+// writes — e.g. finalizing a validation run).
+func (r *ProviderCapabilityRepository) CreateGap(ctx context.Context, q Querier, versionID uuid.UUID, gapType, severity, description string) (*model.ProviderIntegrationGap, error) {
 	var g model.ProviderIntegrationGap
-	err := r.pool.QueryRow(ctx,
+	err := q.QueryRow(ctx,
 		`INSERT INTO provider_integration_gaps (provider_version_id, gap_type, severity, description)
 		 VALUES ($1,$2,$3,$4) RETURNING `+providerGapColumns,
 		versionID, gapType, severity, description).

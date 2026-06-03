@@ -1477,6 +1477,32 @@ Endpointy:   GET/PATCH /…/versions/{vid}/{capabilities,status-mappings}, GET/P
              PATCH /…/gaps/{gap_id} — RequirePlatformPermission (read|write), audytowane.
 ```
 
+### Provider validation engine & evidence (OPE-408)
+
+Silnik walidacji wersji providera: definicje probe'ów + niemutowalne validation runs/results + evidence + auto-tworzenie luk. Platform-managed, bez RLS.
+
+```
+Tabele:      provider_validation_probes (probe_type [15 typów], label, destructive,
+             required, config jsonb), provider_validation_runs (environment sandbox|
+             production, verdict pending|passed|failed|error, started/finished, actor),
+             provider_validation_results (status passed|failed|skipped|error, observation
+             [redacted], payload_hash, findings; UNIQUE(run_id,label)).
+Stan run:    StartRun (pending) → RecordResult (tylko gdy pending) → CompleteRun (verdict z
+             VerdictFromResults; finalizacja niemutowalna). Wszystko po publikacji wersji
+             zamrożone (probes).
+Safety:      probe'y destructive (np. sandbox_order_create) wymagają allow_destructive=true
+             przy StartRun, inaczej 422.
+Evidence:    results trzymają tylko redacted observation + payload_hash (HashPayload sha256);
+             nigdy surowych sekretów/PII. Faktyczne wykonywanie probe'ów na realnych
+             providerach = pluggable/odłożone (adaptery+creds, OPE-413+).
+Auto-gaps:   CompleteRun atomowo (transakcja) finalizuje verdykt i tworzy luki dla
+             failed/error (auth_check→auth_failure, feed_parse/malformed→parser_failure,
+             order_preflight→missing_order_preflight, shipment_tracking_read→missing_tracking,
+             reszta→provider_business_error; severity error→system_error).
+Endpointy:   GET/PATCH /…/versions/{vid}/probes, POST /…/validate, GET /…/validation-runs[/{id}],
+             POST /…/validation-runs/{id}/{results,complete} — providers:read|write|validate.
+```
+
 ### Zabezpieczenia
 
 | Zagrozenie | Mitygacja |

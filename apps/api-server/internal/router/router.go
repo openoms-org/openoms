@@ -122,6 +122,7 @@ type RouterDeps struct { //nolint:revive
 	Platform                   *handler.PlatformHandler
 	PlatformAdmin              middleware.PlatformAdminLookup
 	Provider                   *handler.ProviderHandler
+	ProviderValidation         *handler.ProviderValidationHandler
 }
 
 // New constructs the chi router with all routes registered.
@@ -342,6 +343,17 @@ func New(deps RouterDeps) *chi.Mux {
 							r.With(rpp(model.PermPlatformProvidersPublish)).Post("/publish", deps.Provider.Publish)
 							r.With(rpp(model.PermPlatformProvidersPublish)).Post("/disable", deps.Provider.EmergencyDisable)
 							r.With(rpp(model.PermPlatformProvidersPublish)).Post("/enable-tenant", deps.Provider.EnableTenant)
+
+							// Validation engine (OPE-408).
+							if deps.ProviderValidation != nil {
+								r.With(rpp(model.PermPlatformProvidersRead)).Get("/probes", deps.ProviderValidation.GetProbes)
+								r.With(rpp(model.PermPlatformProvidersWrite)).Patch("/probes", deps.ProviderValidation.UpdateProbes)
+								r.With(rpp(model.PermPlatformProvidersValidate)).Post("/validate", deps.ProviderValidation.StartRun)
+								r.With(rpp(model.PermPlatformProvidersRead)).Get("/validation-runs", deps.ProviderValidation.ListRuns)
+								r.With(rpp(model.PermPlatformProvidersRead)).Get("/validation-runs/{run_id}", deps.ProviderValidation.GetRun)
+								r.With(rpp(model.PermPlatformProvidersValidate)).Post("/validation-runs/{run_id}/results", deps.ProviderValidation.RecordResult)
+								r.With(rpp(model.PermPlatformProvidersValidate)).Post("/validation-runs/{run_id}/complete", deps.ProviderValidation.CompleteRun)
+							}
 						})
 					})
 				})
