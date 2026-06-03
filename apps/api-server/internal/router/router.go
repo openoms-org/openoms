@@ -330,6 +330,8 @@ func New(deps RouterDeps) *chi.Mux {
 						r.Route("/versions/{version_id}", func(r chi.Router) {
 							r.With(rpp(model.PermPlatformProvidersRead)).Get("/", deps.Provider.GetVersion)
 							r.With(rpp(model.PermPlatformProvidersRead)).Get("/publication-events", deps.Provider.ListPublicationEvents)
+							r.With(rpp(model.PermPlatformProvidersRead)).Get("/schema", deps.Provider.GetSchema)
+							r.With(rpp(model.PermPlatformProvidersWrite)).Patch("/schema", deps.Provider.UpdateSchema)
 							r.With(rpp(model.PermPlatformProvidersPublish)).Post("/publish", deps.Provider.Publish)
 							r.With(rpp(model.PermPlatformProvidersPublish)).Post("/disable", deps.Provider.EmergencyDisable)
 							r.With(rpp(model.PermPlatformProvidersPublish)).Post("/enable-tenant", deps.Provider.EnableTenant)

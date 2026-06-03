@@ -1433,8 +1433,28 @@ Niemutowalność: wersje w stanie published (private_beta/available/deprecated/r
 Emergency disable: available/private_beta → internal_validation z rollbackiem
              wskaźnika latest_published do poprzedniej available (lub NULL).
 Endpointy:   /v1/platform/providers (+ /{id}, /{id}/versions, /{id}/versions/{vid}/
-             {publish,disable,enable-tenant,publication-events}); każdy strzeżony przez
+             {schema,publish,disable,enable-tenant,publication-events}); każdy strzeżony przez
              RequirePlatformPermission (providers:read|write|publish). Mutacje audytowane.
+```
+
+### Provider field schema — contract (OPE-406)
+
+Wersjonowany schemat pól credential/settings (jedno źródło prawdy generujące formularze admina i klienta), 1:1 z `provider_versions`.
+
+```
+Tabela:      provider_field_schemas (UNIQUE provider_version_id, schema jsonb, no RLS).
+Grupy pól:   secret_credentials, settings, environment, sync, feature_toggles, provider_options.
+Pole:        key, label, type (string|password|number|boolean|enum|url|textarea), required,
+             secret (cel zapisu), environment_scope (all|production|sandbox), help_text,
+             validation (enum/regex/min/max/min_length/max_length), capability_enabled,
+             test_connection_dependency.
+Walidacja:   ValidateFieldSchema — znane grupy/typy/scope, unikalne klucze pól w całym
+             schemacie, enum z wartościami, kompilowalny regex, min<=max. Błąd → 422.
+Niemutowalność: edycja schematu zablokowana gdy wersja published (private_beta+) → 422.
+Endpointy:   GET/PATCH /v1/platform/providers/{id}/versions/{vid}/schema (read|write).
+Uwaga:       schemat tylko DEKLARUJE które pola są secret; wartości credentials klienta
+             pozostają zaszyfrowane AES w integrations.credentials. Renderowanie formularzy
+             (frontend) i ścieżka tenant-setup = późniejsze zadania (Studio UI).
 ```
 
 ### Zabezpieczenia

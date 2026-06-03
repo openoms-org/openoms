@@ -28,6 +28,8 @@ type ProviderRegistry interface {
 	EmergencyDisable(ctx context.Context, versionID uuid.UUID, actorID *uuid.UUID, reason string) (*model.ProviderVersion, error)
 	EnableTenant(ctx context.Context, versionID, tenantID uuid.UUID, actorID *uuid.UUID) (*model.ProviderTenantEnable, error)
 	ListPublicationEvents(ctx context.Context, versionID uuid.UUID) ([]model.ProviderPublicationEvent, error)
+	SetSchema(ctx context.Context, versionID uuid.UUID, groups []model.ProviderFieldGroup) (*model.ProviderFieldSchema, error)
+	GetSchema(ctx context.Context, versionID uuid.UUID) (*model.ProviderFieldSchema, error)
 }
 
 // ProviderHandler serves the Provider Integration Studio registry endpoints
@@ -80,7 +82,8 @@ func (h *ProviderHandler) writeServiceError(w http.ResponseWriter, err error) {
 		errors.Is(err, service.ErrProviderEnableStateInvalid),
 		errors.Is(err, service.ErrProviderDisableStateInvalid),
 		errors.Is(err, service.ErrInvalidProviderType),
-		errors.Is(err, service.ErrInvalidPublicationState):
+		errors.Is(err, service.ErrInvalidPublicationState),
+		errors.Is(err, service.ErrInvalidFieldSchema):
 		writeError(w, http.StatusUnprocessableEntity, err.Error())
 	default:
 		writeServerError(w, "provider registry error", err)
@@ -360,4 +363,46 @@ func (h *ProviderHandler) EnableTenant(w http.ResponseWriter, r *http.Request) {
 	}
 	h.logAudit(r, "platform.provider.version.tenant_enabled", "provider_version", versionID.String(), map[string]string{"tenant_id": tenantID.String()})
 	writeJSON(w, http.StatusCreated, enable)
+}
+
+// ---- Field schema ----
+
+type setSchemaRequest struct {
+	Groups []model.ProviderFieldGroup `json:"groups"`
+}
+
+// GetSchema returns the credential/settings field schema for a version.
+func (h *ProviderHandler) GetSchema(w http.ResponseWriter, r *http.Request) {
+	versionID, ok := pathUUID(r, "version_id")
+	if !ok {
+		writeError(w, http.StatusBadRequest, "invalid version id")
+		return
+	}
+	schema, err := h.svc.GetSchema(r.Context(), versionID)
+	if err != nil {
+		h.writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, schema)
+}
+
+// UpdateSchema replaces the credential/settings field schema for a version.
+func (h *ProviderHandler) UpdateSchema(w http.ResponseWriter, r *http.Request) {
+	versionID, ok := pathUUID(r, "version_id")
+	if !ok {
+		writeError(w, http.StatusBadRequest, "invalid version id")
+		return
+	}
+	var req setSchemaRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	schema, err := h.svc.SetSchema(r.Context(), versionID, req.Groups)
+	if err != nil {
+		h.writeServiceError(w, err)
+		return
+	}
+	h.logAudit(r, "platform.provider.version.schema_updated", "provider_version", versionID.String(), nil)
+	writeJSON(w, http.StatusOK, schema)
 }

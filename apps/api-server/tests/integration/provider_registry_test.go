@@ -25,6 +25,7 @@ func TestProviderRegistry_LifecycleEndToEnd(t *testing.T) {
 		repository.NewProviderDefinitionRepository(appPool),
 		repository.NewProviderVersionRepository(appPool),
 		repository.NewProviderPublicationRepository(appPool),
+		repository.NewProviderSchemaRepository(appPool),
 	)
 
 	def, err := svc.CreateDefinition(ctx, service.CreateProviderDefinitionInput{
