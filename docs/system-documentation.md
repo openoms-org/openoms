@@ -1503,6 +1503,25 @@ Endpointy:   GET/PATCH /…/versions/{vid}/probes, POST /…/validate, GET /…/
              POST /…/validation-runs/{id}/{results,complete} — providers:read|write|validate.
 ```
 
+### Migracja istniejących providerów do registry (OPE-412)
+
+Seed rejestru draftowymi definicjami istniejących providerów (class-first, §526). Additive — integracje najemców nietknięte; frontendowe statyczne mapy zostają jako fallback.
+
+```
+Katalog:     internal/service/provider_catalog.go — reprezentanci klas zdolności:
+             allegro (marketplace), inpost (carrier), btp (supplier),
+             fakturownia (invoicing), shopify (shop). Każdy: provider_type + schema
+             credentiali (z realnych pól) + capability-stuby.
+Seeder:      ProviderRegistrySeeder.Seed — idempotentny (klucz provider_key); tworzy
+             definicję + wersję `research` (draft) + schema + capabilities. Pomija
+             providerów już obecnych. Forward-only, nie modyfikuje istniejących.
+Uczciwość:   wszystkie capabilities seedowane jako `unknown` — NIGDY fabrykowane jako
+             supported; weryfikacja/upgrade przez Studio (OPE-407 workbench / OPE-408
+             validation). Migracja status-map = autoring w workbenchu (świadomie odłożone).
+Uruchomienie: env SEED_PROVIDERS=true → seed przy starcie (jak backfill szyfrowania).
+             Publikacja seedowanych wersji = osobny gated krok (OPE-413).
+```
+
 ### Zabezpieczenia
 
 | Zagrozenie | Mitygacja |

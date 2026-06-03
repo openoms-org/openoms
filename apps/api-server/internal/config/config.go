@@ -46,6 +46,10 @@ type Config struct {
 
 	WorkersEnabled bool `env:"WORKERS_ENABLED" envDefault:"true"`
 
+	// SeedProviders, when true, idempotently seeds the provider registry with the
+	// class-first catalog of existing providers at startup (OPE-412).
+	SeedProviders bool `env:"SEED_PROVIDERS" envDefault:"false"`
+
 	UploadDir     string `env:"UPLOAD_DIR" envDefault:"./uploads"`
 	MaxUploadSize int64  `env:"MAX_UPLOAD_SIZE" envDefault:"10485760"` // 10MB
 
