@@ -1457,6 +1457,26 @@ Uwaga:       schemat tylko DEKLARUJE które pola są secret; wartości credentia
              (frontend) i ścieżka tenant-setup = późniejsze zadania (Studio UI).
 ```
 
+### Provider capabilities / status mappings / gaps (OPE-407)
+
+Deklaracje per provider-version: co wersja potrafi, jak mapują się statusy, jakie luki blokują publikację. Platform-managed, bez RLS.
+
+```
+Tabele:      provider_capability_profiles (capability_key, support_status, channel/mode/
+             freshness, required_inputs[]/provided_outputs[], latency_sla_seconds),
+             provider_status_mappings (status_domain order|shipment|line, raw_status →
+             canonical_status/event_type/step_key, confidence, is_terminal),
+             provider_integration_gaps (gap_type, severity info|warning|action_required|
+             system_error, status open|acknowledged|resolved).
+Support:     supported|configured|unsupported|requires_manual|degraded|unknown.
+Replace-set: capabilities i status-mappings ustawiane hurtowo (DELETE+INSERT w transakcji),
+             walidowane (unikalne klucze/pary, znane enumy), zamrożone gdy wersja published.
+Gaps:        tworzone/listowane/rozwiązywane; OPE-408 (validation engine) będzie je auto-tworzyć
+             (np. nieznany status → missing_status_mapping).
+Endpointy:   GET/PATCH /…/versions/{vid}/{capabilities,status-mappings}, GET/POST /…/gaps,
+             PATCH /…/gaps/{gap_id} — RequirePlatformPermission (read|write), audytowane.
+```
+
 ### Zabezpieczenia
 
 | Zagrozenie | Mitygacja |
