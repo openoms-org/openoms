@@ -38,6 +38,7 @@ export default function NewMarketplacePage() {
   const router = useRouter();
   const createIntegration = useCreateIntegration();
   const t = useTranslations("marketplaces");
+  const tc = useTranslations("common");
 
   const [step, setStep] = useState<Step>("select");
   const [selectedProvider, setSelectedProvider] = useState<string>("");
@@ -298,7 +299,7 @@ export default function NewMarketplacePage() {
                 }
                 primary={
                   <Button type="submit" disabled={createIntegration.isPending}>
-                    {createIntegration.isPending ? "Tworzenie..." : "Dodaj marketplace"}
+                    {createIntegration.isPending ? tc("creating") : t("addMarketplace")}
                   </Button>
                 }
               />

@@ -31,6 +31,7 @@ function createEmptyEndpoint(): WebhookEndpoint {
 export default function WebhooksPage() {
   const t = useTranslations("settings");
   const tw = useTranslations("settings.webhooks");
+  const tc = useTranslations("common");
 
   const WEBHOOK_EVENTS: { value: string; label: string }[] = [
     { value: "order.created", label: tw("eventOrderCreated") },
@@ -233,7 +234,7 @@ export default function WebhooksPage() {
 
       <div className="flex justify-end">
         <Button onClick={handleSave} disabled={updateConfig.isPending}>
-          {updateConfig.isPending ? "Zapisywanie..." : "Zapisz"}
+          {updateConfig.isPending ? tc("saving") : tc("save")}
         </Button>
       </div>
     </div>

@@ -204,6 +204,7 @@
       "prestaShopConfigured": "Integracja PrestaShop została skonfigurowana",
       "shoperConfigured": "Integracja Shoper została skonfigurowana",
       "shopifyConfigured": "Integracja Shopify została skonfigurowana"
-    }
+    },
+    "addMarketplace": "Dodaj marketplace"
   }
 }

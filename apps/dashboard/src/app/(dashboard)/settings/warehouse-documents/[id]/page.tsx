@@ -152,7 +152,7 @@ export default function WarehouseDocumentDetailPage() {
                   disabled={confirmDoc.isPending}
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  {confirmDoc.isPending ? "Zatwierdzanie..." : t("zatwierdz")}
+                  {confirmDoc.isPending ? t("confirming") : t("zatwierdz")}
                 </Button>
                 <Button
                   variant="outline"
@@ -160,7 +160,7 @@ export default function WarehouseDocumentDetailPage() {
                   disabled={cancelDoc.isPending}
                 >
                   <XCircle className="h-4 w-4 mr-2" />
-                  {cancelDoc.isPending ? "Anulowanie..." : "Anuluj"}
+                  {cancelDoc.isPending ? t("cancelling") : t("cancelButton")}
                 </Button>
               </>
             )}

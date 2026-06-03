@@ -52,6 +52,7 @@ type FormValues = z.infer<typeof formSchema>;
 export default function NewRecurringOrderPage() {
   const router = useRouter();
   const t = useTranslations("recurringOrders");
+  const tc = useTranslations("common");
   const createRecurringOrder = useCreateRecurringOrder();
 
   const {
@@ -318,10 +319,10 @@ export default function NewRecurringOrderPage() {
 
         <div className="flex gap-2">
           <Button type="submit" disabled={createRecurringOrder.isPending}>
-            {createRecurringOrder.isPending ? "Tworzenie..." : "Utworz subskrypcje"}
+            {createRecurringOrder.isPending ? tc("creating") : t("createSubscription")}
           </Button>
           <Button type="button" variant="outline" onClick={() => router.push("/recurring-orders")}>
-            Anuluj
+            {tc("cancel")}
           </Button>
         </div>
       </form>

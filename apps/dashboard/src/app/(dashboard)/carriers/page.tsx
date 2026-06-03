@@ -31,6 +31,7 @@ import {
 export default function CarriersPage() {
   const router = useRouter();
   const t = useTranslations("carriers");
+  const tc = useTranslations("common");
   const { carriers, isLoading, isError, refetch } = useIntegrationsByCategory();
   const deleteIntegration = useDeleteIntegration();
 
@@ -64,7 +65,7 @@ export default function CarriersPage() {
       <PageHeader
         title="Kurierzy"
         description="Zarządzaj połączeniami z firmami kurierskimi"
-        action={{ label: "Dodaj kuriera", href: "/carriers/new" }}
+        action={{ label: t("addCarrier"), href: "/carriers/new" }}
       />
 
       {isError && (
@@ -88,7 +89,7 @@ export default function CarriersPage() {
           icon={Truck}
           title="Brak kurierów"
           description="Dodaj pierwszego kuriera, aby zacząć generować etykiety i śledzić przesyłki."
-          action={{ label: "Dodaj kuriera", href: "/carriers/new" }}
+          action={{ label: t("addCarrier"), href: "/carriers/new" }}
         />
       ) : (
         <div className="rounded-md border">
@@ -169,7 +170,7 @@ export default function CarriersPage() {
         onOpenChange={(open) => !open && setDeleteId(null)}
         title="Usuń kuriera"
         description="Czy na pewno chcesz usunąć tego kuriera? Ta operacja jest nieodwracalna."
-        confirmLabel="Usuń"
+        confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleDelete}
         isPending={deleteIntegration.isPending}
