@@ -27,8 +27,11 @@ CREATE TABLE public.platform_audit_log (
     created_at    timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_platform_audit_action_created ON public.platform_audit_log (action, created_at DESC);
-CREATE INDEX idx_platform_audit_actor ON public.platform_audit_log (actor_user_id, created_at DESC);
+-- Brand-new empty table in this same migration: the ACCESS EXCLUSIVE lock is
+-- harmless (no rows, no concurrent writers), and a CONCURRENTLY index build
+-- cannot run inside golang-migrate's transaction. Marked safe per index line.
+CREATE INDEX idx_platform_audit_action_created ON public.platform_audit_log (action, created_at DESC); -- migrate:index-lock-ok
+CREATE INDEX idx_platform_audit_actor ON public.platform_audit_log (actor_user_id, created_at DESC); -- migrate:index-lock-ok
 
 -- Grant the least-privilege app role(s) access to the new tables. Production
 -- (Supabase) uses role "openoms_app"; self-hosted/staging uses "openoms".
