@@ -1413,6 +1413,30 @@ Auth:        platform-admin loguje się istniejącym loginem (JWT -> user_id); o
              jest wyłącznie AUTORYZACJA, nie uwierzytelnianie.
 ```
 
+### Provider Integration Studio — registry (OPE-405)
+
+Rejestr providerów (rdzeń Studio), platform-managed, BEZ RLS — pod bramką OPE-404.
+
+```
+Tabele:      provider_definitions (rodzina providera: provider_key, type, regions[],
+             business_domains[], latest_published_version_id),
+             provider_versions (wersjonowana konfiguracja; UNIQUE(definition_id, version)),
+             provider_publication_events (append-only audyt cyklu życia),
+             provider_tenant_enables (allowlista private-beta per tenant).
+Cykl życia:  research → designed → adapter_in_progress → internal_validation →
+             private_beta → available → deprecated → retired
+             (+ internal_validation→designed, private_beta/available→internal_validation).
+             Przejścia egzekwowane w ProviderRegistryService; nielegalne → 422.
+Niemutowalność: wersje w stanie published (private_beta/available/deprecated/retired)
+             nie pozwalają na edycję metadanych (422). available ustawia
+             definition.latest_published_version_id + published_at.
+Emergency disable: available/private_beta → internal_validation z rollbackiem
+             wskaźnika latest_published do poprzedniej available (lub NULL).
+Endpointy:   /v1/platform/providers (+ /{id}, /{id}/versions, /{id}/versions/{vid}/
+             {publish,disable,enable-tenant,publication-events}); każdy strzeżony przez
+             RequirePlatformPermission (providers:read|write|publish). Mutacje audytowane.
+```
+
 ### Zabezpieczenia
 
 | Zagrozenie | Mitygacja |

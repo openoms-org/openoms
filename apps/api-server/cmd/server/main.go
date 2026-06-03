@@ -808,6 +808,13 @@ func run() error {
 	platformAuditRepo := repository.NewPlatformAuditRepository(pool)
 	platformHandler := handler.NewPlatformHandler(platformAuditRepo)
 
+	// Provider Integration Studio registry (OPE-405): platform-managed, not tenant-scoped.
+	providerDefinitionRepo := repository.NewProviderDefinitionRepository(pool)
+	providerVersionRepo := repository.NewProviderVersionRepository(pool)
+	providerPublicationRepo := repository.NewProviderPublicationRepository(pool)
+	providerRegistryService := service.NewProviderRegistryService(pool, providerDefinitionRepo, providerVersionRepo, providerPublicationRepo)
+	providerHandler := handler.NewProviderHandler(providerRegistryService, platformAuditRepo)
+
 	// Setup router
 	r := router.New(router.RouterDeps{
 		Pool:                       pool,
@@ -909,6 +916,7 @@ func run() error {
 		EbayListings:               ebayListingsHandler,
 		Platform:                   platformHandler,
 		PlatformAdmin:              platformAdminRepo,
+		Provider:                   providerHandler,
 	})
 
 	// Start background workers (use workerPool for cross-tenant queries).

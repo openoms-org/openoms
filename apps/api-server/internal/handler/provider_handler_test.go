@@ -1,0 +1,148 @@
+package handler
+
+import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/service"
+)
+
+// fakeProviderRegistry implements handler.ProviderRegistry; unset funcs return zero values.
+type fakeProviderRegistry struct {
+	createDef  func(service.CreateProviderDefinitionInput) (*model.ProviderDefinition, error)
+	getDef     func(uuid.UUID) (*model.ProviderDefinition, error)
+	createVer  func(uuid.UUID, string) (*model.ProviderVersion, error)
+	transition func(uuid.UUID, string) (*model.ProviderVersion, error)
+	enableTen  func(uuid.UUID, uuid.UUID) (*model.ProviderTenantEnable, error)
+}
+
+func (f *fakeProviderRegistry) CreateDefinition(_ context.Context, in service.CreateProviderDefinitionInput) (*model.ProviderDefinition, error) {
+	return f.createDef(in)
+}
+func (f *fakeProviderRegistry) ListDefinitions(context.Context) ([]model.ProviderDefinition, error) {
+	return []model.ProviderDefinition{}, nil
+}
+func (f *fakeProviderRegistry) GetDefinition(_ context.Context, id uuid.UUID) (*model.ProviderDefinition, error) {
+	return f.getDef(id)
+}
+func (f *fakeProviderRegistry) UpdateDefinitionMetadata(_ context.Context, in model.ProviderDefinition) (*model.ProviderDefinition, error) {
+	return &in, nil
+}
+func (f *fakeProviderRegistry) CreateVersion(_ context.Context, defID uuid.UUID, version, _, _ string, _ *uuid.UUID) (*model.ProviderVersion, error) {
+	return f.createVer(defID, version)
+}
+func (f *fakeProviderRegistry) GetVersion(context.Context, uuid.UUID) (*model.ProviderVersion, error) {
+	return &model.ProviderVersion{ID: uuid.New()}, nil
+}
+func (f *fakeProviderRegistry) ListVersions(context.Context, uuid.UUID) ([]model.ProviderVersion, error) {
+	return []model.ProviderVersion{}, nil
+}
+func (f *fakeProviderRegistry) Transition(_ context.Context, versionID uuid.UUID, toState string, _ *uuid.UUID, _ string) (*model.ProviderVersion, error) {
+	return f.transition(versionID, toState)
+}
+func (f *fakeProviderRegistry) EmergencyDisable(context.Context, uuid.UUID, *uuid.UUID, string) (*model.ProviderVersion, error) {
+	return &model.ProviderVersion{ID: uuid.New(), PublicationState: model.ProviderStateInternalValidation}, nil
+}
+func (f *fakeProviderRegistry) EnableTenant(_ context.Context, versionID, tenantID uuid.UUID, _ *uuid.UUID) (*model.ProviderTenantEnable, error) {
+	return f.enableTen(versionID, tenantID)
+}
+func (f *fakeProviderRegistry) ListPublicationEvents(context.Context, uuid.UUID) ([]model.ProviderPublicationEvent, error) {
+	return []model.ProviderPublicationEvent{}, nil
+}
+
+func provReq(method, target, body string, params map[string]string) *http.Request {
+	req := httptest.NewRequest(method, target, strings.NewReader(body))
+	rctx := chi.NewRouteContext()
+	for k, v := range params {
+		rctx.URLParams.Add(k, v)
+	}
+	return req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+}
+
+func TestProviderHandler_CreateDefinition_Success(t *testing.T) {
+	f := &fakeProviderRegistry{createDef: func(in service.CreateProviderDefinitionInput) (*model.ProviderDefinition, error) {
+		return &model.ProviderDefinition{ID: uuid.New(), ProviderKey: in.ProviderKey, ProviderType: in.ProviderType}, nil
+	}}
+	h := NewProviderHandler(f, &fakePlatformAudit{})
+	rr := httptest.NewRecorder()
+	h.CreateDefinition(rr, provReq(http.MethodPost, "/v1/platform/providers",
+		`{"provider_key":"bigbuy","display_name":"BigBuy","provider_type":"supplier"}`, nil))
+	assert.Equal(t, http.StatusCreated, rr.Code)
+}
+
+func TestProviderHandler_CreateDefinition_InvalidType_422(t *testing.T) {
+	f := &fakeProviderRegistry{createDef: func(service.CreateProviderDefinitionInput) (*model.ProviderDefinition, error) {
+		return nil, service.ErrInvalidProviderType
+	}}
+	h := NewProviderHandler(f, &fakePlatformAudit{})
+	rr := httptest.NewRecorder()
+	h.CreateDefinition(rr, provReq(http.MethodPost, "/v1/platform/providers",
+		`{"provider_key":"x","display_name":"X","provider_type":"banana"}`, nil))
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+}
+
+func TestProviderHandler_CreateDefinition_MissingFields_400(t *testing.T) {
+	h := NewProviderHandler(&fakeProviderRegistry{}, &fakePlatformAudit{})
+	rr := httptest.NewRecorder()
+	h.CreateDefinition(rr, provReq(http.MethodPost, "/v1/platform/providers", `{"provider_key":"x"}`, nil))
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestProviderHandler_GetDefinition_NotFound_404(t *testing.T) {
+	f := &fakeProviderRegistry{getDef: func(uuid.UUID) (*model.ProviderDefinition, error) {
+		return nil, service.ErrProviderDefinitionNotFound
+	}}
+	h := NewProviderHandler(f, &fakePlatformAudit{})
+	rr := httptest.NewRecorder()
+	h.GetDefinition(rr, provReq(http.MethodGet, "/", "", map[string]string{"id": uuid.New().String()}))
+	assert.Equal(t, http.StatusNotFound, rr.Code)
+}
+
+func TestProviderHandler_GetDefinition_BadUUID_400(t *testing.T) {
+	h := NewProviderHandler(&fakeProviderRegistry{}, &fakePlatformAudit{})
+	rr := httptest.NewRecorder()
+	h.GetDefinition(rr, provReq(http.MethodGet, "/", "", map[string]string{"id": "not-a-uuid"}))
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestProviderHandler_Publish_IllegalTransition_422(t *testing.T) {
+	f := &fakeProviderRegistry{transition: func(uuid.UUID, string) (*model.ProviderVersion, error) {
+		return nil, service.ErrIllegalProviderTransition
+	}}
+	h := NewProviderHandler(f, &fakePlatformAudit{})
+	rr := httptest.NewRecorder()
+	h.Publish(rr, provReq(http.MethodPost, "/publish", `{"to_state":"available"}`,
+		map[string]string{"version_id": uuid.New().String()}))
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+}
+
+func TestProviderHandler_Publish_Success_Audits(t *testing.T) {
+	audit := &fakePlatformAudit{}
+	f := &fakeProviderRegistry{transition: func(id uuid.UUID, to string) (*model.ProviderVersion, error) {
+		return &model.ProviderVersion{ID: id, PublicationState: to}, nil
+	}}
+	h := NewProviderHandler(f, audit)
+	rr := httptest.NewRecorder()
+	h.Publish(rr, provReq(http.MethodPost, "/publish", `{"to_state":"designed","reason":"ready"}`,
+		map[string]string{"version_id": uuid.New().String()}))
+	require.Equal(t, http.StatusOK, rr.Code)
+	require.Len(t, audit.entries, 1)
+	assert.Equal(t, "platform.provider.version.published", audit.entries[0].Action)
+}
+
+func TestProviderHandler_EnableTenant_BadTenant_400(t *testing.T) {
+	h := NewProviderHandler(&fakeProviderRegistry{}, &fakePlatformAudit{})
+	rr := httptest.NewRecorder()
+	h.EnableTenant(rr, provReq(http.MethodPost, "/enable-tenant", `{"tenant_id":"nope"}`,
+		map[string]string{"version_id": uuid.New().String()}))
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
