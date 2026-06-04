@@ -1522,6 +1522,27 @@ Uruchomienie: env SEED_PROVIDERS=true → seed przy starcie (jak backfill szyfro
              Publikacja seedowanych wersji = osobny gated krok (OPE-413).
 ```
 
+### Fulfillment Orchestration — model danych (OPE-414, tor B)
+
+Kanoniczny, TENANT-SCOPED model realizacji (ADR-424) — fundament orchestracji (OPE-415+). W przeciwieństwie do tabel Studio: RLS + `database.WithTenant`.
+
+```
+Tabele:      fulfillment_processes (per-order: aggregate_status [new|validating|ready|
+             in_progress|waiting_external|blocked|completed|cancelled] + health_status
+             [ok|warning|action_required|system_error], niezależne),
+             fulfillment_units (typ warehouse|dropship|backorder|mixed_child|manual; status
+             pending..skipped; parent_unit_id dla splitu),
+             fulfillment_steps (22 kanoniczne, provider-agnostyczne step_key; status; attempts),
+             fulfillment_blockers (12 kodów w kategoriach integration|supplier|operator|
+             capability|mapping; status open|acknowledged|resolved).
+RLS:         FORCE ROW LEVEL SECURITY + tenant_isolation (current_setting('app.current_tenant_id'))
+             na wszystkich 4 tabelach — jak orders/shipments. Read+write izolowane per-najemca.
+Repo:        FulfillmentRepository — metody przyjmują pgx.Tx z database.WithTenant (wzorzec
+             tenant-scoped, jak AuditRepository). CRUD procesów/unitów/kroków/blockerów.
+Zakres:      tylko model+RLS+repo (foundation). Orchestracja (outbox/worker/commands),
+             inventory availability i stock-propagation = OPE-415+. Repo podłączy OPE-415.
+```
+
 ### Zabezpieczenia
 
 | Zagrozenie | Mitygacja |
