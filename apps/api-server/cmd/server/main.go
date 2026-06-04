@@ -972,6 +972,14 @@ func run() error {
 	if cfg.BillingEnabled() && checkoutSvc != nil {
 		workerMgr.Register(worker.NewBillingReconciliationWorker(workerPool, checkoutSvc, slog.Default()))
 	}
+	// Fulfillment orchestration outbox worker (OPE-415). Gated off by default;
+	// no real side-effect handlers are registered until OPE-416+.
+	if cfg.OrchestrationWorkerEnabled {
+		orchestrationRepo := repository.NewOrchestrationRepository()
+		orchestrationDispatcher := service.NewOrchestrationDispatcher()
+		fulfillmentRepo := repository.NewFulfillmentRepository()
+		workerMgr.Register(worker.NewOrchestrationWorker(workerPool, orchestrationRepo, orchestrationDispatcher, fulfillmentRepo, 0, slog.Default()))
+	}
 	if cfg.WorkersEnabled {
 		go workerMgr.Start(context.Background())
 	}

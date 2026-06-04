@@ -1,0 +1,181 @@
+package repository
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+)
+
+// OrchestrationRepository persists the transactional outbox + attempts. Outbox
+// rows are tenant-scoped (RLS): EnqueueEvent runs inside database.WithTenant
+// (part of a state-change tx), while the worker's claim/finish methods take a
+// Querier — the privileged cross-tenant pool — to process all tenants' due rows.
+type OrchestrationRepository struct{}
+
+// NewOrchestrationRepository creates an OrchestrationRepository.
+func NewOrchestrationRepository() *OrchestrationRepository { return &OrchestrationRepository{} }
+
+const orchestrationOutboxColumns = `id, tenant_id, process_id, unit_id, event_type, payload, status,
+	idempotency_key, attempts, max_attempts, next_attempt_at, claimed_at, last_error, created_at, updated_at`
+
+func scanOutbox(row interface{ Scan(...any) error }) (*model.OrchestrationOutboxEvent, error) {
+	var e model.OrchestrationOutboxEvent
+	var payload []byte
+	if err := row.Scan(&e.ID, &e.TenantID, &e.ProcessID, &e.UnitID, &e.EventType, &payload, &e.Status,
+		&e.IdempotencyKey, &e.Attempts, &e.MaxAttempts, &e.NextAttemptAt, &e.ClaimedAt, &e.LastError, &e.CreatedAt, &e.UpdatedAt); err != nil {
+		return nil, err
+	}
+	unmarshalMeta(payload, &e.Payload)
+	return &e, nil
+}
+
+// EnqueueEvent inserts an outbox event idempotently (deduped on tenant +
+// idempotency_key). Returns created=false when the event already existed.
+// Runs inside the caller's tenant transaction (RLS-scoped).
+func (r *OrchestrationRepository) EnqueueEvent(ctx context.Context, q Querier, e model.OrchestrationOutboxEvent) (bool, *model.OrchestrationOutboxEvent, error) {
+	maxAttempts := e.MaxAttempts
+	if maxAttempts <= 0 {
+		maxAttempts = 8
+	}
+	out, err := scanOutbox(q.QueryRow(ctx,
+		`INSERT INTO orchestration_outbox (tenant_id, process_id, unit_id, event_type, payload, idempotency_key, max_attempts)
+		 VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7)
+		 ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
+		 RETURNING `+orchestrationOutboxColumns,
+		e.TenantID, e.ProcessID, e.UnitID, e.EventType, marshalMeta(e.Payload), e.IdempotencyKey, maxAttempts))
+	if err == nil {
+		return true, out, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return false, nil, fmt.Errorf("enqueue outbox event: %w", err)
+	}
+	// Conflict: the event already exists — return the existing row. Filter by
+	// tenant_id too (the unique key is (tenant_id, idempotency_key)) so this is
+	// correct even on a privileged pool that bypasses RLS.
+	existing, err := scanOutbox(q.QueryRow(ctx,
+		`SELECT `+orchestrationOutboxColumns+` FROM orchestration_outbox WHERE tenant_id = $1 AND idempotency_key = $2`,
+		e.TenantID, e.IdempotencyKey))
+	if err != nil {
+		return false, nil, fmt.Errorf("load existing outbox event: %w", err)
+	}
+	return false, existing, nil
+}
+
+// ClaimDue atomically claims up to limit due (pending, next_attempt_at<=now)
+// outbox rows across tenants using FOR UPDATE SKIP LOCKED, so concurrent workers
+// never claim the same row. Runs on the privileged cross-tenant pool.
+func (r *OrchestrationRepository) ClaimDue(ctx context.Context, q Querier, limit int) ([]model.OrchestrationOutboxEvent, error) {
+	rows, err := q.Query(ctx,
+		`UPDATE orchestration_outbox SET status = 'claimed', claimed_at = now(), updated_at = now()
+		  WHERE id IN (
+		      SELECT id FROM orchestration_outbox
+		       WHERE status = 'pending' AND next_attempt_at <= now()
+		       ORDER BY next_attempt_at
+		       LIMIT $1
+		       FOR UPDATE SKIP LOCKED
+		  )
+		 RETURNING `+orchestrationOutboxColumns, limit)
+	if err != nil {
+		return nil, fmt.Errorf("claim due outbox events: %w", err)
+	}
+	defer rows.Close()
+	result := []model.OrchestrationOutboxEvent{}
+	for rows.Next() {
+		e, err := scanOutbox(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan outbox event: %w", err)
+		}
+		result = append(result, *e)
+	}
+	return result, rows.Err()
+}
+
+// MarkSucceeded marks an outbox row as succeeded.
+func (r *OrchestrationRepository) MarkSucceeded(ctx context.Context, q Querier, id uuid.UUID) error {
+	_, err := q.Exec(ctx, `UPDATE orchestration_outbox SET status='succeeded', updated_at=now() WHERE id=$1`, id)
+	if err != nil {
+		return fmt.Errorf("mark outbox succeeded: %w", err)
+	}
+	return nil
+}
+
+// MarkFailedRetry records a retryable failure: increments attempts, re-queues
+// the row (status pending) with a future next_attempt_at, and clears the claim.
+func (r *OrchestrationRepository) MarkFailedRetry(ctx context.Context, q Querier, id uuid.UUID, errMsg string, nextAttemptAt time.Time) error {
+	_, err := q.Exec(ctx,
+		`UPDATE orchestration_outbox
+		    SET status='pending', attempts = attempts + 1, next_attempt_at = $2::timestamptz,
+		        last_error = $3, claimed_at = NULL, updated_at = now()
+		  WHERE id = $1`, id, nextAttemptAt, errMsg)
+	if err != nil {
+		return fmt.Errorf("mark outbox retry: %w", err)
+	}
+	return nil
+}
+
+// MarkFailedPermanent marks an outbox row as permanently failed.
+func (r *OrchestrationRepository) MarkFailedPermanent(ctx context.Context, q Querier, id uuid.UUID, errMsg string) error {
+	_, err := q.Exec(ctx,
+		`UPDATE orchestration_outbox SET status='failed', attempts = attempts + 1, last_error=$2, updated_at=now() WHERE id=$1`,
+		id, errMsg)
+	if err != nil {
+		return fmt.Errorf("mark outbox failed: %w", err)
+	}
+	return nil
+}
+
+const orchestrationAttemptColumns = `id, tenant_id, outbox_id, attempt_number, status, error, started_at, finished_at`
+
+// StartAttempt records the beginning of an execution attempt.
+func (r *OrchestrationRepository) StartAttempt(ctx context.Context, q Querier, tenantID, outboxID uuid.UUID, attemptNumber int) (*model.OrchestrationAttempt, error) {
+	var a model.OrchestrationAttempt
+	err := q.QueryRow(ctx,
+		`INSERT INTO orchestration_attempts (tenant_id, outbox_id, attempt_number, status)
+		 VALUES ($1,$2,$3,'running') RETURNING `+orchestrationAttemptColumns,
+		tenantID, outboxID, attemptNumber).
+		Scan(&a.ID, &a.TenantID, &a.OutboxID, &a.AttemptNumber, &a.Status, &a.Error, &a.StartedAt, &a.FinishedAt)
+	if err != nil {
+		return nil, fmt.Errorf("start attempt: %w", err)
+	}
+	return &a, nil
+}
+
+// FinishAttempt records the outcome of an attempt.
+func (r *OrchestrationRepository) FinishAttempt(ctx context.Context, q Querier, id uuid.UUID, status, errMsg string) error {
+	_, err := q.Exec(ctx,
+		`UPDATE orchestration_attempts SET status=$2, error=$3, finished_at=now() WHERE id=$1`,
+		id, status, errMsg)
+	if err != nil {
+		return fmt.Errorf("finish attempt: %w", err)
+	}
+	return nil
+}
+
+// GetEvent returns an outbox event by id.
+func (r *OrchestrationRepository) GetEvent(ctx context.Context, q Querier, id uuid.UUID) (*model.OrchestrationOutboxEvent, error) {
+	return scanOutbox(q.QueryRow(ctx, `SELECT `+orchestrationOutboxColumns+` FROM orchestration_outbox WHERE id = $1`, id))
+}
+
+// ListByProcess returns a process's outbox events (RLS-scoped; pass a WithTenant tx).
+func (r *OrchestrationRepository) ListByProcess(ctx context.Context, q Querier, processID uuid.UUID) ([]model.OrchestrationOutboxEvent, error) {
+	rows, err := q.Query(ctx, `SELECT `+orchestrationOutboxColumns+` FROM orchestration_outbox WHERE process_id = $1 ORDER BY created_at`, processID)
+	if err != nil {
+		return nil, fmt.Errorf("list outbox by process: %w", err)
+	}
+	defer rows.Close()
+	result := []model.OrchestrationOutboxEvent{}
+	for rows.Next() {
+		e, err := scanOutbox(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan outbox event: %w", err)
+		}
+		result = append(result, *e)
+	}
+	return result, rows.Err()
+}
