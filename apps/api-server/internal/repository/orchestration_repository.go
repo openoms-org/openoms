@@ -55,9 +55,12 @@ func (r *OrchestrationRepository) EnqueueEvent(ctx context.Context, q Querier, e
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return false, nil, fmt.Errorf("enqueue outbox event: %w", err)
 	}
-	// Conflict: the event already exists — return the existing row.
+	// Conflict: the event already exists — return the existing row. Filter by
+	// tenant_id too (the unique key is (tenant_id, idempotency_key)) so this is
+	// correct even on a privileged pool that bypasses RLS.
 	existing, err := scanOutbox(q.QueryRow(ctx,
-		`SELECT `+orchestrationOutboxColumns+` FROM orchestration_outbox WHERE idempotency_key = $1`, e.IdempotencyKey))
+		`SELECT `+orchestrationOutboxColumns+` FROM orchestration_outbox WHERE tenant_id = $1 AND idempotency_key = $2`,
+		e.TenantID, e.IdempotencyKey))
 	if err != nil {
 		return false, nil, fmt.Errorf("load existing outbox event: %w", err)
 	}

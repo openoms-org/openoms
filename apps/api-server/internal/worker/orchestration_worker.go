@@ -74,18 +74,25 @@ func (w *OrchestrationWorker) Run(ctx context.Context) error {
 // processEvent executes one claimed event. A panic or error in one event must
 // not abort the rest of the batch.
 func (w *OrchestrationWorker) processEvent(ctx context.Context, e model.OrchestrationOutboxEvent) {
+	var att *model.OrchestrationAttempt
 	defer func() {
 		if r := recover(); r != nil {
 			w.logger.Error("orchestration worker panic", "event_id", e.ID, "event_type", e.EventType, "panic", r)
 			sentry.CurrentHub().Recover(r)
+			if att != nil {
+				_ = w.repo.FinishAttempt(ctx, w.pool, att.ID, model.AttemptStatusFailed, fmt.Sprintf("panic: %v", r))
+			}
 			_ = w.repo.MarkFailedRetry(ctx, w.pool, e.ID, fmt.Sprintf("panic: %v", r), time.Now().UTC().Add(model.NextOutboxBackoff(e.Attempts+1)))
 		}
 	}()
 
 	attemptNumber := e.Attempts + 1
-	att, err := w.repo.StartAttempt(ctx, w.pool, e.TenantID, e.ID, attemptNumber)
+	var err error
+	att, err = w.repo.StartAttempt(ctx, w.pool, e.TenantID, e.ID, attemptNumber)
 	if err != nil {
+		// Re-queue rather than leaving the row stuck as 'claimed'.
 		w.logger.Error("orchestration start attempt failed", "event_id", e.ID, "error", err)
+		_ = w.repo.MarkFailedRetry(ctx, w.pool, e.ID, fmt.Sprintf("start attempt error: %v", err), time.Now().UTC().Add(model.NextOutboxBackoff(e.Attempts)))
 		return
 	}
 
