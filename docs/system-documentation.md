@@ -1543,6 +1543,26 @@ Zakres:      tylko model+RLS+repo (foundation). Orchestracja (outbox/worker/comm
              inventory availability i stock-propagation = OPE-415+. Repo podłączy OPE-415.
 ```
 
+### Orchestration outbox + idempotent worker (OPE-415, tor B)
+
+Transactional outbox: trwała kolejka efektów ubocznych fulfillmentu + idempotentny worker. TENANT-SCOPED (RLS).
+
+```
+Tabele:      orchestration_outbox (event_type, payload, status pending|claimed|succeeded|failed,
+             idempotency_key UNIQUE per tenant, attempts/max_attempts, next_attempt_at, last_error),
+             orchestration_attempts (per-próba: attempt_number, status running|succeeded|failed, error).
+Enqueue:     EnqueueEvent w TEJ SAMEJ transakcji co zmiana stanu (database.WithTenant) — efekt
+             uboczny nie ginie przy crashu. Idempotentny (ON CONFLICT tenant+idempotency_key).
+Worker:      OrchestrationWorker (Manager/Worker, gated ORCHESTRATION_WORKER_ENABLED, domyślnie
+             OFF). Claimuje due rows MIĘDZY najemcami przez privileged workerPool (bypass RLS)
+             z FOR UPDATE SKIP LOCKED — brak podwójnego claimu. Per event: StartAttempt →
+             Dispatch → FinishAttempt.
+Dispatcher:  OrchestrationDispatcher (mapa event_type → handler). OPE-415 dostarcza pusty (+ test);
+             realne handlery = OPE-416/417/418. Nieznany event_type → PermanentError.
+Retry:       sukces→succeeded; błąd retryable→pending + next_attempt_at = now+backoff (30s×2^n,
+             cap 1h); permanent (PermanentError) lub wyczerpane attempts→failed + fulfillment_blocker.
+```
+
 ### Zabezpieczenia
 
 | Zagrozenie | Mitygacja |

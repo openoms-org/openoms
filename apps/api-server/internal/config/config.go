@@ -50,6 +50,10 @@ type Config struct {
 	// class-first catalog of existing providers at startup (OPE-412).
 	SeedProviders bool `env:"SEED_PROVIDERS" envDefault:"false"`
 
+	// OrchestrationWorkerEnabled enables the fulfillment outbox worker (OPE-415).
+	// Off by default until side-effect handlers are registered (OPE-416+).
+	OrchestrationWorkerEnabled bool `env:"ORCHESTRATION_WORKER_ENABLED" envDefault:"false"`
+
 	UploadDir     string `env:"UPLOAD_DIR" envDefault:"./uploads"`
 	MaxUploadSize int64  `env:"MAX_UPLOAD_SIZE" envDefault:"10485760"` // 10MB
 
