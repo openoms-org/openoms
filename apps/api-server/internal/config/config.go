@@ -54,6 +54,12 @@ type Config struct {
 	// Off by default until side-effect handlers are registered (OPE-416+).
 	OrchestrationWorkerEnabled bool `env:"ORCHESTRATION_WORKER_ENABLED" envDefault:"false"`
 
+	// FulfillmentProcessEnabled routes order creation through the fulfillment
+	// commands (OPE-416): on each new order it creates a fulfillment process and
+	// enqueues an order.created orchestration event in the order's transaction.
+	// Off by default — zero behavior change until enabled.
+	FulfillmentProcessEnabled bool `env:"FULFILLMENT_PROCESS_ENABLED" envDefault:"false"`
+
 	UploadDir     string `env:"UPLOAD_DIR" envDefault:"./uploads"`
 	MaxUploadSize int64  `env:"MAX_UPLOAD_SIZE" envDefault:"10485760"` // 10MB
 

@@ -31,15 +31,19 @@ type BaseLinkerImportService struct {
 	auditRepo    repository.AuditRepo
 	tenantRepo   repository.TenantRepo
 	pool         *pgxpool.Pool
+	fulfillment  *FulfillmentService
 }
 
-// NewBaseLinkerImportService creates a new BaseLinkerImportService.
+// NewBaseLinkerImportService creates a new BaseLinkerImportService. fulfillment
+// may be nil (or a disabled FulfillmentService), in which case imported orders
+// do not spin up a fulfillment process.
 func NewBaseLinkerImportService(
 	orderRepo repository.OrderRepo,
 	customerRepo repository.CustomerRepo,
 	auditRepo repository.AuditRepo,
 	tenantRepo repository.TenantRepo,
 	pool *pgxpool.Pool,
+	fulfillment *FulfillmentService,
 ) *BaseLinkerImportService {
 	return &BaseLinkerImportService{
 		orderRepo:    orderRepo,
@@ -47,6 +51,7 @@ func NewBaseLinkerImportService(
 		auditRepo:    auditRepo,
 		tenantRepo:   tenantRepo,
 		pool:         pool,
+		fulfillment:  fulfillment,
 	}
 }
 
@@ -611,6 +616,19 @@ func (s *BaseLinkerImportService) importOrderGroup(
 			Message: fmt.Sprintf("duplicate order_id: %s", externalID),
 		})
 		return errs
+	}
+
+	// Route the newly created order through the fulfillment commands (OPE-416),
+	// in the same transaction. Only when the row actually created an order.
+	// No-op when the gated service is nil/disabled.
+	if s.fulfillment != nil {
+		if _, err := s.fulfillment.EnsureProcessForOrder(ctx, tx, tenantID, order.ID); err != nil {
+			errs = append(errs, model.ImportError{
+				Row:     rowNum,
+				Message: fmt.Sprintf("failed to create fulfillment process: %s", err.Error()),
+			})
+			return errs
+		}
 	}
 
 	result.OrdersCreated++

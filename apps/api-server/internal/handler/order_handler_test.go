@@ -164,7 +164,7 @@ func TestOrderHandler_GetAudit_InvalidOrderID(t *testing.T) {
 
 func TestOrderHandler_Create_ValidationError(t *testing.T) {
 	// OrderService with nil pool will fail at WithTenant, but validation error happens before
-	svc := service.NewOrderService(nil, nil, nil, nil, nil, nil)
+	svc := service.NewOrderService(nil, nil, nil, nil, nil, nil, nil)
 	h := NewOrderHandler(svc, nil, nil)
 
 	tenantID := uuid.New()
@@ -185,7 +185,7 @@ func TestOrderHandler_Create_ValidationError(t *testing.T) {
 }
 
 func TestOrderHandler_BulkTransitionStatus_ValidationError(t *testing.T) {
-	svc := service.NewOrderService(nil, nil, nil, nil, nil, nil)
+	svc := service.NewOrderService(nil, nil, nil, nil, nil, nil, nil)
 	h := NewOrderHandler(svc, nil, nil)
 
 	tenantID := uuid.New()
@@ -207,7 +207,7 @@ func TestOrderHandler_BulkTransitionStatus_ValidationError(t *testing.T) {
 }
 
 func TestOrderHandler_TransitionStatus_ValidationError(t *testing.T) {
-	svc := service.NewOrderService(nil, nil, nil, nil, nil, nil)
+	svc := service.NewOrderService(nil, nil, nil, nil, nil, nil, nil)
 	h := NewOrderHandler(svc, nil, nil)
 
 	tenantID := uuid.New()
@@ -230,7 +230,7 @@ func TestOrderHandler_TransitionStatus_ValidationError(t *testing.T) {
 }
 
 func TestOrderHandler_Update_ValidationError(t *testing.T) {
-	svc := service.NewOrderService(nil, nil, nil, nil, nil, nil)
+	svc := service.NewOrderService(nil, nil, nil, nil, nil, nil, nil)
 	h := NewOrderHandler(svc, nil, nil)
 
 	tenantID := uuid.New()
