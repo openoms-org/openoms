@@ -39,6 +39,22 @@ type PurchaseOrderService struct {
 	pool            *pgxpool.Pool
 	webhookDispatch *WebhookDispatchService
 	logger          *slog.Logger
+	fulfillment     *FulfillmentService
+}
+
+// SetFulfillmentService wires the gated fulfillment service used for best-effort
+// supplier-purchase / backorder recording (OPE-418). Nil-safe and a complete no-op
+// until FULFILLMENT_PROCESS_ENABLED is set.
+//
+// NOTE: purchase_orders are supplier replenishment documents and are NOT linked to
+// a customer order in the current schema, so the receipt of a PO cannot be
+// correlated to a specific fulfillment process here. The customer-order-side
+// backorder resolution is driven from the order-linked warehouse-document (PZ)
+// receipt path instead. This setter is wired for symmetry and a future
+// PO<->order link; the receive hook is a no-op resolver until that link exists
+// (see the OPE-418 follow-up deferral on the supplier-availability policy model).
+func (s *PurchaseOrderService) SetFulfillmentService(f *FulfillmentService) {
+	s.fulfillment = f
 }
 
 // NewPurchaseOrderService creates a new PurchaseOrderService.

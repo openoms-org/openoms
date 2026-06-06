@@ -362,13 +362,17 @@ func run() error {
 	priceListService := service.NewPriceListService(priceListRepo, productRepo, auditRepo, pool)
 	messageTemplateService := service.NewMessageTemplateService(messageTemplateRepo, pool)
 	warehouseDocService := service.NewWarehouseDocumentService(warehouseDocRepo, warehouseDocItemRepo, warehouseStockRepo, auditRepo, pool)
+	warehouseDocService.SetFulfillmentService(fulfillmentService) // OPE-418: gated best-effort unit/step recording
 	exchangeRateService := service.NewExchangeRateService(exchangeRateRepo, auditRepo, pool)
 	ksefService := service.NewKSeFService(invoiceRepo, orderRepo, tenantRepo, auditRepo, pool)
 	invoiceService.SetKSeFService(ksefService)
 	stocktakeService := service.NewStocktakeService(stocktakeRepo, stocktakeItemRepo, warehouseStockRepo, warehouseDocRepo, warehouseDocItemRepo, auditRepo, pool, webhookDispatchService)
 	purchaseOrderService := service.NewPurchaseOrderService(purchaseOrderRepo, purchaseOrderItemRepo, warehouseStockRepo, auditRepo, pool, webhookDispatchService, slog.Default())
+	purchaseOrderService.SetFulfillmentService(fulfillmentService) // OPE-418: gated best-effort recording
 	pickPackService := service.NewPickPackService(pickPackRepo, orderRepo, productRepo, variantRepo, auditRepo, pool)
+	pickPackService.SetFulfillmentService(fulfillmentService) // OPE-418: gated best-effort unit/step recording
 	dropshipService := service.NewDropshipService(dropshipRepo, dropshipItemRepo, orderRepo, productRepo, supplierRepo, auditRepo, integrationService, pool, webhookDispatchService, slog.Default())
+	dropshipService.SetFulfillmentService(fulfillmentService) // OPE-418: gated best-effort unit/step recording
 	recurringOrderService := service.NewRecurringOrderService(recurringOrderRepo, orderRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 
 	// Product listing repo (needed by both stock sync and allegro listings)

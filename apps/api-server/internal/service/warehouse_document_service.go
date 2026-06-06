@@ -31,11 +31,62 @@ type WarehouseDocumentService struct {
 	auditRepo        repository.AuditRepo
 	pool             *pgxpool.Pool
 	stockSyncService *StockSyncService
+	fulfillment      *FulfillmentService
 }
 
 // SetStockSyncService sets the stock sync service for propagating stock changes after document confirmation.
 func (s *WarehouseDocumentService) SetStockSyncService(svc *StockSyncService) {
 	s.stockSyncService = svc
+}
+
+// SetFulfillmentService wires the gated fulfillment service used for best-effort
+// warehouse-unit / backorder transition recording on document confirmation
+// (OPE-418). Nil-safe and a complete no-op until FULFILLMENT_PROCESS_ENABLED is set.
+func (s *WarehouseDocumentService) SetFulfillmentService(f *FulfillmentService) {
+	s.fulfillment = f
+}
+
+// recordDocConfirmFulfillment maps a confirmed, order-linked warehouse document onto
+// the order's fulfillment units (OPE-418, gated best-effort). For a WZ (goods issue)
+// it records the reserve/release of stock against the warehouse unit; for a PZ
+// (goods receipt) tied to an order it resolves any open backorder unit (the goods
+// arrived) and resumes the warehouse unit. No-op when the document has no order, or
+// when the service is disabled. Never affects the confirm operation.
+func (s *WarehouseDocumentService) recordDocConfirmFulfillment(ctx context.Context, tenantID uuid.UUID, doc *model.WarehouseDocument) {
+	if !s.fulfillment.Enabled() || doc == nil || doc.OrderID == nil {
+		return
+	}
+	orderID := *doc.OrderID
+
+	switch doc.DocumentType {
+	case "PZ":
+		// Goods receipt for an order — the backordered stock arrived. Resolve the
+		// backorder unit and mark it succeeded, then resume the warehouse unit.
+		bo := s.fulfillment.EnsureUnit(ctx, tenantID, orderID, model.UnitTypeBackorder, "",
+			map[string]any{"source": "warehouse_document", "document_id": doc.ID.String()})
+		if bo != nil {
+			s.fulfillment.RecordStep(ctx, tenantID, bo.ID, model.StepReceivePurchaseOrder, model.FulfillmentStatusSucceeded,
+				map[string]any{"document_number": doc.DocumentNumber})
+			s.fulfillment.RecordUnitTransition(ctx, tenantID, bo.ID, model.FulfillmentStatusSucceeded)
+		}
+		wh := s.fulfillment.EnsureUnit(ctx, tenantID, orderID, model.UnitTypeWarehouse, "",
+			map[string]any{"source": "warehouse_document", "document_id": doc.ID.String()})
+		if wh != nil {
+			s.fulfillment.RecordStep(ctx, tenantID, wh.ID, model.StepReserveStock, model.FulfillmentStatusSucceeded,
+				map[string]any{"document_number": doc.DocumentNumber})
+			s.fulfillment.RecordUnitTransition(ctx, tenantID, wh.ID, model.FulfillmentStatusRunning)
+		}
+	case "WZ":
+		// Goods issue for an order — stock left the warehouse for dispatch.
+		wh := s.fulfillment.EnsureUnit(ctx, tenantID, orderID, model.UnitTypeWarehouse, "",
+			map[string]any{"source": "warehouse_document", "document_id": doc.ID.String()})
+		if wh != nil {
+			s.fulfillment.RecordStep(ctx, tenantID, wh.ID, model.StepCreateDispatchOrder, model.FulfillmentStatusSucceeded,
+				map[string]any{"document_number": doc.DocumentNumber})
+			s.fulfillment.RecordUnitTransition(ctx, tenantID, wh.ID, model.FulfillmentStatusRunning)
+		}
+	}
+	s.fulfillment.AggregateMixedOrder(ctx, tenantID, orderID)
 }
 
 // NewWarehouseDocumentService creates a new WarehouseDocumentService.
@@ -371,6 +422,10 @@ func (s *WarehouseDocumentService) Confirm(ctx context.Context, tenantID, docID 
 			})
 		}
 	}
+
+	// OPE-418: map an order-linked confirmation onto the order's warehouse/backorder
+	// units (gated, best-effort — never affects the result above).
+	s.recordDocConfirmFulfillment(ctx, tenantID, doc)
 
 	return doc, nil
 }
