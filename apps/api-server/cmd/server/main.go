@@ -319,11 +319,16 @@ func run() error {
 	// fulfillment process + orchestration outbox. A no-op when disabled.
 	fulfillmentRepo := repository.NewFulfillmentRepository()
 	orchestrationRepo := repository.NewOrchestrationRepository()
-	fulfillmentService := service.NewFulfillmentService(cfg.FulfillmentProcessEnabled, fulfillmentRepo, orchestrationRepo)
+	fulfillmentAttemptRepo := repository.NewFulfillmentAttemptRepository()
+	// OPE-417: best-effort provider-attempt recording is wired via WithRecording.
+	// It stays a no-op until FULFILLMENT_PROCESS_ENABLED is set.
+	fulfillmentService := service.NewFulfillmentService(cfg.FulfillmentProcessEnabled, fulfillmentRepo, orchestrationRepo).
+		WithRecording(pool, fulfillmentAttemptRepo)
 	orderService := service.NewOrderService(orderRepo, auditRepo, tenantRepo, pool, emailService, webhookDispatchService, fulfillmentService)
 	returnService := service.NewReturnService(returnRepo, orderRepo, auditRepo, pool, webhookDispatchService)
 	shipmentService := service.NewShipmentService(shipmentRepo, orderRepo, productRepo, auditRepo, tenantRepo, pool, webhookDispatchService)
 	shipmentService.SetWorkerPool(workerPool)
+	shipmentService.SetFulfillmentService(fulfillmentService) // OPE-417: gated best-effort recording
 	productService := service.NewProductService(productRepo, auditRepo, pool, webhookDispatchService)
 	integrationService := service.NewIntegrationService(integrationRepo, auditRepo, pool, encryptionKey)
 	labelService := service.NewLabelService(
@@ -332,6 +337,7 @@ func run() error {
 		pool, encryptionKey, cfg.UploadDir, cfg.BaseURL,
 		objectStorage,
 	)
+	labelService.SetFulfillmentService(fulfillmentService) // OPE-417: gated best-effort recording
 	webhookService := service.NewWebhookService(webhookRepo, tenantRepo, pool, cfg.AllegroWebhookSecret, cfg.InPostWebhookSecret)
 	providerWebhookSecretResolver := service.NewProviderWebhookSecretResolver(workerPool, encryptionKey)
 	statsService := service.NewStatsService(statsRepo, pool)
@@ -957,7 +963,9 @@ func run() error {
 	workerMgr.Register(worker.NewAllegroOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, labelService, slog.Default()))
 	workerMgr.Register(worker.NewStockSyncWorker(workerPool, encryptionKey, slog.Default()))
 	workerMgr.Register(worker.NewPriceSyncWorker(workerPool, encryptionKey, slog.Default()))
-	workerMgr.Register(worker.NewTrackingPoller(workerPool, encryptionKey, shipmentRepo, shipmentService, slog.Default()))
+	trackingPoller := worker.NewTrackingPoller(workerPool, encryptionKey, shipmentRepo, shipmentService, slog.Default())
+	trackingPoller.SetFulfillmentRecorder(fulfillmentService) // OPE-417: gated best-effort recording
+	workerMgr.Register(trackingPoller)
 	workerMgr.Register(worker.NewErliOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
 	workerMgr.Register(worker.NewAmazonOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
 	workerMgr.Register(worker.NewAmazonFeedStatusWorker(workerPool, encryptionKey, slog.Default()))
