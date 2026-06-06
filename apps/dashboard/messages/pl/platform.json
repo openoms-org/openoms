@@ -63,7 +63,10 @@
       "tabs": {
         "schema": "Schemat danych logowania",
         "capabilities": "Możliwości",
-        "statusMappings": "Mapowania statusów"
+        "statusMappings": "Mapowania statusów",
+        "validation": "Walidacja",
+        "publication": "Review publikacji",
+        "tenantVisibility": "Widoczność dla najemców"
       }
     },
     "schemaBuilder": {
@@ -281,6 +284,199 @@
           "manual_fallback_required": "Wymagane ręczne rozwiązanie awaryjne"
         }
       }
+    },
+    "validationLab": {
+      "probesTitle": "Sondy walidacyjne",
+      "probesDescription": "Sondy zadeklarowane dla tej wersji, pogrupowane według klasy bezpieczeństwa.",
+      "loadingProbes": "Ładowanie sond…",
+      "noProbesTitle": "Brak zadeklarowanych sond",
+      "noProbesDescription": "Zadeklaruj sondy walidacyjne dla tej wersji, aby uruchamiać powtarzalne testy.",
+      "runTitle": "Uruchom walidację",
+      "runDescription": "Otwórz niezmienialny przebieg walidacji dla środowiska.",
+      "environment": "Środowisko",
+      "startRun": "Uruchom przebieg walidacji",
+      "runStarted": "Przebieg walidacji uruchomiony.",
+      "safetyNote": "Wykonanie sond jest rejestrowane jako niezmienialny przebieg. Zapisy produkcyjne i sondy destrukcyjne są chronione.",
+      "productionPermissionRequired": "Przebiegi produkcyjne wymagają uprawnienia providers:secrets.",
+      "allowDestructive": "Zezwól na sondy destrukcyjne",
+      "allowDestructiveHint": "Sondy destrukcyjne anulują lub usuwają stan dostawcy i nigdy nie są częścią domyślnego zestawu.",
+      "destructiveConfirmTitle": "Uruchomić sondy destrukcyjne?",
+      "destructiveConfirmDescription": "Ten przebieg może wykonać sondy destrukcyjne, które anulują lub usuwają stan dostawcy. Tej operacji nie można cofnąć.",
+      "destructiveConfirmAction": "Uruchom z sondami destrukcyjnymi",
+      "probeRequired": "Wymagana",
+      "runsTitle": "Przebiegi walidacji",
+      "runsDescription": "Niezmienialna historia walidacji z wynikami poszczególnych sond i dowodami.",
+      "loadingRuns": "Ładowanie przebiegów…",
+      "noRunsTitle": "Brak przebiegów walidacji",
+      "noRunsDescription": "Uruchom przebieg walidacji, aby zarejestrować wyniki i dowody.",
+      "loadingResults": "Ładowanie wyników…",
+      "selectRun": "Wybierz przebieg, aby zobaczyć jego wyniki.",
+      "noResults": "Brak zarejestrowanych wyników dla tego przebiegu.",
+      "openEvidence": "Zobacz dowody",
+      "finishedAt": "Zakończono {time}",
+      "runInProgress": "W trakcie",
+      "safety": {
+        "read_only": "Tylko odczyt",
+        "sandbox_write": "Zapis w sandbox",
+        "production_write": "Zapis produkcyjny",
+        "destructive": "Destrukcyjne"
+      },
+      "safetyHint": {
+        "read_only": "Nie zmienia stanu dostawcy.",
+        "sandbox_write": "Zmienia środowisko sandbox/testowe.",
+        "production_write": "Zmienia stan produkcyjny — opcjonalne i chronione uprawnieniem.",
+        "destructive": "Anuluje lub usuwa nieodwracalnie — osobny niebezpieczny przepływ."
+      },
+      "env": {
+        "sandbox": "Sandbox",
+        "production": "Produkcja"
+      },
+      "verdict": {
+        "pending": "Oczekuje",
+        "passed": "Zaliczony",
+        "failed": "Niezaliczony",
+        "error": "Błąd"
+      },
+      "resultStatus": {
+        "passed": "Zaliczony",
+        "failed": "Niezaliczony",
+        "skipped": "Pominięty",
+        "error": "Błąd"
+      },
+      "probeType": {
+        "auth_check": "Uwierzytelnianie",
+        "endpoint_reachability": "Łączność",
+        "feed_fetch": "Pobranie kanału",
+        "feed_parse": "Parsowanie kanału",
+        "sample_catalog_read": "Odczyt katalogu",
+        "sample_stock_read": "Odczyt stanów",
+        "sample_price_read": "Odczyt cen",
+        "order_preflight": "Preflight zamówienia",
+        "sandbox_order_create": "Utworzenie zamówienia testowego",
+        "order_status_read": "Odczyt statusu zamówienia",
+        "shipment_tracking_read": "Odczyt śledzenia",
+        "invoice_read": "Odczyt faktury",
+        "webhook_signature_verification": "Podpis webhooka",
+        "malformed_payload_test": "Nieprawidłowy ładunek",
+        "rate_limit_behavior": "Limit żądań"
+      }
+    },
+    "evidence": {
+      "title": "Dowody",
+      "description": "Zredagowane dowody sond z hashami i metadanymi. Surowe sekrety nigdy nie są pokazywane.",
+      "noRun": "Nie wybrano przebiegu.",
+      "empty": "Brak zarejestrowanych dowodów dla tego przebiegu.",
+      "sensitiveAllowed": "Dostęp do wrażliwych dowodów",
+      "redactedOnly": "Podgląd zredagowany",
+      "observation": "Obserwacja",
+      "noObservation": "(brak obserwacji)",
+      "findings": "Ustalenia",
+      "payloadHash": "Hash ładunku",
+      "recordedAt": "Zarejestrowano",
+      "reveal": "Pokaż",
+      "hide": "Ukryj",
+      "redactedNotice": "Wrażliwa treść jest zamaskowana. Do jej odsłonięcia wymagane jest uprawnienie providers:secrets."
+    },
+    "publicationReview": {
+      "title": "Review publikacji",
+      "description": "Publikacja to świadoma decyzja oparta o walidację i dowody.",
+      "currentState": "Bieżący stan",
+      "lastValidation": "Ostatnia walidacja",
+      "noValidation": "Brak zakończonej walidacji",
+      "rollbackTarget": "Cel wycofania",
+      "noRollback": "Brak wcześniejszego stanu",
+      "versionCount": "Wersje",
+      "derived": "Wyprowadzone",
+      "gatesTitle": "Bramki gotowości G1–G9",
+      "gatesDescription": "Bramki są wyprowadzane ze stanu wersji, schematu, możliwości, walidacji i luk. Bramki ręczne wymagają zatwierdzenia przez człowieka.",
+      "gapsTitle": "Luki",
+      "blockingGaps": "{count, plural, one {# blokująca luka} few {# blokujące luki} many {# blokujących luk} other {# blokującej luki}}",
+      "warningGaps": "{count, plural, one {# ostrzeżenie} few {# ostrzeżenia} many {# ostrzeżeń} other {# ostrzeżenia}}",
+      "actionsTitle": "Akcje cyklu życia",
+      "actionsDescription": "Oferowane są tylko dozwolone przejścia. Akcje zwiększające ekspozycję wymagają zaliczenia wszystkich bramek.",
+      "noTransitions": "Z tego stanu nie są dostępne żadne przejścia cyklu życia.",
+      "published": "Stan cyklu życia zaktualizowany.",
+      "disabled": "Wersja dostawcy wyłączona.",
+      "reason": "Powód (opcjonalnie)",
+      "reasonRequired": "Powód",
+      "reasonRequiredHint": "Awaryjne wyłączenie wymaga podania powodu.",
+      "reasonPlaceholder": "Dlaczego wykonywane jest to przejście",
+      "confirmTitle": "Przejść do stanu {state}?",
+      "confirmDescription": "Zmienia to stan publikacji wersji i jej widoczność dla klientów.",
+      "confirmAction": "Potwierdź przejście",
+      "emergencyDisable": "Awaryjne wyłączenie",
+      "emergencyDisableHint": "Natychmiast cofa wersję dostępną lub w prywatnej becie do walidacji wewnętrznej.",
+      "emergencyDisableTitle": "Awaryjnie wyłączyć tę wersję?",
+      "emergencyDisableDescription": "Klienci natychmiast tracą dostęp. Wersja wraca do walidacji wewnętrznej.",
+      "emergencyDisableAction": "Wyłącz teraz",
+      "gate": {
+        "G1": "Bezpieczeństwo platformy",
+        "G2": "Fundament danych",
+        "G3": "Silnik walidacji",
+        "G4": "Kontrola publikacji",
+        "G5": "Bezpieczeństwo dowodów",
+        "G6": "Bezpieczeństwo migracji",
+        "G7": "Gotowość operacyjna",
+        "G8": "Certyfikacja",
+        "G9": "Przegląd bezpieczeństwa"
+      },
+      "gateStatus": {
+        "pass": "Zaliczona",
+        "warn": "Ostrzeżenie",
+        "blocked": "Zablokowana",
+        "manual": "Ręczna"
+      },
+      "gateReason": {
+        "g1Ok": "Egzekwowane uwierzytelnianie administratora platformy, uprawnienia i izolacja tras.",
+        "g2Ok": "Istnieją schemat danych logowania, możliwości i mapowania.",
+        "g2NoSchema": "Dla tej wersji nie zdefiniowano pól schematu danych logowania.",
+        "g3Ok": "Ostatni przebieg walidacji zaliczony.",
+        "g3NoRun": "Brak zakończonego przebiegu walidacji.",
+        "g3LastRunFailed": "Ostatni zakończony przebieg walidacji nie został zaliczony.",
+        "g3OpenBlockingGaps": "Otwarte blokujące luki unieważniają ostatnią walidację.",
+        "g4Ok": "Widoczność dla klientów jest sterowana stanem publikacji po stronie serwera.",
+        "g5Ok": "Przebiegi walidacji zarejestrowały zredagowane dowody z hashami.",
+        "g5NoEvidence": "Brak zarejestrowanych dowodów — uruchom walidację, aby je zebrać.",
+        "g6Ok": "Wszystkie zadeklarowane możliwości mają jawny stan obsługi.",
+        "g6CapabilitiesIncomplete": "Niektóre możliwości są wciąż nieznane.",
+        "g7Manual": "Runbooki, pulpity i alerty wymagają ręcznego zatwierdzenia.",
+        "g8Manual": "Certyfikacja klasy wymaga ręcznego zatwierdzenia.",
+        "g9Manual": "Model zagrożeń i przegląd bezpieczeństwa wymagają ręcznego zatwierdzenia."
+      },
+      "transitionTo": {
+        "research": "Przejdź do badania",
+        "designed": "Przejdź do zaprojektowano",
+        "adapter_in_progress": "Rozpocznij adapter",
+        "internal_validation": "Przejdź do walidacji wewnętrznej",
+        "private_beta": "Włącz prywatną betę",
+        "available": "Awansuj do dostępny",
+        "deprecated": "Wycofaj (deprecate)",
+        "retired": "Wycofaj całkowicie"
+      },
+      "disabledReason": {
+        "illegalTransition": "To przejście nie jest dozwolone z bieżącego stanu.",
+        "blockedGates": "Zablokowane bramki gotowości muszą najpierw zostać zaliczone.",
+        "blockingGaps": "Otwarte blokujące luki muszą najpierw zostać rozwiązane."
+      }
+    },
+    "tenantVisibility": {
+      "title": "Widoczność dla najemców",
+      "description": "Kontroluj, którzy najemcy mogą widzieć tę wersję dostawcy.",
+      "publicAvailability": "Dostępność publiczna",
+      "allTenants": "Widoczne dla wszystkich najemców",
+      "privateBetaExplainer": "Ta wersja jest w prywatnej becie — widzą ją tylko najemcy z listy dozwolonych.",
+      "onlyPrivateBeta": "Lista dozwolonych najemców jest dostępna tylko wtedy, gdy wersja jest w prywatnej becie.",
+      "enableTenant": "Dodaj najemcę do bety",
+      "enabled": "Najemca dodany do listy dozwolonych prywatnej bety.",
+      "enableTenantTitle": "Włącz najemcę dla prywatnej bety",
+      "enableTenantDescription": "Najemca będzie mógł widzieć i konfigurować tę wersję w prywatnej becie.",
+      "enableTenantAction": "Dodaj do listy",
+      "tenantId": "ID najemcy",
+      "tenantIdInvalid": "Podaj prawidłowy UUID najemcy.",
+      "allowlistTitle": "Lista dozwolonych prywatnej bety",
+      "allowlistUnavailable": "Wyświetlanie bieżącej listy dozwolonych nie jest jeszcze dostępne — brak endpointu odczytu włączeń najemców.",
+      "downgradesTitle": "Obniżenia możliwości dla najemcy",
+      "downgradesUnavailable": "Obniżenia możliwości per najemca nie są jeszcze dostępne — brak endpointu po stronie serwera."
     }
   }
 }

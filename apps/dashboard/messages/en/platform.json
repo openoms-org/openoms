@@ -63,7 +63,10 @@
       "tabs": {
         "schema": "Credential schema",
         "capabilities": "Capabilities",
-        "statusMappings": "Status mappings"
+        "statusMappings": "Status mappings",
+        "validation": "Validation",
+        "publication": "Publication review",
+        "tenantVisibility": "Tenant visibility"
       }
     },
     "schemaBuilder": {
@@ -281,6 +284,199 @@
           "manual_fallback_required": "Manual fallback required"
         }
       }
+    },
+    "validationLab": {
+      "probesTitle": "Validation probes",
+      "probesDescription": "Probes declared for this version, grouped by safety class.",
+      "loadingProbes": "Loading probes…",
+      "noProbesTitle": "No probes declared",
+      "noProbesDescription": "Declare validation probes for this version to run repeatable checks.",
+      "runTitle": "Run validation",
+      "runDescription": "Open an immutable validation run for an environment.",
+      "environment": "Environment",
+      "startRun": "Start validation run",
+      "runStarted": "Validation run started.",
+      "safetyNote": "Probe execution is recorded as an immutable run. Production writes and destructive probes are gated.",
+      "productionPermissionRequired": "Production runs require the providers:secrets permission.",
+      "allowDestructive": "Allow destructive probes",
+      "allowDestructiveHint": "Destructive probes cancel or delete provider state and are never part of the default suite.",
+      "destructiveConfirmTitle": "Run destructive probes?",
+      "destructiveConfirmDescription": "This run is allowed to execute destructive probes that cancel or delete provider state. This cannot be undone.",
+      "destructiveConfirmAction": "Run with destructive probes",
+      "probeRequired": "Required",
+      "runsTitle": "Validation runs",
+      "runsDescription": "Immutable validation history with per-probe results and evidence.",
+      "loadingRuns": "Loading runs…",
+      "noRunsTitle": "No validation runs yet",
+      "noRunsDescription": "Start a validation run to record results and evidence.",
+      "loadingResults": "Loading results…",
+      "selectRun": "Select a run to see its results.",
+      "noResults": "No results recorded for this run yet.",
+      "openEvidence": "View evidence",
+      "finishedAt": "Finished {time}",
+      "runInProgress": "In progress",
+      "safety": {
+        "read_only": "Read only",
+        "sandbox_write": "Sandbox write",
+        "production_write": "Production write",
+        "destructive": "Destructive"
+      },
+      "safetyHint": {
+        "read_only": "Does not mutate provider state.",
+        "sandbox_write": "Mutates the sandbox/test environment.",
+        "production_write": "Mutates production state — opt-in and permission-gated.",
+        "destructive": "Cancels or deletes irreversibly — separate danger flow."
+      },
+      "env": {
+        "sandbox": "Sandbox",
+        "production": "Production"
+      },
+      "verdict": {
+        "pending": "Pending",
+        "passed": "Passed",
+        "failed": "Failed",
+        "error": "Error"
+      },
+      "resultStatus": {
+        "passed": "Passed",
+        "failed": "Failed",
+        "skipped": "Skipped",
+        "error": "Error"
+      },
+      "probeType": {
+        "auth_check": "Authentication",
+        "endpoint_reachability": "Connectivity",
+        "feed_fetch": "Feed fetch",
+        "feed_parse": "Feed parse",
+        "sample_catalog_read": "Catalog read",
+        "sample_stock_read": "Stock read",
+        "sample_price_read": "Price read",
+        "order_preflight": "Order preflight",
+        "sandbox_order_create": "Test order create",
+        "order_status_read": "Order status read",
+        "shipment_tracking_read": "Tracking read",
+        "invoice_read": "Invoice read",
+        "webhook_signature_verification": "Webhook signature",
+        "malformed_payload_test": "Malformed payload",
+        "rate_limit_behavior": "Rate limit"
+      }
+    },
+    "evidence": {
+      "title": "Evidence",
+      "description": "Redacted probe evidence with hashes and metadata. Raw secrets are never shown.",
+      "noRun": "No run selected.",
+      "empty": "No evidence recorded for this run.",
+      "sensitiveAllowed": "Sensitive evidence access",
+      "redactedOnly": "Redacted preview",
+      "observation": "Observation",
+      "noObservation": "(no observation)",
+      "findings": "Findings",
+      "payloadHash": "Payload hash",
+      "recordedAt": "Recorded",
+      "reveal": "Reveal",
+      "hide": "Hide",
+      "redactedNotice": "Sensitive content is masked. The providers:secrets permission is required to reveal it."
+    },
+    "publicationReview": {
+      "title": "Publication review",
+      "description": "Publishing is a deliberate decision based on validation and evidence.",
+      "currentState": "Current state",
+      "lastValidation": "Last validation",
+      "noValidation": "No completed validation",
+      "rollbackTarget": "Rollback target",
+      "noRollback": "No prior state",
+      "versionCount": "Versions",
+      "derived": "Derived",
+      "gatesTitle": "Readiness gates G1–G9",
+      "gatesDescription": "Gates are derived from version state, schema, capabilities, validation and gaps. Manual gates require human sign-off.",
+      "gapsTitle": "Gaps",
+      "blockingGaps": "{count, plural, one {# blocking gap} other {# blocking gaps}}",
+      "warningGaps": "{count, plural, one {# warning} other {# warnings}}",
+      "actionsTitle": "Lifecycle actions",
+      "actionsDescription": "Only legal transitions are offered. Exposure-increasing actions require all gates to pass.",
+      "noTransitions": "No lifecycle transitions are available from this state.",
+      "published": "Lifecycle state updated.",
+      "disabled": "Provider version disabled.",
+      "reason": "Reason (optional)",
+      "reasonRequired": "Reason",
+      "reasonRequiredHint": "A reason is required to emergency-disable.",
+      "reasonPlaceholder": "Why this transition is being made",
+      "confirmTitle": "Transition to {state}?",
+      "confirmDescription": "This changes the version's publication state and customer visibility.",
+      "confirmAction": "Confirm transition",
+      "emergencyDisable": "Emergency disable",
+      "emergencyDisableHint": "Immediately pulls an available or private-beta version back to internal validation.",
+      "emergencyDisableTitle": "Emergency disable this version?",
+      "emergencyDisableDescription": "Customers lose access immediately. The version returns to internal validation.",
+      "emergencyDisableAction": "Disable now",
+      "gate": {
+        "G1": "Platform security",
+        "G2": "Data foundation",
+        "G3": "Validation engine",
+        "G4": "Publication control",
+        "G5": "Evidence safety",
+        "G6": "Migration safety",
+        "G7": "Operational readiness",
+        "G8": "Certification",
+        "G9": "Security review"
+      },
+      "gateStatus": {
+        "pass": "Pass",
+        "warn": "Warning",
+        "blocked": "Blocked",
+        "manual": "Manual"
+      },
+      "gateReason": {
+        "g1Ok": "Platform-admin auth, permissions and route isolation enforced.",
+        "g2Ok": "Credential schema, capabilities and mappings exist.",
+        "g2NoSchema": "No credential schema fields defined for this version.",
+        "g3Ok": "Last validation run passed.",
+        "g3NoRun": "No completed validation run yet.",
+        "g3LastRunFailed": "Last completed validation run did not pass.",
+        "g3OpenBlockingGaps": "Open blocking gaps invalidate the last validation.",
+        "g4Ok": "Customer visibility is controlled by backend publication state.",
+        "g5Ok": "Validation runs recorded redacted evidence with hashes.",
+        "g5NoEvidence": "No evidence recorded yet — run validation to capture it.",
+        "g6Ok": "All declared capabilities have an explicit support state.",
+        "g6CapabilitiesIncomplete": "Some capabilities are still unknown.",
+        "g7Manual": "Runbooks, dashboards and alerts require manual sign-off.",
+        "g8Manual": "Class certification requires manual sign-off.",
+        "g9Manual": "Threat model and security review require manual sign-off."
+      },
+      "transitionTo": {
+        "research": "Move to research",
+        "designed": "Move to designed",
+        "adapter_in_progress": "Start adapter",
+        "internal_validation": "Move to internal validation",
+        "private_beta": "Enable private beta",
+        "available": "Promote to available",
+        "deprecated": "Deprecate",
+        "retired": "Retire"
+      },
+      "disabledReason": {
+        "illegalTransition": "This transition is not allowed from the current state.",
+        "blockedGates": "Blocked readiness gates must pass first.",
+        "blockingGaps": "Open blocking gaps must be resolved first."
+      }
+    },
+    "tenantVisibility": {
+      "title": "Tenant visibility",
+      "description": "Control which tenants can see this provider version.",
+      "publicAvailability": "Public availability",
+      "allTenants": "Visible to all tenants",
+      "privateBetaExplainer": "This version is in private beta — only allowlisted tenants can see it.",
+      "onlyPrivateBeta": "Per-tenant allowlisting is only available while a version is in private beta.",
+      "enableTenant": "Add tenant to beta",
+      "enabled": "Tenant added to the private-beta allowlist.",
+      "enableTenantTitle": "Enable tenant for private beta",
+      "enableTenantDescription": "The tenant will be able to see and configure this private-beta version.",
+      "enableTenantAction": "Add to allowlist",
+      "tenantId": "Tenant ID",
+      "tenantIdInvalid": "Enter a valid tenant UUID.",
+      "allowlistTitle": "Private-beta allowlist",
+      "allowlistUnavailable": "Listing the current allowlist is not yet available — there is no read endpoint for tenant enablements.",
+      "downgradesTitle": "Tenant capability downgrades",
+      "downgradesUnavailable": "Per-tenant capability downgrades are not yet available — no backend endpoint exists."
     }
   }
 }

@@ -23,11 +23,19 @@ import { PublicationStateBadge } from "@/components/platform/publication-state-b
 import { SchemaBuilder } from "@/components/platform/providers/schema-builder/schema-builder";
 import { CapabilityMatrix } from "@/components/platform/providers/capability-matrix/capability-matrix";
 import { StatusMappingWorkbench } from "@/components/platform/providers/status-mapping/status-mapping-workbench";
-import { isPublishedState, type ProviderVersion } from "@/types/platform";
+import { ValidationLab } from "@/components/platform/providers/validation-lab/validation-lab";
+import { PublicationReview } from "@/components/platform/providers/publication-review/publication-review";
+import { TenantVisibilityPanel } from "@/components/platform/providers/tenant-visibility/tenant-visibility-panel";
+import {
+  isPublishedState,
+  type PlatformMe,
+  type ProviderVersion,
+} from "@/types/platform";
 
 interface VersionConfigProps {
   providerId: string;
   versions: ProviderVersion[];
+  me: PlatformMe | undefined;
 }
 
 /**
@@ -35,7 +43,7 @@ interface VersionConfigProps {
  * capabilities, and status mappings across three tabs. Published versions are
  * read-only — edits require creating a new draft version (handled elsewhere).
  */
-export function VersionConfig({ providerId, versions }: VersionConfigProps) {
+export function VersionConfig({ providerId, versions, me }: VersionConfigProps) {
   const t = useTranslations("platform");
   // Only the user's explicit choice is stored; the effective selection is
   // derived each render so no effect is needed to track the versions list.
@@ -94,13 +102,22 @@ export function VersionConfig({ providerId, versions }: VersionConfigProps) {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="schema">
-          <TabsList>
+          <TabsList className="flex-wrap">
             <TabsTrigger value="schema">{t("versionConfig.tabs.schema")}</TabsTrigger>
             <TabsTrigger value="capabilities">
               {t("versionConfig.tabs.capabilities")}
             </TabsTrigger>
             <TabsTrigger value="status-mappings">
               {t("versionConfig.tabs.statusMappings")}
+            </TabsTrigger>
+            <TabsTrigger value="validation">
+              {t("versionConfig.tabs.validation")}
+            </TabsTrigger>
+            <TabsTrigger value="publication">
+              {t("versionConfig.tabs.publication")}
+            </TabsTrigger>
+            <TabsTrigger value="tenant-visibility">
+              {t("versionConfig.tabs.tenantVisibility")}
             </TabsTrigger>
           </TabsList>
           <TabsContent value="schema" className="pt-4">
@@ -125,6 +142,29 @@ export function VersionConfig({ providerId, versions }: VersionConfigProps) {
               providerId={providerId}
               versionId={selected.id}
               readOnly={readOnly}
+            />
+          </TabsContent>
+          <TabsContent value="validation" className="pt-4">
+            <ValidationLab
+              key={`${selected.id}-validation`}
+              providerId={providerId}
+              versionId={selected.id}
+              me={me}
+            />
+          </TabsContent>
+          <TabsContent value="publication" className="pt-4">
+            <PublicationReview
+              key={`${selected.id}-publication`}
+              providerId={providerId}
+              version={selected}
+              versions={versions}
+            />
+          </TabsContent>
+          <TabsContent value="tenant-visibility" className="pt-4">
+            <TenantVisibilityPanel
+              key={`${selected.id}-tenant`}
+              providerId={providerId}
+              version={selected}
             />
           </TabsContent>
         </Tabs>
