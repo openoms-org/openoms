@@ -199,7 +199,7 @@ function ProviderDetail({ id }: { id: string }) {
           isError={versionsQuery.isError}
           refetch={versionsQuery.refetch}
         />
-        <VersionConfig providerId={id} versions={versions} />
+        <VersionConfig providerId={id} versions={versions} me={me} />
       </div>
     </>
   );

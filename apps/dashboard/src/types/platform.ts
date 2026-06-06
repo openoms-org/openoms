@@ -321,3 +321,226 @@ export interface ProviderCreateGapRequest {
 export interface ProviderUpdateGapRequest {
   status: GapStatus;
 }
+
+// === Validation engine (OPE-408) ===
+
+/** Probe types — must match model.validProbeTypes on the backend. */
+export type ProbeType =
+  | "auth_check"
+  | "endpoint_reachability"
+  | "feed_fetch"
+  | "feed_parse"
+  | "sample_catalog_read"
+  | "sample_stock_read"
+  | "sample_price_read"
+  | "order_preflight"
+  | "sandbox_order_create"
+  | "order_status_read"
+  | "shipment_tracking_read"
+  | "invoice_read"
+  | "webhook_signature_verification"
+  | "malformed_payload_test"
+  | "rate_limit_behavior";
+
+export const PROBE_TYPES: ProbeType[] = [
+  "auth_check",
+  "endpoint_reachability",
+  "feed_fetch",
+  "feed_parse",
+  "sample_catalog_read",
+  "sample_stock_read",
+  "sample_price_read",
+  "order_preflight",
+  "sandbox_order_create",
+  "order_status_read",
+  "shipment_tracking_read",
+  "invoice_read",
+  "webhook_signature_verification",
+  "malformed_payload_test",
+  "rate_limit_behavior",
+];
+
+/** Validation environments — must match model.validValidationEnvs. */
+export type ValidationEnvironment = "sandbox" | "production";
+
+export const VALIDATION_ENVIRONMENTS: ValidationEnvironment[] = [
+  "sandbox",
+  "production",
+];
+
+/** Run verdicts — must match model RunVerdict* constants. */
+export type RunVerdict = "pending" | "passed" | "failed" | "error";
+
+/** Probe result statuses — must match model.validResultStatuses. */
+export type ResultStatus = "passed" | "failed" | "skipped" | "error";
+
+export const RESULT_STATUSES: ResultStatus[] = [
+  "passed",
+  "failed",
+  "skipped",
+  "error",
+];
+
+/**
+ * Safety class of a probe. NOT a persisted backend column: derived UI-side from
+ * the probe type plus its `destructive` flag (Screen 8 safety levels). The
+ * backend authoritative control is the per-run `allow_destructive` flag.
+ */
+export type ProbeSafetyClass =
+  | "read_only"
+  | "sandbox_write"
+  | "production_write"
+  | "destructive";
+
+export const PROBE_SAFETY_CLASSES: ProbeSafetyClass[] = [
+  "read_only",
+  "sandbox_write",
+  "production_write",
+  "destructive",
+];
+
+/** A probe declared for a provider version. */
+export interface ProviderValidationProbe {
+  id: string;
+  provider_version_id: string;
+  probe_type: ProbeType;
+  label: string;
+  destructive: boolean;
+  required: boolean;
+  config?: unknown;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProviderProbesResponse {
+  probes: ProviderValidationProbe[];
+}
+
+/**
+ * One probe-level result within a run. `observation` is a redacted safe summary;
+ * `payload_hash` correlates evidence without storing raw (possibly sensitive)
+ * data — see Evidence/Retention contract §9.
+ */
+export interface ProviderValidationResult {
+  id: string;
+  run_id: string;
+  probe_type: ProbeType | string;
+  label: string;
+  status: ResultStatus;
+  observation: string;
+  payload_hash: string;
+  findings: string;
+  created_at: string;
+}
+
+/** One immutable validation attempt against a version. */
+export interface ProviderValidationRun {
+  id: string;
+  provider_version_id: string;
+  environment: ValidationEnvironment | string;
+  verdict: RunVerdict;
+  started_by?: string | null;
+  started_at: string;
+  finished_at?: string | null;
+  notes: string;
+  results?: ProviderValidationResult[];
+}
+
+export interface ProviderValidationRunsResponse {
+  runs: ProviderValidationRun[];
+}
+
+export interface StartValidationRunRequest {
+  environment: ValidationEnvironment;
+  allow_destructive: boolean;
+}
+
+export interface RecordValidationResultRequest {
+  probe_type: ProbeType | string;
+  label: string;
+  status: ResultStatus;
+  observation: string;
+  payload_hash: string;
+  findings: string;
+}
+
+// === Lifecycle / publication (OPE-405) ===
+
+/** Publication-event action — must match model ProviderEvent* constants. */
+export type PublicationEventAction =
+  | "create"
+  | "transition"
+  | "emergency_disable";
+
+/** Append-only audit record of a lifecycle change. */
+export interface ProviderPublicationEvent {
+  id: number;
+  provider_version_id: string;
+  from_state?: string | null;
+  to_state: ProviderPublicationState;
+  action: PublicationEventAction | string;
+  actor_user_id?: string | null;
+  reason: string;
+  created_at: string;
+}
+
+export interface ProviderPublicationEventsResponse {
+  events: ProviderPublicationEvent[];
+}
+
+/** A private-beta allowlist entry returned by POST .../enable-tenant. */
+export interface ProviderTenantEnable {
+  id: string;
+  provider_version_id: string;
+  tenant_id: string;
+  enabled_by?: string | null;
+  created_at: string;
+}
+
+export interface PublishRequest {
+  to_state: ProviderPublicationState;
+  reason: string;
+}
+
+export interface EmergencyDisableRequest {
+  reason: string;
+}
+
+export interface EnableTenantRequest {
+  tenant_id: string;
+}
+
+/**
+ * Authoritative lifecycle graph, mirrored from model.allowedProviderTransitions.
+ * A transition from -> to is legal only when `to` is listed for `from`.
+ * `retired` is terminal. Used to derive which publication actions are offered.
+ */
+export const ALLOWED_PROVIDER_TRANSITIONS: Record<
+  ProviderPublicationState,
+  ProviderPublicationState[]
+> = {
+  research: ["designed"],
+  designed: ["adapter_in_progress"],
+  adapter_in_progress: ["internal_validation"],
+  internal_validation: ["private_beta", "designed"],
+  private_beta: ["available", "internal_validation"],
+  available: ["deprecated", "internal_validation"],
+  deprecated: ["retired"],
+  retired: [],
+};
+
+/** True when a from -> to lifecycle transition is legal (mirror of CanTransition). */
+export function canTransition(
+  from: ProviderPublicationState,
+  to: ProviderPublicationState,
+): boolean {
+  return ALLOWED_PROVIDER_TRANSITIONS[from]?.includes(to) ?? false;
+}
+
+/**
+ * States from which an emergency disable is valid. Mirrors the backend rule:
+ * EmergencyDisable pulls an available/private_beta version back to
+ * internal_validation.
+ */
+export const EMERGENCY_DISABLE_FROM_STATES: ReadonlySet<ProviderPublicationState> =
+  new Set(["private_beta", "available"]);
