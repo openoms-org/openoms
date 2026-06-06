@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/card";
 import { PlatformAccessGate } from "@/components/platform/platform-access-gate";
 import { PublicationStateBadge } from "@/components/platform/publication-state-badge";
+import { VersionConfig } from "@/components/platform/providers/version-config";
 import {
   usePlatformMe,
   useProviderDefinition,
@@ -89,13 +90,18 @@ function OverviewCard({ definition }: { definition: ProviderDefinition }) {
   );
 }
 
-function VersionsCard({ id, enabled }: { id: string; enabled: boolean }) {
+function VersionsCard({
+  versions,
+  isLoading,
+  isError,
+  refetch,
+}: {
+  versions: ProviderVersion[];
+  isLoading: boolean;
+  isError: boolean;
+  refetch: () => void;
+}) {
   const t = useTranslations("platform");
-  const { data, isLoading, isError, refetch } = useProviderVersions(id, {
-    enabled,
-  });
-
-  const versions = data ?? [];
 
   const columns: ColumnDef<ProviderVersion>[] = [
     {
@@ -154,6 +160,8 @@ function ProviderDetail({ id }: { id: string }) {
   const { data: definition, isLoading, isError, refetch } = useProviderDefinition(id, {
     enabled: hasAccess,
   });
+  const versionsQuery = useProviderVersions(id, { enabled: hasAccess });
+  const versions = versionsQuery.data ?? [];
 
   if (isLoading) {
     return <LoadingSkeleton />;
@@ -185,7 +193,13 @@ function ProviderDetail({ id }: { id: string }) {
       />
       <div className="space-y-6">
         <OverviewCard definition={definition} />
-        <VersionsCard id={id} enabled={hasAccess} />
+        <VersionsCard
+          versions={versions}
+          isLoading={versionsQuery.isLoading}
+          isError={versionsQuery.isError}
+          refetch={versionsQuery.refetch}
+        />
+        <VersionConfig providerId={id} versions={versions} />
       </div>
     </>
   );

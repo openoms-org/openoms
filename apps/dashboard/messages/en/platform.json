@@ -2,6 +2,8 @@
   "platform": {
     "retry": "Retry",
     "loadError": "Failed to load data. Please try again.",
+    "saveError": "Failed to save. Please try again.",
+    "saving": "Saving…",
     "accessRequired": {
       "title": "Platform administration access required",
       "description": "This section is available only to platform administrators. Your account does not have platform permissions."
@@ -52,6 +54,233 @@
       "available": "Available",
       "deprecated": "Deprecated",
       "retired": "Retired"
+    },
+    "versionConfig": {
+      "title": "Version configuration",
+      "description": "Edit the credential schema, capabilities, and status mappings for a version. Published versions are read-only.",
+      "noVersionsTitle": "No versions yet",
+      "noVersionsDescription": "Create a draft version to configure its schema, capabilities, and status mappings.",
+      "tabs": {
+        "schema": "Credential schema",
+        "capabilities": "Capabilities",
+        "statusMappings": "Status mappings"
+      }
+    },
+    "schemaBuilder": {
+      "fieldsTitle": "Fields",
+      "fieldsDescription": "Structured credential and settings fields, grouped by purpose.",
+      "editorTitle": "Field properties",
+      "selectField": "Select a field to edit its properties.",
+      "addField": "Add field",
+      "noFields": "No fields in this group.",
+      "unnamedKey": "(no key)",
+      "hasError": "Error",
+      "readOnlyNotice": "This version is published and read-only. Create a new draft version to make changes.",
+      "fixErrors": "Fix the highlighted errors before saving.",
+      "save": "Save schema",
+      "saved": "Schema saved.",
+      "errorCount": "{count, plural, one {# blocking error} other {# blocking errors}}",
+      "group": {
+        "secret_credentials": "Secret credentials",
+        "settings": "Settings",
+        "environment": "Environment",
+        "sync": "Sync",
+        "feature_toggles": "Feature toggles",
+        "provider_options": "Provider options"
+      },
+      "field": {
+        "label": "Label",
+        "key": "Key",
+        "keyHint": "Generated from the label; editable before publication.",
+        "type": "Type",
+        "environment": "Environment",
+        "required": "Required",
+        "secret": "Secret",
+        "secretWarning": "This field name looks sensitive. Enable Secret so its value is encrypted and never previewed.",
+        "enumValues": "Allowed values",
+        "enumPlaceholder": "value_a, value_b, value_c",
+        "min": "Min",
+        "max": "Max",
+        "minLength": "Min length",
+        "maxLength": "Max length",
+        "regex": "Pattern (regex)",
+        "helpText": "Tenant help text",
+        "capabilityEnabled": "Enables capability",
+        "capabilityPlaceholder": "supplier.order.create",
+        "testConnectionDependency": "Required for test connection"
+      },
+      "fieldType": {
+        "string": "Text",
+        "password": "Password",
+        "number": "Number",
+        "boolean": "Boolean",
+        "enum": "Select",
+        "url": "URL",
+        "textarea": "Long text"
+      },
+      "envScope": {
+        "": "Any environment",
+        "all": "Any environment",
+        "production": "Production only",
+        "sandbox": "Sandbox only"
+      },
+      "validation": {
+        "keyRequired": "Key is required.",
+        "keyDuplicate": "Key must be unique across the schema.",
+        "labelRequired": "Label is required.",
+        "enumValuesRequired": "Select fields must declare at least one allowed value.",
+        "regexInvalid": "Pattern is not a valid regular expression.",
+        "minGreaterThanMax": "Min must not be greater than Max.",
+        "minLengthGreaterThanMaxLength": "Min length must not be greater than Max length.",
+        "secretRecommended": "This field looks sensitive — consider enabling Secret."
+      },
+      "preview": {
+        "title": "Tenant setup preview",
+        "description": "How tenants will see this setup form. Secret fields never preview a raw value.",
+        "environment": "Environment",
+        "empty": "Add complete fields to preview the tenant setup form.",
+        "secret": "Secret",
+        "visible": "Visible"
+      }
+    },
+    "capabilityMatrix": {
+      "title": "Capability matrix",
+      "description": "Each capability has a support state, channel, mode, freshness, and evidence.",
+      "readOnlyNotice": "This version is published and read-only. Create a new draft version to make changes.",
+      "addRow": "Add capability",
+      "removeRow": "Remove capability",
+      "filterAll": "All states",
+      "empty": "No capabilities declared for this version.",
+      "unnamed": "(no key)",
+      "keyRequired": "Every capability needs a key before saving.",
+      "save": "Save capabilities",
+      "saved": "Capabilities saved.",
+      "evidenceRequired": "Evidence required",
+      "evidenceRequiredHint": "This support state requires recorded evidence.",
+      "noEvidence": "No evidence",
+      "openEvidence": "Open evidence",
+      "probeReferenced": "Probe referenced",
+      "probeNone": "No probe reference",
+      "visibilityShown": "Shown to customers",
+      "visibilityHidden": "Hidden from customers",
+      "domain": {
+        "supplier": "Supplier",
+        "marketplace": "Marketplace",
+        "carrier": "Carrier",
+        "shop": "Shop",
+        "invoicing": "Invoicing",
+        "edi": "EDI",
+        "order": "Order",
+        "other": "Other"
+      },
+      "fields": {
+        "capabilityKey": "Capability",
+        "supportState": "Support state",
+        "channel": "Channel",
+        "mode": "Mode",
+        "freshness": "Freshness",
+        "latencySla": "Latency SLA (s)",
+        "requiredInputs": "Required inputs",
+        "providedOutputs": "Provided outputs",
+        "evidence": "Evidence",
+        "evidencePlaceholder": "Evidence link or reference",
+        "validationProbe": "Validation probe",
+        "validationProbeHint": "Derived from evidence — references a validation probe or run.",
+        "customerVisibility": "Customer visibility",
+        "customerVisibilityHint": "Derived from support state — unknown and unsupported stay hidden."
+      },
+      "supportStatus": {
+        "supported": "Supported",
+        "configured": "Configured",
+        "unsupported": "Not supported",
+        "requires_manual": "Manual",
+        "degraded": "Degraded",
+        "unknown": "Unknown"
+      },
+      "supportStatusHint": {
+        "supported": "Verified and automatable.",
+        "configured": "Configured and working for this provider.",
+        "unsupported": "The provider does not offer this capability.",
+        "requires_manual": "Works through a controlled manual process.",
+        "degraded": "Works in a limited or degraded way.",
+        "unknown": "No evidence yet — blocks publication if the capability is required."
+      }
+    },
+    "statusMapping": {
+      "title": "Status mappings",
+      "description": "Map raw provider statuses to canonical statuses. Unknown statuses become gaps, never silent successes.",
+      "readOnlyNotice": "This version is published and read-only. Create a new draft version to make changes.",
+      "addRow": "Add mapping",
+      "removeRow": "Remove mapping",
+      "empty": "No mappings for this level yet.",
+      "rawRequired": "Every mapping needs a raw status before saving.",
+      "save": "Save mappings",
+      "saved": "Mappings saved.",
+      "blocksAutomation": "Blocks automation",
+      "warningCount": "{count, plural, one {# blocking warning} other {# blocking warnings}}",
+      "domainNotSupported": "This level is not configurable yet. Order, line, and shipment levels are supported today.",
+      "domain": {
+        "order": "Order",
+        "line": "Order line",
+        "shipment": "Shipment",
+        "package": "Package",
+        "invoice": "Invoice",
+        "return": "Return"
+      },
+      "confidence": {
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low"
+      },
+      "fields": {
+        "rawStatus": "Raw status",
+        "notes": "Notes",
+        "notesPlaceholder": "Raw source / sample payload reference",
+        "canonicalStatus": "Canonical status",
+        "canonicalPlaceholder": "e.g. shipped",
+        "confidence": "Confidence",
+        "eventType": "Event type",
+        "stepKey": "Step key",
+        "terminal": "Terminal status"
+      },
+      "warning": {
+        "terminalLowConfidence": "Terminal status with confidence below high — confirm before allowing automatic transitions.",
+        "shipmentOverwritesOrder": "A shipment status must not overwrite a commercial order status.",
+        "unknownNeedsGap": "Unknown status must be filed as a gap, not mapped to a successful status."
+      },
+      "gaps": {
+        "title": "{count, plural, one {# open gap} other {# open gaps}}",
+        "none": "No open integration gaps.",
+        "noDescription": "(no description)",
+        "acknowledge": "Acknowledge",
+        "resolve": "Resolve",
+        "resolved": "Gap resolved.",
+        "severity": {
+          "info": "Info",
+          "warning": "Warning",
+          "action_required": "Action required",
+          "system_error": "System error"
+        },
+        "status": {
+          "open": "Open",
+          "acknowledged": "Acknowledged",
+          "resolved": "Resolved"
+        },
+        "type": {
+          "missing_source_docs": "Missing source docs",
+          "missing_credential_field": "Missing credential field",
+          "missing_status_mapping": "Missing status mapping",
+          "unsupported_capability": "Unsupported capability",
+          "stale_data_risk": "Stale data risk",
+          "missing_tracking": "Missing tracking",
+          "missing_order_preflight": "Missing order preflight",
+          "ambiguous_product_identity": "Ambiguous product identity",
+          "auth_failure": "Auth failure",
+          "provider_business_error": "Provider business error",
+          "parser_failure": "Parser failure",
+          "manual_fallback_required": "Manual fallback required"
+        }
+      }
     }
   }
 }
