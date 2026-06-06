@@ -26,6 +26,7 @@ const (
 type trackableShipment struct {
 	ID             uuid.UUID
 	TenantID       uuid.UUID
+	OrderID        uuid.UUID
 	Provider       string
 	TrackingNumber string
 	Status         string
@@ -41,15 +42,39 @@ type ShipmentStatusTransitioner interface {
 	TransitionStatus(ctx context.Context, tenantID, shipmentID uuid.UUID, req model.ShipmentStatusTransitionRequest, actorID uuid.UUID, ip string) (*model.Shipment, error)
 }
 
+// TrackingFulfillmentRecorder is the narrow surface the poller uses to record
+// tracking-sync provider attempts, emit fulfillment steps and create blockers
+// without importing the service package (which would be a cycle). It is satisfied
+// by *service.FulfillmentService (OPE-417). All implementations are gated +
+// best-effort: nil/disabled implementations make the calls no-ops.
+type TrackingFulfillmentRecorder interface {
+	Enabled() bool
+	RecordTrackingSyncAttempt(ctx context.Context, tenantID, orderID uuid.UUID, provider, correlationID string, mapping model.TrackingStatusMapping, status string)
+	RecordTrackingSyncFailure(ctx context.Context, tenantID, orderID uuid.UUID, provider, correlationID string, cause error)
+}
+
 // TrackingPoller periodically polls carrier APIs for shipment tracking updates.
 type TrackingPoller struct {
 	pool            *pgxpool.Pool
 	encryptionKey   []byte
 	shipmentService ShipmentStatusTransitioner
+	fulfillment     TrackingFulfillmentRecorder
 	logger          *slog.Logger
 	// fetchPage loads one keyset page; defaults to queryTrackablePage and is
 	// overridable in tests to exercise the pagination loop without a database.
 	fetchPage func(ctx context.Context, cursorTime time.Time, cursorID uuid.UUID) ([]trackableShipment, error)
+}
+
+// SetFulfillmentRecorder wires the gated fulfillment recorder used for best-effort
+// tracking-sync provider-attempt recording (OPE-417). Nil-safe and a complete
+// no-op until FULFILLMENT_PROCESS_ENABLED is set.
+func (w *TrackingPoller) SetFulfillmentRecorder(f TrackingFulfillmentRecorder) {
+	w.fulfillment = f
+}
+
+// fulfillmentEnabled reports whether the gated recorder is wired and enabled.
+func (w *TrackingPoller) fulfillmentEnabled() bool {
+	return w.fulfillment != nil && w.fulfillment.Enabled()
 }
 
 // NewTrackingPoller creates a new TrackingPoller worker.
@@ -77,7 +102,7 @@ func (w *TrackingPoller) Interval() time.Duration {
 }
 
 func trackableShipmentsQuery() string {
-	return `SELECT s.id, s.tenant_id, s.provider, s.tracking_number, s.status, s.carrier_data, s.updated_at,
+	return `SELECT s.id, s.tenant_id, s.order_id, s.provider, s.tracking_number, s.status, s.carrier_data, s.updated_at,
 	        i.credentials, i.settings
 	 FROM shipments s
 	 JOIN integrations i ON i.id = s.integration_id
@@ -138,7 +163,7 @@ func (w *TrackingPoller) queryTrackablePage(ctx context.Context, cursorTime time
 		}
 		var ts trackableShipment
 		if err := rows.Scan(
-			&ts.ID, &ts.TenantID, &ts.Provider, &ts.TrackingNumber,
+			&ts.ID, &ts.TenantID, &ts.OrderID, &ts.Provider, &ts.TrackingNumber,
 			&ts.Status, &ts.CarrierData, &ts.UpdatedAt, &ts.Credentials, &ts.Settings,
 		); err != nil {
 			return nil, err
@@ -224,6 +249,11 @@ func (w *TrackingPoller) Run(ctx context.Context) error {
 			if err != nil {
 				w.logger.Error("tracking poller: get tracking failed",
 					"shipment_id", ts.ID, "tracking_number", ts.TrackingNumber, "error", err)
+				// OPE-417: record the failed sync_tracking attempt + typed blocker
+				// (gated, best-effort — never changes polling control flow).
+				if w.fulfillmentEnabled() {
+					w.fulfillment.RecordTrackingSyncFailure(ctx, ts.TenantID, ts.OrderID, ts.Provider, ts.ID.String(), err)
+				}
 				errCount++
 				continue
 			}
@@ -235,6 +265,14 @@ func (w *TrackingPoller) Run(ctx context.Context) error {
 			// Check last event for status update
 			lastEvent := events[len(events)-1]
 			omsStatus, ok := carrier.MapStatus(lastEvent.Status)
+			// OPE-417: record the sync_tracking attempt, ALWAYS preserving the raw
+			// provider status. An unmapped status (ok=false) is an explicit
+			// unsupported-capability outcome — recorded, not treated as a failure.
+			if w.fulfillmentEnabled() {
+				mapping := model.NewTrackingStatusMapping(lastEvent.Status, omsStatus, ok)
+				w.fulfillment.RecordTrackingSyncAttempt(ctx, ts.TenantID, ts.OrderID, ts.Provider, ts.ID.String(),
+					mapping, model.ProviderAttemptSucceeded)
+			}
 			if !ok || omsStatus == ts.Status {
 				continue
 			}

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -44,6 +45,14 @@ type LabelService struct {
 	uploadDir       string
 	baseURL         string
 	objectStorage   storage.ObjectStorage
+	fulfillment     *FulfillmentService
+}
+
+// SetFulfillmentService wires the gated fulfillment service used for best-effort
+// provider-attempt recording, fulfillment-step emission and typed carrier blockers
+// (OPE-417). Nil-safe and a complete no-op until FULFILLMENT_PROCESS_ENABLED is set.
+func (s *LabelService) SetFulfillmentService(f *FulfillmentService) {
+	s.fulfillment = f
 }
 
 // NewLabelService creates a new LabelService.
@@ -304,14 +313,56 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 
 	resp, err := carrier.CreateShipment(ctx, carrierReq)
 	if err != nil {
+		// OPE-417: record the failed create_shipment attempt + a typed carrier
+		// blocker (gated, best-effort — does not change the returned error).
+		s.recordCarrierFailure(ctx, tenantID, shipment.OrderID, shipment.Provider,
+			model.ProviderOpCreateShipment, shipment.ID.String(), err)
 		return nil, fmt.Errorf("carrier create shipment: %w", err)
+	}
+	// OPE-417: record the successful create_shipment attempt + step (best-effort).
+	if s.fulfillment.Enabled() {
+		s.fulfillment.RecordProviderAttempt(ctx, ProviderAttemptInput{
+			TenantID:       tenantID,
+			OrderID:        shipment.OrderID,
+			Provider:       shipment.Provider,
+			Operation:      model.ProviderOpCreateShipment,
+			Status:         model.ProviderAttemptSucceeded,
+			RequestID:      resp.ExternalID,
+			CorrelationID:  shipment.ID.String(),
+			ResultRedacted: map[string]any{"has_external_id": resp.ExternalID != "", "has_tracking": resp.TrackingNumber != ""},
+		})
+		s.fulfillment.EmitFulfillmentStep(ctx, tenantID, shipment.OrderID,
+			model.StepCreateShipment, model.FulfillmentStatusSucceeded, shipment.ID.String(),
+			map[string]any{"provider": shipment.Provider})
 	}
 
 	// Get label (some carriers may return label URL in CreateShipment, but we always
 	// fetch via GetLabel for a consistent local-file approach)
 	labelBytes, err := carrier.GetLabel(ctx, resp.ExternalID, req.LabelFormat)
 	if err != nil {
+		// OPE-417: record the failed generate_label attempt + a typed blocker
+		// (gated, best-effort). The PayloadHash carries the non-sensitive
+		// external-id+format identity to express label idempotency intent.
+		s.recordLabelFailure(ctx, tenantID, shipment.OrderID, shipment.Provider,
+			shipment.ID.String(), resp.ExternalID, req.LabelFormat, err)
 		return nil, fmt.Errorf("carrier get label: %w", err)
+	}
+	// OPE-417: record the successful generate_label attempt + step (best-effort).
+	if s.fulfillment.Enabled() {
+		s.fulfillment.RecordProviderAttempt(ctx, ProviderAttemptInput{
+			TenantID:       tenantID,
+			OrderID:        shipment.OrderID,
+			Provider:       shipment.Provider,
+			Operation:      model.ProviderOpGenerateLabel,
+			Status:         model.ProviderAttemptSucceeded,
+			RequestID:      resp.ExternalID,
+			CorrelationID:  shipment.ID.String(),
+			PayloadHash:    HashPayload(shipment.Provider, resp.ExternalID, req.LabelFormat),
+			ResultRedacted: map[string]any{"label_format": req.LabelFormat, "label_bytes": len(labelBytes)},
+		})
+		s.fulfillment.EmitFulfillmentStep(ctx, tenantID, shipment.OrderID,
+			model.StepGenerateLabel, model.FulfillmentStatusSucceeded, shipment.ID.String(),
+			map[string]any{"provider": shipment.Provider, "label_format": req.LabelFormat})
 	}
 
 	// Save label file — allowlist extension to prevent path traversal
@@ -610,6 +661,96 @@ func (s *LabelService) CreateDispatchOrder(ctx context.Context, tenantID uuid.UU
 		ID:     orderID,
 		Status: "created",
 	}, nil
+}
+
+// classifyCarrierError maps a carrier/provider error onto a coarse failure class
+// (model.CarrierFail*) by inspecting the error message. It is heuristic and only
+// drives best-effort blocker typing — never control flow. Unknown errors fall
+// back to provider_rejection (a reachable-but-rejected interpretation).
+func classifyCarrierError(err error) string {
+	if err == nil {
+		return model.CarrierFailProviderRejection
+	}
+	msg := strings.ToLower(err.Error())
+	switch {
+	case strings.Contains(msg, "rate limit") || strings.Contains(msg, "too many requests") || strings.Contains(msg, "429"):
+		return model.CarrierFailRateLimit
+	case strings.Contains(msg, "unauthorized") || strings.Contains(msg, "forbidden") ||
+		strings.Contains(msg, "invalid credentials") || strings.Contains(msg, "401") || strings.Contains(msg, "403") ||
+		strings.Contains(msg, "auth"):
+		return model.CarrierFailAuth
+	case strings.Contains(msg, "timeout") || strings.Contains(msg, "deadline exceeded") ||
+		strings.Contains(msg, "connection refused") || strings.Contains(msg, "unavailable") ||
+		strings.Contains(msg, "503") || strings.Contains(msg, "502") || strings.Contains(msg, "500"):
+		return model.CarrierFailProviderOutage
+	case strings.Contains(msg, "missing") || strings.Contains(msg, "required") ||
+		strings.Contains(msg, "invalid address") || strings.Contains(msg, "validation"):
+		return model.CarrierFailMissingData
+	default:
+		return model.CarrierFailProviderRejection
+	}
+}
+
+// recordCarrierFailure records a failed provider attempt and creates a typed
+// carrier blocker (gated, best-effort). All work is delegated to the gated
+// FulfillmentService, so this is a no-op when fulfillment recording is disabled.
+func (s *LabelService) recordCarrierFailure(ctx context.Context, tenantID, orderID uuid.UUID, provider, operation, correlationID string, cause error) {
+	if !s.fulfillment.Enabled() {
+		return
+	}
+	failClass := classifyCarrierError(cause)
+	s.fulfillment.RecordProviderAttempt(ctx, ProviderAttemptInput{
+		TenantID:      tenantID,
+		OrderID:       orderID,
+		Provider:      provider,
+		Operation:     operation,
+		Status:        model.ProviderAttemptFailed,
+		CorrelationID: correlationID,
+		ErrorCode:     failClass,
+	})
+	s.fulfillment.EmitFulfillmentStep(ctx, tenantID, orderID,
+		stepKeyForOperation(operation), model.FulfillmentStatusFailed, correlationID,
+		map[string]any{"provider": provider, "failure_class": failClass})
+	s.fulfillment.CreateCarrierBlocker(ctx, tenantID, orderID, failClass,
+		fmt.Sprintf("%s via %s failed: %s", operation, provider, failClass))
+}
+
+// recordLabelFailure records a failed generate_label attempt + blocker, preserving
+// the non-sensitive external-id+format payload hash (label idempotency intent).
+func (s *LabelService) recordLabelFailure(ctx context.Context, tenantID, orderID uuid.UUID, provider, correlationID, externalID, format string, cause error) {
+	if !s.fulfillment.Enabled() {
+		return
+	}
+	failClass := classifyCarrierError(cause)
+	s.fulfillment.RecordProviderAttempt(ctx, ProviderAttemptInput{
+		TenantID:      tenantID,
+		OrderID:       orderID,
+		Provider:      provider,
+		Operation:     model.ProviderOpGenerateLabel,
+		Status:        model.ProviderAttemptFailed,
+		RequestID:     externalID,
+		CorrelationID: correlationID,
+		PayloadHash:   HashPayload(provider, externalID, format),
+		ErrorCode:     failClass,
+	})
+	s.fulfillment.EmitFulfillmentStep(ctx, tenantID, orderID,
+		model.StepGenerateLabel, model.FulfillmentStatusFailed, correlationID,
+		map[string]any{"provider": provider, "failure_class": failClass})
+	s.fulfillment.CreateCarrierBlocker(ctx, tenantID, orderID, failClass,
+		fmt.Sprintf("generate_label via %s failed: %s", provider, failClass))
+}
+
+// stepKeyForOperation maps a provider operation onto its canonical fulfillment
+// step key, defaulting to create_shipment for unrecognized operations.
+func stepKeyForOperation(operation string) string {
+	switch operation {
+	case model.ProviderOpGenerateLabel, model.ProviderOpDownloadLabel:
+		return model.StepGenerateLabel
+	case model.ProviderOpSyncTracking:
+		return model.StepAwaitTracking
+	default:
+		return model.StepCreateShipment
+	}
 }
 
 // resolveShipper attempts to build a CarrierSender from the default warehouse address,
