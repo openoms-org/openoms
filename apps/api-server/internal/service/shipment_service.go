@@ -45,6 +45,14 @@ type ShipmentService struct {
 	smsService        *SMSService
 	automationService *AutomationService
 	allegroSync       *AllegroSyncService
+	fulfillment       *FulfillmentService
+}
+
+// SetFulfillmentService wires the gated fulfillment service used for best-effort
+// provider-attempt recording + fulfillment-step emission (OPE-417). Nil-safe and a
+// complete no-op until FULFILLMENT_PROCESS_ENABLED is set.
+func (s *ShipmentService) SetFulfillmentService(f *FulfillmentService) {
+	s.fulfillment = f
 }
 
 // SetWorkerPool sets the privileged database pool used for cross-tenant webhook lookups.
@@ -229,6 +237,26 @@ func (s *ShipmentService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 	FireAutomationEvent(s.automationService, tenantID, "shipment", "shipment.created", shipment.ID, map[string]any{
 		"status": shipment.Status, "provider": shipment.Provider, "order_id": shipment.OrderID.String(),
 	})
+	// OPE-417: record the create_shipment provider attempt + emit the canonical
+	// fulfillment step (gated, best-effort — never affects the result above).
+	if s.fulfillment.Enabled() {
+		s.fulfillment.RecordProviderAttempt(ctx, ProviderAttemptInput{
+			TenantID:      tenantID,
+			OrderID:       shipment.OrderID,
+			Provider:      shipment.Provider,
+			Operation:     model.ProviderOpCreateShipment,
+			Status:        model.ProviderAttemptSucceeded,
+			CorrelationID: shipment.ID.String(),
+			RequestID:     externalIDOrEmpty(shipment),
+			ResultRedacted: map[string]any{
+				"shipment_status": shipment.Status,
+				"package_number":  shipment.PackageNumber,
+			},
+		})
+		s.fulfillment.EmitFulfillmentStep(ctx, tenantID, shipment.OrderID,
+			model.StepCreateShipment, model.FulfillmentStatusSucceeded, shipment.ID.String(),
+			map[string]any{"provider": shipment.Provider})
+	}
 	// Auto-sync tracking to Allegro if shipment has a tracking number (async, best-effort)
 	if s.allegroSync != nil && shipment.TrackingNumber != nil && *shipment.TrackingNumber != "" && associatedOrder != nil {
 		asyncutil.SafeGo(func() {
@@ -541,6 +569,15 @@ func readLabelFile(labelURL string) ([]byte, error) {
 	}
 
 	return nil, fmt.Errorf("label file not found for URL: %s", labelURL)
+}
+
+// externalIDOrEmpty returns a shipment's carrier external id as a request
+// correlation id, or "" when unset. Used only for best-effort attempt recording.
+func externalIDOrEmpty(shipment *model.Shipment) string {
+	if shipment == nil || shipment.ExternalID == nil {
+		return ""
+	}
+	return *shipment.ExternalID
 }
 
 // calculateOrderWeight sums product weights for all items in the order.
