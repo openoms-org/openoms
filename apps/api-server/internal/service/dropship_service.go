@@ -42,6 +42,7 @@ type DropshipService struct {
 	pool             *pgxpool.Pool
 	webhookDispatch  *WebhookDispatchService
 	logger           *slog.Logger
+	fulfillment      *FulfillmentService
 }
 
 // NewDropshipService creates a new DropshipService.
@@ -69,6 +70,109 @@ func NewDropshipService(
 		webhookDispatch:  webhookDispatch,
 		logger:           logger,
 	}
+}
+
+// SetFulfillmentService wires the gated fulfillment service used for best-effort
+// dropship-unit + supplier-capability recording (OPE-418). Nil-safe and a complete
+// no-op until FULFILLMENT_PROCESS_ENABLED is set.
+func (s *DropshipService) SetFulfillmentService(f *FulfillmentService) {
+	s.fulfillment = f
+}
+
+// recordDropshipUnit ensures a dropship fulfillment unit for the order/supplier and
+// records the create_dropship_order step + supplier capability (OPE-418, gated
+// best-effort). When the supplier cannot accept API orders it records a manual or
+// portal preflight step; when the supplier is configured with an integration whose
+// format has no provider it raises a typed capability-missing blocker. It never
+// affects the dropship operation: all FulfillmentService calls are best-effort.
+func (s *DropshipService) recordDropshipUnit(ctx context.Context, tenantID, orderID, supplierID uuid.UUID, supplierName string) {
+	if !s.fulfillment.Enabled() {
+		return
+	}
+	capability := s.supplierCapability(ctx, tenantID, supplierID)
+
+	unit := s.fulfillment.EnsureUnit(ctx, tenantID, orderID, model.UnitTypeDropship, supplierID.String(),
+		map[string]any{"supplier_id": supplierID.String(), "supplier_name": supplierName, "capability": string(capability)})
+	if unit == nil {
+		return
+	}
+
+	switch capability {
+	case SupplierCapAPI:
+		// API-capable: the create_dropship_order step is ready to run programmatically.
+		s.fulfillment.RecordStep(ctx, tenantID, unit.ID, model.StepCreateDropshipOrder, model.FulfillmentStatusReady,
+			map[string]any{"capability": string(capability), "supplier_id": supplierID.String()})
+	case SupplierCapPortal, SupplierCapManual:
+		// No API: a human must place the order via portal/out-of-band — surface a
+		// preflight step waiting on the operator.
+		s.fulfillment.RecordStep(ctx, tenantID, unit.ID, model.StepPreflightSupplierOrder, model.FulfillmentStatusWaitingExternal,
+			map[string]any{"capability": string(capability), "supplier_id": supplierID.String()})
+		s.fulfillment.RecordUnitTransition(ctx, tenantID, unit.ID, model.FulfillmentStatusWaitingExternal)
+	case SupplierCapUnsupported:
+		// Integration linked but no provider for its format — capability missing.
+		s.fulfillment.RecordStep(ctx, tenantID, unit.ID, model.StepPreflightSupplierOrder, model.FulfillmentStatusBlocked,
+			map[string]any{"capability": string(capability), "supplier_id": supplierID.String()})
+		s.fulfillment.RecordUnitTransition(ctx, tenantID, unit.ID, model.FulfillmentStatusBlocked)
+		s.fulfillment.CreateSupplierBlocker(ctx, tenantID, orderID, &unit.ID,
+			model.BlockerIntegrationCapabilityMissing,
+			fmt.Sprintf("supplier %q has an integration with no registered order provider", supplierName))
+	}
+	s.fulfillment.AggregateMixedOrder(ctx, tenantID, orderID)
+}
+
+// supplierCapability loads a supplier and classifies its fulfillment capability
+// from its existing config (feed format + linked integration). Best-effort: on any
+// lookup error it falls back to manual so a unit is still recorded.
+func (s *DropshipService) supplierCapability(ctx context.Context, tenantID, supplierID uuid.UUID) SupplierFulfillmentCapability {
+	capability := SupplierCapManual // best-effort fallback if the lookup yields nothing
+	_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		supplier, err := s.supplierRepo.FindByID(ctx, tx, supplierID)
+		if err != nil {
+			return err // logged-and-ignored by the caller; fallback stays manual
+		}
+		if supplier == nil {
+			return nil // keep manual fallback
+		}
+		providerName := supplier.FeedFormat
+		if providerName == "xml" {
+			providerName = "btp"
+		}
+		capability = ClassifySupplierCapability(supplier, supplier.IntegrationID != nil && integration.HasSupplierProvider(providerName))
+		return nil
+	})
+	return capability
+}
+
+// recordDropshipTransition maps a dropship status change onto the order's dropship
+// unit + supplier steps (OPE-418, gated best-effort). It looks up the dropship
+// order to resolve the customer order + supplier, then records the appropriate
+// step/unit transition and re-aggregates the order's process.
+func (s *DropshipService) recordDropshipTransition(ctx context.Context, tenantID uuid.UUID, d *model.DropshipOrder) {
+	if !s.fulfillment.Enabled() || d == nil {
+		return
+	}
+	unit := s.fulfillment.EnsureUnit(ctx, tenantID, d.OrderID, model.UnitTypeDropship, d.SupplierID.String(),
+		map[string]any{"supplier_id": d.SupplierID.String(), "supplier_name": d.SupplierName})
+	if unit == nil {
+		return
+	}
+	switch d.Status {
+	case "sent":
+		s.fulfillment.RecordStep(ctx, tenantID, unit.ID, model.StepCreateDropshipOrder, model.FulfillmentStatusSucceeded,
+			map[string]any{"supplier_id": d.SupplierID.String()})
+		s.fulfillment.RecordUnitTransition(ctx, tenantID, unit.ID, model.FulfillmentStatusWaitingExternal)
+	case "confirmed":
+		s.fulfillment.RecordStep(ctx, tenantID, unit.ID, model.StepConfirmSupplierOrder, model.FulfillmentStatusSucceeded,
+			map[string]any{"supplier_id": d.SupplierID.String()})
+		s.fulfillment.RecordUnitTransition(ctx, tenantID, unit.ID, model.FulfillmentStatusRunning)
+	case "shipped", "delivered":
+		s.fulfillment.RecordStep(ctx, tenantID, unit.ID, model.StepAwaitTracking, model.FulfillmentStatusSucceeded,
+			map[string]any{"supplier_id": d.SupplierID.String(), "dropship_status": d.Status})
+		s.fulfillment.RecordUnitTransition(ctx, tenantID, unit.ID, model.FulfillmentStatusSucceeded)
+	case "cancelled":
+		s.fulfillment.RecordUnitTransition(ctx, tenantID, unit.ID, model.FulfillmentStatusCancelled)
+	}
+	s.fulfillment.AggregateMixedOrder(ctx, tenantID, d.OrderID)
 }
 
 // List returns a paginated list of dropship orders.
@@ -304,6 +408,11 @@ func (s *DropshipService) AutoRouteOrder(ctx context.Context, tenantID, orderID,
 			asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.created", ds) })
 		}
 	}
+	// OPE-418: record a dropship unit per supplier + supplier capability (gated,
+	// best-effort — never affects the routing result above).
+	for _, ds := range result {
+		s.recordDropshipUnit(ctx, tenantID, ds.OrderID, ds.SupplierID, ds.SupplierName)
+	}
 	return result, nil
 }
 
@@ -391,6 +500,8 @@ func (s *DropshipService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 	if s.webhookDispatch != nil {
 		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.created", d) })
 	}
+	// OPE-418: record the dropship unit + supplier capability (gated, best-effort).
+	s.recordDropshipUnit(ctx, tenantID, d.OrderID, d.SupplierID, d.SupplierName)
 	return d, nil
 }
 
@@ -466,6 +577,9 @@ func (s *DropshipService) UpdateStatus(ctx context.Context, tenantID, id uuid.UU
 	if s.webhookDispatch != nil {
 		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.status_updated", d) })
 	}
+	// OPE-418: map the dropship status change onto the dropship unit + supplier
+	// steps (gated, best-effort — never affects the result above).
+	s.recordDropshipTransition(ctx, tenantID, d)
 	return d, nil
 }
 
@@ -521,6 +635,8 @@ func (s *DropshipService) Cancel(ctx context.Context, tenantID, id uuid.UUID, ac
 	if s.webhookDispatch != nil {
 		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.cancelled", d) })
 	}
+	// OPE-418: cancel the dropship unit (gated, best-effort).
+	s.recordDropshipTransition(ctx, tenantID, d)
 	return d, nil
 }
 

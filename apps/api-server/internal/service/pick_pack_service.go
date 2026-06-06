@@ -54,6 +54,7 @@ type PickPackService struct {
 	variantRepo  repository.VariantRepo
 	auditRepo    repository.AuditRepo
 	pool         *pgxpool.Pool
+	fulfillment  *FulfillmentService
 }
 
 // NewPickPackService creates a new PickPackService.
@@ -72,6 +73,50 @@ func NewPickPackService(
 		variantRepo:  variantRepo,
 		auditRepo:    auditRepo,
 		pool:         pool,
+	}
+}
+
+// SetFulfillmentService wires the gated fulfillment service used for best-effort
+// warehouse-unit pick/pack step recording (OPE-418). Nil-safe and a complete no-op
+// until FULFILLMENT_PROCESS_ENABLED is set.
+func (s *PickPackService) SetFulfillmentService(f *FulfillmentService) {
+	s.fulfillment = f
+}
+
+// recordPickPackSteps records the pick/pack progress of a session's orders onto
+// their warehouse fulfillment units (OPE-418, gated best-effort). For each distinct
+// order in the session it ensures a warehouse unit exists, records the pick/pack
+// step at the given status, and re-aggregates the order's process. It never returns
+// an error: the FulfillmentService methods are themselves best-effort no-ops when
+// disabled, so this is a complete no-op until the flag is on.
+func (s *PickPackService) recordPickPackSteps(ctx context.Context, tenantID, sessionID uuid.UUID, stepKey, status, unitStatus string) {
+	if !s.fulfillment.Enabled() {
+		return
+	}
+	var orderIDs []uuid.UUID
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		ids, e := s.pickPackRepo.GetDistinctOrderIDs(ctx, tx, sessionID)
+		if e != nil {
+			return e
+		}
+		orderIDs = ids
+		return nil
+	})
+	if err != nil {
+		return // best-effort: a lookup failure must not affect the pick-pack flow
+	}
+	for _, orderID := range orderIDs {
+		unit := s.fulfillment.EnsureUnit(ctx, tenantID, orderID, model.UnitTypeWarehouse, "",
+			map[string]any{"source": "pick_pack", "session_id": sessionID.String()})
+		if unit == nil {
+			continue
+		}
+		s.fulfillment.RecordStep(ctx, tenantID, unit.ID, stepKey, status,
+			map[string]any{"session_id": sessionID.String()})
+		if unitStatus != "" {
+			s.fulfillment.RecordUnitTransition(ctx, tenantID, unit.ID, unitStatus)
+		}
+		s.fulfillment.AggregateMixedOrder(ctx, tenantID, orderID)
 	}
 }
 
@@ -415,6 +460,9 @@ func (s *PickPackService) MoveToPacking(ctx context.Context, tenantID, sessionID
 	if err != nil {
 		return nil, err
 	}
+	// OPE-418: picking complete — record pick_items succeeded on each order's
+	// warehouse unit (gated, best-effort — never affects the result above).
+	s.recordPickPackSteps(ctx, tenantID, sessionID, model.StepPickItems, model.FulfillmentStatusSucceeded, model.FulfillmentStatusRunning)
 	return session, nil
 }
 
@@ -528,6 +576,9 @@ func (s *PickPackService) CompleteSession(ctx context.Context, tenantID, session
 	if err != nil {
 		return nil, err
 	}
+	// OPE-418: packing complete — record pack_items succeeded and mark each order's
+	// warehouse unit succeeded (gated, best-effort — never affects the result above).
+	s.recordPickPackSteps(ctx, tenantID, sessionID, model.StepPackItems, model.FulfillmentStatusSucceeded, model.FulfillmentStatusSucceeded)
 	return session, nil
 }
 
