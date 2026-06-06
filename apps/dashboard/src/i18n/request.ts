@@ -59,6 +59,7 @@ const MODULES = [
   "misc",
   "operations",
   "orders",
+  "platform",
   "products",
   "reconciliation",
   "reports",
