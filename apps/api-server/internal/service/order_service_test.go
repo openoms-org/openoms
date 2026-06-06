@@ -13,7 +13,7 @@ import (
 )
 
 func TestOrderService_Create_ValidationError_MissingCustomerName(t *testing.T) {
-	svc := NewOrderService(nil, nil, nil, nil, nil, nil)
+	svc := NewOrderService(nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.Create(context.Background(), uuid.New(), model.CreateOrderRequest{
 		CustomerName: "",
@@ -27,7 +27,7 @@ func TestOrderService_Create_ValidationError_MissingCustomerName(t *testing.T) {
 }
 
 func TestOrderService_Create_ValidationError_NegativeAmount(t *testing.T) {
-	svc := NewOrderService(nil, nil, nil, nil, nil, nil)
+	svc := NewOrderService(nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.Create(context.Background(), uuid.New(), model.CreateOrderRequest{
 		CustomerName: "John",
@@ -40,7 +40,7 @@ func TestOrderService_Create_ValidationError_NegativeAmount(t *testing.T) {
 }
 
 func TestOrderService_Update_ValidationError_NoFields(t *testing.T) {
-	svc := NewOrderService(nil, nil, nil, nil, nil, nil)
+	svc := NewOrderService(nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.Update(context.Background(), uuid.New(), uuid.New(), model.UpdateOrderRequest{}, uuid.New(), "127.0.0.1")
 
@@ -50,7 +50,7 @@ func TestOrderService_Update_ValidationError_NoFields(t *testing.T) {
 }
 
 func TestOrderService_TransitionStatus_ValidationError_EmptyStatus(t *testing.T) {
-	svc := NewOrderService(nil, nil, nil, nil, nil, nil)
+	svc := NewOrderService(nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.TransitionStatus(context.Background(), uuid.New(), uuid.New(),
 		model.StatusTransitionRequest{Status: ""}, uuid.New(), "127.0.0.1")
@@ -61,7 +61,7 @@ func TestOrderService_TransitionStatus_ValidationError_EmptyStatus(t *testing.T)
 }
 
 func TestOrderService_BulkTransitionStatus_ValidationError_EmptyOrders(t *testing.T) {
-	svc := NewOrderService(nil, nil, nil, nil, nil, nil)
+	svc := NewOrderService(nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.BulkTransitionStatus(context.Background(), uuid.New(), model.BulkStatusTransitionRequest{
 		OrderIDs: []uuid.UUID{},
@@ -74,7 +74,7 @@ func TestOrderService_BulkTransitionStatus_ValidationError_EmptyOrders(t *testin
 }
 
 func TestOrderService_BulkTransitionStatus_ValidationError_EmptyStatus(t *testing.T) {
-	svc := NewOrderService(nil, nil, nil, nil, nil, nil)
+	svc := NewOrderService(nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.BulkTransitionStatus(context.Background(), uuid.New(), model.BulkStatusTransitionRequest{
 		OrderIDs: []uuid.UUID{uuid.New()},
@@ -115,7 +115,7 @@ func TestOrderService_Create_HTMLStrippedFromCustomerName(t *testing.T) {
 }
 
 func TestOrderService_TransitionStatus_ValidationError_WhitespaceStatus(t *testing.T) {
-	svc := NewOrderService(nil, nil, nil, nil, nil, nil)
+	svc := NewOrderService(nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.TransitionStatus(context.Background(), uuid.New(), uuid.New(),
 		model.StatusTransitionRequest{Status: "   "}, uuid.New(), "127.0.0.1")
@@ -127,7 +127,7 @@ func TestOrderService_TransitionStatus_ValidationError_WhitespaceStatus(t *testi
 }
 
 func TestOrderService_BulkTransitionStatus_ValidationError_TooManyOrders(t *testing.T) {
-	svc := NewOrderService(nil, nil, nil, nil, nil, nil)
+	svc := NewOrderService(nil, nil, nil, nil, nil, nil, nil)
 
 	// BulkStatusTransitionRequest.Validate() rejects > 100 orders
 	ids := make([]uuid.UUID, 101)
@@ -147,7 +147,7 @@ func TestOrderService_BulkTransitionStatus_ValidationError_TooManyOrders(t *test
 }
 
 func TestOrderService_Update_ValidationError_NegativeAmount(t *testing.T) {
-	svc := NewOrderService(nil, nil, nil, nil, nil, nil)
+	svc := NewOrderService(nil, nil, nil, nil, nil, nil, nil)
 
 	negativeAmount := -50.0
 	_, err := svc.Update(context.Background(), uuid.New(), uuid.New(), model.UpdateOrderRequest{
@@ -161,7 +161,7 @@ func TestOrderService_Update_ValidationError_NegativeAmount(t *testing.T) {
 }
 
 func TestOrderService_Create_ValidationError_InvalidPriority(t *testing.T) {
-	svc := NewOrderService(nil, nil, nil, nil, nil, nil)
+	svc := NewOrderService(nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.Create(context.Background(), uuid.New(), model.CreateOrderRequest{
 		CustomerName: "Jan Kowalski",
@@ -176,7 +176,7 @@ func TestOrderService_Create_ValidationError_InvalidPriority(t *testing.T) {
 }
 
 func TestOrderService_BulkTransitionStatus_ValidationError_WhitespaceStatus(t *testing.T) {
-	svc := NewOrderService(nil, nil, nil, nil, nil, nil)
+	svc := NewOrderService(nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.BulkTransitionStatus(context.Background(), uuid.New(), model.BulkStatusTransitionRequest{
 		OrderIDs: []uuid.UUID{uuid.New()},
@@ -190,7 +190,7 @@ func TestOrderService_BulkTransitionStatus_ValidationError_WhitespaceStatus(t *t
 }
 
 func TestOrderService_Create_ValidationError_AutoCreateShipmentNoProvider(t *testing.T) {
-	svc := NewOrderService(nil, nil, nil, nil, nil, nil)
+	svc := NewOrderService(nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.Create(context.Background(), uuid.New(), model.CreateOrderRequest{
 		CustomerName:       "Jan Kowalski",
@@ -206,7 +206,7 @@ func TestOrderService_Create_ValidationError_AutoCreateShipmentNoProvider(t *tes
 }
 
 func TestOrderService_Update_ValidationError_InvalidPriority(t *testing.T) {
-	svc := NewOrderService(nil, nil, nil, nil, nil, nil)
+	svc := NewOrderService(nil, nil, nil, nil, nil, nil, nil)
 
 	badPriority := "extreme"
 	_, err := svc.Update(context.Background(), uuid.New(), uuid.New(), model.UpdateOrderRequest{

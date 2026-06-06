@@ -41,9 +41,12 @@ type OrderService struct {
 	shipmentService    *ShipmentService
 	allegroSync        *AllegroSyncService
 	stockSyncService   *StockSyncService
+	fulfillment        *FulfillmentService
 }
 
-// NewOrderService creates a new OrderService.
+// NewOrderService creates a new OrderService. fulfillment may be nil (or a
+// disabled FulfillmentService), in which case order creation does not spin up a
+// fulfillment process — preserving the pre-OPE-416 behavior.
 func NewOrderService(
 	orderRepo repository.OrderRepo,
 	auditRepo repository.AuditRepo,
@@ -51,6 +54,7 @@ func NewOrderService(
 	pool *pgxpool.Pool,
 	emailService *EmailService,
 	webhookDispatch *WebhookDispatchService,
+	fulfillment *FulfillmentService,
 ) *OrderService {
 	return &OrderService{
 		orderRepo:       orderRepo,
@@ -59,6 +63,7 @@ func NewOrderService(
 		pool:            pool,
 		emailService:    emailService,
 		webhookDispatch: webhookDispatch,
+		fulfillment:     fulfillment,
 	}
 }
 
@@ -288,6 +293,14 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 
 		if err := s.orderRepo.Create(ctx, tx, order); err != nil {
 			return err
+		}
+		// Route the new order through the fulfillment commands (OPE-416): create
+		// its fulfillment process + enqueue the orchestration event in the SAME
+		// transaction. No-op when the gated service is nil/disabled.
+		if s.fulfillment != nil {
+			if _, err := s.fulfillment.EnsureProcessForOrder(ctx, tx, tenantID, order.ID); err != nil {
+				return err
+			}
 		}
 		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
 			TenantID:   tenantID,

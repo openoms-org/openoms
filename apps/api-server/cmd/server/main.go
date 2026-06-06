@@ -315,7 +315,12 @@ func run() error {
 	emailService := service.NewEmailService(tenantRepo, pool)
 	smsService := service.NewSMSService(tenantRepo, pool)
 	webhookDispatchService := service.NewWebhookDispatchService(tenantRepo, webhookDeliveryRepo, pool)
-	orderService := service.NewOrderService(orderRepo, auditRepo, tenantRepo, pool, emailService, webhookDispatchService)
+	// Fulfillment commands (OPE-416): gated bridge from order creation to the
+	// fulfillment process + orchestration outbox. A no-op when disabled.
+	fulfillmentRepo := repository.NewFulfillmentRepository()
+	orchestrationRepo := repository.NewOrchestrationRepository()
+	fulfillmentService := service.NewFulfillmentService(cfg.FulfillmentProcessEnabled, fulfillmentRepo, orchestrationRepo)
+	orderService := service.NewOrderService(orderRepo, auditRepo, tenantRepo, pool, emailService, webhookDispatchService, fulfillmentService)
 	returnService := service.NewReturnService(returnRepo, orderRepo, auditRepo, pool, webhookDispatchService)
 	shipmentService := service.NewShipmentService(shipmentRepo, orderRepo, productRepo, auditRepo, tenantRepo, pool, webhookDispatchService)
 	shipmentService.SetWorkerPool(workerPool)
@@ -606,8 +611,8 @@ func run() error {
 	marketplaceCategoryMappingHandler := handler.NewMarketplaceCategoryMappingHandler(marketplaceCategoryMappingRepo, pool)
 
 	// Import service & handler
-	importService := service.NewImportService(orderRepo, auditRepo, tenantRepo, pool)
-	baseLinkerImportService := service.NewBaseLinkerImportService(orderRepo, customerRepo, auditRepo, tenantRepo, pool)
+	importService := service.NewImportService(orderRepo, auditRepo, tenantRepo, pool, fulfillmentService)
+	baseLinkerImportService := service.NewBaseLinkerImportService(orderRepo, customerRepo, auditRepo, tenantRepo, pool, fulfillmentService)
 	importHandler := handler.NewImportHandler(importService, baseLinkerImportService)
 
 	// Automation handler
@@ -972,12 +977,11 @@ func run() error {
 	if cfg.BillingEnabled() && checkoutSvc != nil {
 		workerMgr.Register(worker.NewBillingReconciliationWorker(workerPool, checkoutSvc, slog.Default()))
 	}
-	// Fulfillment orchestration outbox worker (OPE-415). Gated off by default;
-	// no real side-effect handlers are registered until OPE-416+.
+	// Fulfillment orchestration outbox worker (OPE-415). Gated off by default.
+	// OPE-416 registers the first real handler (order.created) on the dispatcher.
 	if cfg.OrchestrationWorkerEnabled {
-		orchestrationRepo := repository.NewOrchestrationRepository()
 		orchestrationDispatcher := service.NewOrchestrationDispatcher()
-		fulfillmentRepo := repository.NewFulfillmentRepository()
+		orchestrationDispatcher.Register(service.EventOrderCreated, service.NewOrderCreatedHandler(pool, fulfillmentRepo))
 		workerMgr.Register(worker.NewOrchestrationWorker(workerPool, orchestrationRepo, orchestrationDispatcher, fulfillmentRepo, 0, slog.Default()))
 	}
 	if cfg.WorkersEnabled {
