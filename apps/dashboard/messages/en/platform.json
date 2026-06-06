@@ -1,0 +1,57 @@
+{
+  "platform": {
+    "retry": "Retry",
+    "loadError": "Failed to load data. Please try again.",
+    "accessRequired": {
+      "title": "Platform administration access required",
+      "description": "This section is available only to platform administrators. Your account does not have platform permissions."
+    },
+    "registry": {
+      "title": "Provider Integration Studio",
+      "description": "Browse provider definitions and inspect their published versions.",
+      "emptyTitle": "No provider definitions",
+      "emptyDescription": "No provider definitions have been registered yet.",
+      "columns": {
+        "key": "Key",
+        "name": "Name",
+        "type": "Type",
+        "latestState": "Latest published state"
+      }
+    },
+    "detail": {
+      "backToRegistry": "Back to registry",
+      "metadataTitle": "Overview",
+      "versionsTitle": "Versions",
+      "versionsEmpty": "No versions have been created for this provider.",
+      "noPublishedVersion": "No published version",
+      "notFoundTitle": "Provider not found",
+      "notFoundDescription": "The requested provider definition could not be found.",
+      "fields": {
+        "providerKey": "Provider key",
+        "providerType": "Type",
+        "owner": "Owner",
+        "regions": "Regions",
+        "businessDomains": "Business domains",
+        "notes": "Notes",
+        "createdAt": "Created",
+        "updatedAt": "Updated"
+      },
+      "versionsColumns": {
+        "version": "Version",
+        "state": "State",
+        "changelog": "Changelog",
+        "createdAt": "Created"
+      }
+    },
+    "publicationState": {
+      "research": "Research",
+      "designed": "Designed",
+      "adapter_in_progress": "Adapter in progress",
+      "internal_validation": "Internal validation",
+      "private_beta": "Private beta",
+      "available": "Available",
+      "deprecated": "Deprecated",
+      "retired": "Retired"
+    }
+  }
+}

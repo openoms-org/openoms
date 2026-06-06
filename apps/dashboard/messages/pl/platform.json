@@ -1,0 +1,57 @@
+{
+  "platform": {
+    "retry": "Spróbuj ponownie",
+    "loadError": "Nie udało się załadować danych. Spróbuj ponownie.",
+    "accessRequired": {
+      "title": "Wymagany dostęp administratora platformy",
+      "description": "Ta sekcja jest dostępna tylko dla administratorów platformy. Twoje konto nie ma uprawnień platformowych."
+    },
+    "registry": {
+      "title": "Studio integracji dostawców",
+      "description": "Przeglądaj definicje dostawców i sprawdzaj ich opublikowane wersje.",
+      "emptyTitle": "Brak definicji dostawców",
+      "emptyDescription": "Nie zarejestrowano jeszcze żadnej definicji dostawcy.",
+      "columns": {
+        "key": "Klucz",
+        "name": "Nazwa",
+        "type": "Typ",
+        "latestState": "Najnowszy opublikowany stan"
+      }
+    },
+    "detail": {
+      "backToRegistry": "Powrót do rejestru",
+      "metadataTitle": "Przegląd",
+      "versionsTitle": "Wersje",
+      "versionsEmpty": "Dla tego dostawcy nie utworzono żadnych wersji.",
+      "noPublishedVersion": "Brak opublikowanej wersji",
+      "notFoundTitle": "Nie znaleziono dostawcy",
+      "notFoundDescription": "Nie znaleziono żądanej definicji dostawcy.",
+      "fields": {
+        "providerKey": "Klucz dostawcy",
+        "providerType": "Typ",
+        "owner": "Właściciel",
+        "regions": "Regiony",
+        "businessDomains": "Domeny biznesowe",
+        "notes": "Notatki",
+        "createdAt": "Utworzono",
+        "updatedAt": "Zaktualizowano"
+      },
+      "versionsColumns": {
+        "version": "Wersja",
+        "state": "Stan",
+        "changelog": "Dziennik zmian",
+        "createdAt": "Utworzono"
+      }
+    },
+    "publicationState": {
+      "research": "Badanie",
+      "designed": "Zaprojektowano",
+      "adapter_in_progress": "Adapter w trakcie",
+      "internal_validation": "Walidacja wewnętrzna",
+      "private_beta": "Beta prywatna",
+      "available": "Dostępny",
+      "deprecated": "Wycofywany",
+      "retired": "Wycofany"
+    }
+  }
+}
