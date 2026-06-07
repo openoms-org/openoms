@@ -2,9 +2,6 @@ package apaczka
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,50 +15,25 @@ import (
 // fixedNow returns a deterministic unix timestamp for tests.
 func fixedNow() int64 { return 1700000000 }
 
-// independentSign computes the expected signature without relying on the
-// sign() function under test.
-func independentSign(appID, route, request string, expires int64, appSecret string) string {
-	msg := appID + ":" + route + ":" + request + ":" + strconv.FormatInt(expires, 10)
-	mac := hmac.New(sha256.New, []byte(appSecret))
-	_, _ = mac.Write([]byte(msg))
-	return hex.EncodeToString(mac.Sum(nil))
-}
-
+// TestSign asserts sign() against a precomputed golden HMAC-SHA256 value.
+// The golden hex was computed independently (Python) so this test fails if the
+// signing algorithm, message layout, or encoding regresses:
+//
+//	hmac.new(b"secret", b"appid:service_structure/:{}:1700000000", sha256).hexdigest()
 func TestSign(t *testing.T) {
-	tests := []struct {
-		name      string
-		appID     string
-		route     string
-		request   string
-		expires   int64
-		appSecret string
-	}{
-		{
-			name:      "basic",
-			appID:     "myapp",
-			route:     "order_send/",
-			request:   `{"order":{}}`,
-			expires:   1700001800,
-			appSecret: "s3cr3t",
-		},
-		{
-			name:      "empty request",
-			appID:     "app2",
-			route:     "service_structure/",
-			request:   "{}",
-			expires:   1700000000,
-			appSecret: "another_secret_key",
-		},
-	}
+	const (
+		appID     = "appid"
+		route     = "service_structure/"
+		request   = "{}"
+		expires   = int64(1700000000)
+		appSecret = "secret"
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			got := sign(tc.appID, tc.route, tc.request, tc.expires, tc.appSecret)
-			want := independentSign(tc.appID, tc.route, tc.request, tc.expires, tc.appSecret)
-			if got != want {
-				t.Errorf("sign() = %q, want %q", got, want)
-			}
-		})
+		golden = "73d444c0552eedb0e362e3aa84607efa5a3a2c187843e843f5865545d1e77988"
+	)
+
+	got := sign(appID, route, request, expires, appSecret)
+	if got != golden {
+		t.Errorf("sign() = %q, want golden %q", got, golden)
 	}
 }
 
@@ -104,11 +76,17 @@ func TestWithNow(t *testing.T) {
 }
 
 // TestDoSendsAllFormFields verifies the four required form fields are present
-// and that the signature matches an independently-computed value.
+// and that the dispatched signature matches a precomputed golden value.
+// goldenSig was computed independently (Python) for:
+//
+//	hmac.new(b"testsecret", b"testapp:service_structure/:{}:1700001800", sha256).hexdigest()
+//
+// where expires = fixedNow()+1800 = 1700001800.
 func TestDoSendsAllFormFields(t *testing.T) {
 	const appID = "testapp"
 	const appSecret = "testsecret"
 	const route = "service_structure/"
+	const goldenSig = "19acf90a6000de69bed248ea641c799da786e8164d31683103846abbf004d2e2"
 
 	var (
 		gotAppID   string
@@ -155,9 +133,8 @@ func TestDoSendsAllFormFields(t *testing.T) {
 		t.Errorf("expires = %d, want %d", expiresInt, fixedNow()+1800)
 	}
 
-	wantSig := independentSign(appID, route, "{}", fixedNow()+1800, appSecret)
-	if gotSig != wantSig {
-		t.Errorf("signature = %q, want %q", gotSig, wantSig)
+	if gotSig != goldenSig {
+		t.Errorf("signature = %q, want golden %q", gotSig, goldenSig)
 	}
 }
 

@@ -45,7 +45,7 @@ func TestSearchPoints(t *testing.T) {
 	defer srv.Close()
 
 	c := NewClient("a", "b", WithBaseURL(srv.URL+"/"), WithNow(fixedNow))
-	points, err := c.SearchPoints(context.Background(), "INPOST", "PL")
+	points, err := c.SearchPoints(context.Background(), "INPOST", "PL", "")
 	if err != nil {
 		t.Fatalf("SearchPoints() error: %v", err)
 	}
@@ -100,7 +100,7 @@ func TestSearchPointsDifferentTypes(t *testing.T) {
 			defer srv.Close()
 
 			c := NewClient("a", "b", WithBaseURL(srv.URL+"/"), WithNow(fixedNow))
-			pts, err := c.SearchPoints(context.Background(), tc.pointType, "PL")
+			pts, err := c.SearchPoints(context.Background(), tc.pointType, "PL", "")
 			if err != nil {
 				t.Fatalf("SearchPoints(%q) error: %v", tc.pointType, err)
 			}
@@ -111,6 +111,69 @@ func TestSearchPointsDifferentTypes(t *testing.T) {
 	}
 }
 
+// TestSearchPointsSubtypeSent verifies the optional subtype is included in the
+// request payload when provided.
+func TestSearchPointsSubtypeSent(t *testing.T) {
+	var gotRequest string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		gotRequest = r.FormValue("request")
+		fmt.Fprint(w, `{"status":200,"response":{"points":[]}}`)
+	}))
+	defer srv.Close()
+
+	c := NewClient("a", "b", WithBaseURL(srv.URL+"/"), WithNow(fixedNow))
+	_, err := c.SearchPoints(context.Background(), "INPOST", "PL", "PARCEL_LOCKER")
+	if err != nil {
+		t.Fatalf("SearchPoints() error: %v", err)
+	}
+	if !strings.Contains(gotRequest, `"subtype":"PARCEL_LOCKER"`) {
+		t.Errorf("request payload %q does not contain subtype", gotRequest)
+	}
+}
+
+// TestSearchPointsSubtypeOmitted verifies an empty subtype is omitted from the
+// request payload.
+func TestSearchPointsSubtypeOmitted(t *testing.T) {
+	var gotRequest string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		gotRequest = r.FormValue("request")
+		fmt.Fprint(w, `{"status":200,"response":{"points":[]}}`)
+	}))
+	defer srv.Close()
+
+	c := NewClient("a", "b", WithBaseURL(srv.URL+"/"), WithNow(fixedNow))
+	_, err := c.SearchPoints(context.Background(), "INPOST", "PL", "")
+	if err != nil {
+		t.Fatalf("SearchPoints() error: %v", err)
+	}
+	if strings.Contains(gotRequest, "subtype") {
+		t.Errorf("request payload %q should not contain subtype when empty", gotRequest)
+	}
+}
+
+// TestSearchPointsNilReturnsEmptySlice verifies a null/absent points array
+// yields a non-nil empty slice.
+func TestSearchPointsNilReturnsEmptySlice(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprint(w, `{"status":200,"response":{}}`)
+	}))
+	defer srv.Close()
+
+	c := NewClient("a", "b", WithBaseURL(srv.URL+"/"), WithNow(fixedNow))
+	pts, err := c.SearchPoints(context.Background(), "INPOST", "PL", "")
+	if err != nil {
+		t.Fatalf("SearchPoints() error: %v", err)
+	}
+	if pts == nil {
+		t.Fatal("expected non-nil empty slice, got nil")
+	}
+	if len(pts) != 0 {
+		t.Errorf("len(pts) = %d, want 0", len(pts))
+	}
+}
+
 func TestSearchPointsAPIError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprint(w, `{"status":400,"message":"invalid point type"}`)
@@ -118,7 +181,7 @@ func TestSearchPointsAPIError(t *testing.T) {
 	defer srv.Close()
 
 	c := NewClient("a", "b", WithBaseURL(srv.URL+"/"), WithNow(fixedNow))
-	_, err := c.SearchPoints(context.Background(), "INVALID", "PL")
+	_, err := c.SearchPoints(context.Background(), "INVALID", "PL", "")
 	if err == nil {
 		t.Fatal("expected error")
 	}
