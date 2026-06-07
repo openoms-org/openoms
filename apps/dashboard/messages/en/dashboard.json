@@ -83,7 +83,175 @@
       "new": "New",
       "totalOrders": "Total orders"
     },
-    "title": "Dashboard"
+    "title": "Dashboard",
+    "fulfillment": {
+      "actions": {
+        "blockerResolved": "Blocker resolved.",
+        "resolve": "Resolve",
+        "resolveConfirmDescription": "Mark this blocker as resolved. The process can advance once all blockers are cleared.",
+        "resolveConfirmTitle": "Resolve blocker?",
+        "resolveError": "Could not resolve the blocker.",
+        "retry": "Retry",
+        "retryConfirmDescription": "Reset this step and queue it for another attempt.",
+        "retryConfirmTitle": "Retry step?",
+        "retryError": "Could not retry the step.",
+        "stepRetried": "Step queued for retry."
+      },
+      "aggregateStatus": {
+        "blocked": "Blocked",
+        "cancelled": "Cancelled",
+        "completed": "Completed",
+        "in_progress": "In progress",
+        "new": "New",
+        "ready": "Ready",
+        "validating": "Validating",
+        "waiting_external": "Waiting for external"
+      },
+      "blockerCode": {
+        "channel_stock_stale": "Channel stock data is stale",
+        "external_status_unmapped": "External status has no mapping",
+        "integration_capability_degraded": "Integration capability is degraded",
+        "integration_capability_missing": "Required integration capability is missing",
+        "manual_stock_review_required": "Manual stock review required",
+        "stock_ack_missing": "Missing stock acknowledgement from the channel",
+        "stock_sync_failed": "Stock sync to the channel failed",
+        "stock_write_unsupported": "Stock write is not supported by this integration",
+        "supplier_availability_stale": "Supplier availability data is stale",
+        "supplier_availability_unknown": "Supplier availability is unknown",
+        "supplier_preflight_required": "Supplier order requires preflight review"
+      },
+      "buckets": {
+        "blocked": {
+          "hint": "Held by a blocker",
+          "label": "Blocked"
+        },
+        "missing_data": {
+          "hint": "Needs operator-supplied data",
+          "label": "Missing data"
+        },
+        "processing": {
+          "hint": "Actively in progress",
+          "label": "In progress"
+        },
+        "provider_issue": {
+          "hint": "External provider or capability",
+          "label": "Waiting on provider"
+        },
+        "ready": {
+          "hint": "Ready to be worked",
+          "label": "Ready"
+        },
+        "stuck": {
+          "hint": "System error — needs attention",
+          "label": "Stuck"
+        }
+      },
+      "capability": {
+        "automationCoverage": "Automation coverage",
+        "coverageHint": "Across {count} processes",
+        "failedAttempts": "Failed provider attempts",
+        "loadError": "Could not load automation coverage.",
+        "manualIntervention": "Manual intervention",
+        "missingMapping": "Missing mapping",
+        "staleData": "Stale data",
+        "title": "Integration automation coverage",
+        "unsupportedCapability": "Unsupported capability"
+      },
+      "controlTower": {
+        "loadError": "Could not load the control tower.",
+        "pageSubtitle": "Process-backed operations health, automation coverage, and actionable exceptions.",
+        "pageTitle": "Fulfillment control tower",
+        "subtitle": "Process-backed view of order fulfillment health.",
+        "title": "Fulfillment control tower",
+        "totalProcesses": "{count} processes",
+        "viewAll": "View all"
+      },
+      "detail": {
+        "attempts": "{count} attempts",
+        "attemptsHeading": "Provider attempts",
+        "blockersHeading": "Active blockers",
+        "loadError": "Could not load fulfillment detail.",
+        "noAttempts": "No provider attempts recorded.",
+        "noBlockers": "No active blockers",
+        "noSteps": "No steps recorded yet.",
+        "noUnits": "No units recorded yet.",
+        "notFoundDescription": "There is no recorded fulfillment process for this item yet.",
+        "notFoundTitle": "No fulfillment data",
+        "orderRef": "Order {orderId}",
+        "subtitle": "Units, steps, blockers, and provider attempts.",
+        "title": "Fulfillment detail",
+        "unitsHeading": "Units and steps",
+        "updatedAt": "Updated {time}"
+      },
+      "exceptions": {
+        "emptyDescription": "No fulfillment processes need action right now.",
+        "emptyTitle": "No exceptions",
+        "loadError": "Could not load exceptions.",
+        "noBlocker": "Needs attention",
+        "orderRef": "Order {orderId}",
+        "title": "Needs action now"
+      },
+      "healthStatus": {
+        "action_required": "Action required",
+        "ok": "OK",
+        "system_error": "System error",
+        "warning": "Warning"
+      },
+      "providerOp": {
+        "create_shipment": "Create shipment",
+        "download_label": "Download label",
+        "generate_label": "Generate label",
+        "sync_tracking": "Sync tracking"
+      },
+      "providerStatus": {
+        "failed": "Failed",
+        "pending": "Pending",
+        "succeeded": "Succeeded"
+      },
+      "retry": "Try again",
+      "stepKey": {
+        "allocate_units": "Allocate units",
+        "await_tracking": "Await tracking",
+        "close_process": "Close process",
+        "confirm_supplier_order": "Confirm supplier order",
+        "create_dispatch_order": "Create dispatch order",
+        "create_dropship_order": "Create dropship order",
+        "create_purchase_order": "Create purchase order",
+        "create_shipment": "Create shipment",
+        "generate_label": "Generate label",
+        "notify_customer": "Notify customer",
+        "pack_items": "Pack items",
+        "pick_items": "Pick items",
+        "preflight_supplier_order": "Preflight supplier order",
+        "propagate_stock_to_channels": "Propagate stock to channels",
+        "recalculate_availability": "Recalculate availability",
+        "receive_purchase_order": "Receive purchase order",
+        "release_stock": "Release stock",
+        "reserve_stock": "Reserve stock",
+        "select_carrier_service": "Select carrier service",
+        "select_fulfillment_policy": "Select fulfillment policy",
+        "sync_tracking_to_marketplace": "Sync tracking to marketplace",
+        "validate_order": "Validate order"
+      },
+      "stepStatus": {
+        "blocked": "Blocked",
+        "cancelled": "Cancelled",
+        "failed": "Failed",
+        "pending": "Pending",
+        "ready": "Ready",
+        "running": "Running",
+        "skipped": "Skipped",
+        "succeeded": "Succeeded",
+        "waiting_external": "Waiting for external"
+      },
+      "unitType": {
+        "backorder": "Backorder",
+        "dropship": "Dropship",
+        "manual": "Manual",
+        "mixed_child": "Mixed (split)",
+        "warehouse": "Warehouse"
+      }
+    }
   },
   "onboarding": {
     "allDone": "All done!",

@@ -219,7 +219,8 @@
     "warehouses": "Magazyny",
     "webhookDeliveries": "Dostawy webhooków",
     "webhooks": "Webhooki",
-    "workflowBuilder": "Workflow Builder"
+    "workflowBuilder": "Workflow Builder",
+    "fulfillmentOps": "Wieża kontroli realizacji"
   },
   "pagination": {
     "next": "Następna",
