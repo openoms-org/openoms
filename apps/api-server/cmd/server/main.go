@@ -1041,6 +1041,18 @@ func run() error {
 		workerMgr.Register(worker.NewOrchestrationWorker(workerPool, orchestrationRepo, orchestrationDispatcher, fulfillmentRepo, 0, slog.Default()).
 			WithMetrics(fulfillmentMetrics))
 	}
+	// Fulfillment-process backfill worker (OPE-423a). DOUBLE gated: it is a complete
+	// no-op unless FULFILLMENT_BACKFILL_ENABLED is set, and even then only COUNTS
+	// (dry run) unless FULFILLMENT_BACKFILL_DRY_RUN is explicitly false. Registered
+	// only when enabled so a disabled deployment carries zero behaviour change. It
+	// backfills processes for legacy non-terminal orders so they join process-backed
+	// orchestration; the order.created events it enqueues are drained by the
+	// orchestration worker above (enable ORCHESTRATION_WORKER_ENABLED to process them).
+	if cfg.FulfillmentBackfillEnabled {
+		fulfillmentBackfillService := service.NewFulfillmentBackfillService(fulfillmentRepo, orchestrationRepo)
+		workerMgr.Register(worker.NewFulfillmentBackfillWorker(
+			workerPool, fulfillmentBackfillService, cfg.FulfillmentBackfillEnabled, cfg.FulfillmentBackfillDryRun, slog.Default()))
+	}
 	if cfg.WorkersEnabled {
 		go workerMgr.Start(context.Background())
 	}
