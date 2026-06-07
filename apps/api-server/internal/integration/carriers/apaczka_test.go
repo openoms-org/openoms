@@ -77,7 +77,7 @@ func TestApaczkaRegistered(t *testing.T) {
 
 func TestApaczkaGetRates(t *testing.T) {
 	srv := newApaczkaMockServer(t, map[string]http.HandlerFunc{
-		"/service_structure/": func(w http.ResponseWriter, r *http.Request) {
+		"/service_structure/": func(w http.ResponseWriter, _ *http.Request) {
 			body := map[string]any{
 				"services": []map[string]any{
 					{
@@ -96,7 +96,7 @@ func TestApaczkaGetRates(t *testing.T) {
 			}
 			apaczkaWriteJSON(w, body)
 		},
-		"/order_valuation/": func(w http.ResponseWriter, r *http.Request) {
+		"/order_valuation/": func(w http.ResponseWriter, _ *http.Request) {
 			body := map[string]any{
 				"price_table": map[string]any{
 					"SVC001": map[string]string{"price": "900", "price_gross": "1099"},
@@ -152,7 +152,7 @@ func TestApaczkaGetRates(t *testing.T) {
 
 func TestApaczkaCreateShipment(t *testing.T) {
 	srv := newApaczkaMockServer(t, map[string]http.HandlerFunc{
-		"/order_send/": func(w http.ResponseWriter, r *http.Request) {
+		"/order_send/": func(w http.ResponseWriter, _ *http.Request) {
 			body := map[string]any{
 				"order": map[string]any{
 					"id":             "ORD-999",
@@ -213,7 +213,7 @@ func TestApaczkaCreateShipmentMissingServiceType(t *testing.T) {
 
 func TestApaczkaGetTracking(t *testing.T) {
 	srv := newApaczkaMockServer(t, map[string]http.HandlerFunc{
-		"/tracking/WB12345678/": func(w http.ResponseWriter, r *http.Request) {
+		"/tracking/WB12345678/": func(w http.ResponseWriter, _ *http.Request) {
 			body := map[string]any{
 				"tracking": []map[string]any{
 					{
@@ -251,7 +251,7 @@ func TestApaczkaGetLabel(t *testing.T) {
 	encoded := base64.StdEncoding.EncodeToString(pdfBytes)
 
 	srv := newApaczkaMockServer(t, map[string]http.HandlerFunc{
-		"/waybill/ORD-999/": func(w http.ResponseWriter, r *http.Request) {
+		"/waybill/ORD-999/": func(w http.ResponseWriter, _ *http.Request) {
 			body := map[string]any{
 				"waybill": encoded,
 				"type":    "pdf",
