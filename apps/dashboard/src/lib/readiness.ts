@@ -106,6 +106,11 @@ const ROUTE_READINESS_OVERRIDES: Record<string, FeatureReadiness> = {
   "/settings/webhooks": "controlled",
   "/settings/webhooks/deliveries": "controlled",
   "/audit": "ready",
+  // OPE-419: process-backed operations control tower. The read endpoints are
+  // always registered server-side (RLS-scoped) and return empty/zero while
+  // FULFILLMENT_PROCESS_ENABLED is off, so the surface is safe to expose and
+  // simply renders intentional empty states until recording is enabled.
+  "/operations/fulfillment": "ready",
 };
 
 // Derive route -> readiness from the canonical registry, then layer the
