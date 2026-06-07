@@ -377,3 +377,28 @@ func getMetricsOutput(t *testing.T, mc *middleware.MetricsCollector) string {
 	mc.Handler().ServeHTTP(rr, req)
 	return rr.Body.String()
 }
+
+// stubCollector is a minimal PromCollector used to verify that MetricsCollector
+// renders registered extra collectors through the same /metrics handler.
+type stubCollector struct{ payload string }
+
+func (s stubCollector) Render(b *strings.Builder) { b.WriteString(s.payload) }
+
+func TestMetricsCollector_RendersRegisteredExtraCollectors(t *testing.T) {
+	mc := middleware.NewMetricsCollector()
+	mc.Register(stubCollector{payload: "# TYPE openoms_extra_metric_total counter\nopenoms_extra_metric_total 42\n"})
+
+	out := getMetricsOutput(t, mc)
+	// Built-in HTTP metrics still present.
+	assert.Contains(t, out, "openoms_http_requests_total")
+	// The extra collector's output is appended.
+	assert.Contains(t, out, "openoms_extra_metric_total 42")
+}
+
+func TestMetricsCollector_RegisterNil_NoPanic(t *testing.T) {
+	mc := middleware.NewMetricsCollector()
+	assert.NotPanics(t, func() {
+		mc.Register(nil)
+		_ = getMetricsOutput(t, mc)
+	})
+}
