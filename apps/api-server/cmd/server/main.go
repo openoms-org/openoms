@@ -46,6 +46,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/handler"
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
+	"github.com/openoms-org/openoms/apps/api-server/internal/obsmetrics"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	"github.com/openoms-org/openoms/apps/api-server/internal/router"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
@@ -320,14 +321,23 @@ func run() error {
 	fulfillmentRepo := repository.NewFulfillmentRepository()
 	orchestrationRepo := repository.NewOrchestrationRepository()
 	fulfillmentAttemptRepo := repository.NewFulfillmentAttemptRepository()
+	// OPE-422: additive, best-effort observability collector for the fulfillment /
+	// orchestration / provider-validation paths. Injected (nil-safe) into the
+	// services + worker below and registered with the Prometheus MetricsCollector so
+	// the existing /metrics handler exposes it. Uses ONLY bounded enum labels.
+	fulfillmentMetrics := obsmetrics.NewFulfillmentMetrics()
 	// OPE-417: best-effort provider-attempt recording is wired via WithRecording.
 	// It stays a no-op until FULFILLMENT_PROCESS_ENABLED is set.
 	fulfillmentService := service.NewFulfillmentService(cfg.FulfillmentProcessEnabled, fulfillmentRepo, orchestrationRepo).
-		WithRecording(pool, fulfillmentAttemptRepo)
+		WithRecording(pool, fulfillmentAttemptRepo).
+		WithMetrics(fulfillmentMetrics)
 	// OPE-419: tenant-safe operations/fulfillment READ API over the canonical
 	// fulfillment model. Always active (read endpoints return empty results until
 	// fulfillment data is recorded); reuses the OPE-414..418 repositories.
-	fulfillmentReadService := service.NewFulfillmentReadService(pool, fulfillmentRepo, fulfillmentAttemptRepo, orchestrationRepo)
+	// OPE-422: best-effort stuck/blocked gauges + operator-action audit.
+	fulfillmentReadService := service.NewFulfillmentReadService(pool, fulfillmentRepo, fulfillmentAttemptRepo, orchestrationRepo).
+		WithMetrics(fulfillmentMetrics).
+		WithAudit(auditRepo)
 	fulfillmentHandler := handler.NewFulfillmentHandler(fulfillmentReadService)
 	operationsHandler := handler.NewOperationsHandler(fulfillmentReadService)
 	orderService := service.NewOrderService(orderRepo, auditRepo, tenantRepo, pool, emailService, webhookDispatchService, fulfillmentService)
@@ -823,6 +833,9 @@ func run() error {
 
 	// Prometheus metrics collector
 	metricsCollector := middleware.NewMetricsCollector()
+	// OPE-422: expose the additive fulfillment/orchestration/validation metrics
+	// through the same /metrics handler.
+	metricsCollector.Register(fulfillmentMetrics)
 
 	// Platform-admin boundary (OPE-404): separate from tenant RBAC, not tenant-scoped.
 	platformAdminRepo := repository.NewPlatformAdminRepository(pool)
@@ -835,10 +848,12 @@ func run() error {
 	providerPublicationRepo := repository.NewProviderPublicationRepository(pool)
 	providerSchemaRepo := repository.NewProviderSchemaRepository(pool)
 	providerCapabilityRepo := repository.NewProviderCapabilityRepository(pool)
-	providerRegistryService := service.NewProviderRegistryService(pool, providerDefinitionRepo, providerVersionRepo, providerPublicationRepo, providerSchemaRepo, providerCapabilityRepo)
+	providerRegistryService := service.NewProviderRegistryService(pool, providerDefinitionRepo, providerVersionRepo, providerPublicationRepo, providerSchemaRepo, providerCapabilityRepo).
+		WithMetrics(fulfillmentMetrics) // OPE-422: best-effort publication-transition metrics
 	providerHandler := handler.NewProviderHandler(providerRegistryService, platformAuditRepo)
 	providerValidationRepo := repository.NewProviderValidationRepository(pool)
-	providerValidationService := service.NewProviderValidationService(pool, providerVersionRepo, providerCapabilityRepo, providerValidationRepo)
+	providerValidationService := service.NewProviderValidationService(pool, providerVersionRepo, providerCapabilityRepo, providerValidationRepo).
+		WithMetrics(fulfillmentMetrics) // OPE-422: best-effort validation-run + failure metrics
 	providerValidationHandler := handler.NewProviderValidationHandler(providerValidationService, platformAuditRepo)
 
 	// Provider registry seed (OPE-412): idempotently create draft registry
@@ -1002,7 +1017,9 @@ func run() error {
 	if cfg.OrchestrationWorkerEnabled {
 		orchestrationDispatcher := service.NewOrchestrationDispatcher()
 		orchestrationDispatcher.Register(service.EventOrderCreated, service.NewOrderCreatedHandler(pool, fulfillmentRepo))
-		workerMgr.Register(worker.NewOrchestrationWorker(workerPool, orchestrationRepo, orchestrationDispatcher, fulfillmentRepo, 0, slog.Default()))
+		// OPE-422: best-effort outbox metrics (claimed/processed/failed + queue depth).
+		workerMgr.Register(worker.NewOrchestrationWorker(workerPool, orchestrationRepo, orchestrationDispatcher, fulfillmentRepo, 0, slog.Default()).
+			WithMetrics(fulfillmentMetrics))
 	}
 	if cfg.WorkersEnabled {
 		go workerMgr.Start(context.Background())

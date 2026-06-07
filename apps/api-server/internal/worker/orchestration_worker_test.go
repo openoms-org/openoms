@@ -6,10 +6,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/openoms-org/openoms/apps/api-server/internal/metrics"
+	"github.com/openoms-org/openoms/apps/api-server/internal/obsmetrics"
 )
 
-func renderMetrics(m *metrics.FulfillmentMetrics) string {
+func renderMetrics(m *obsmetrics.FulfillmentMetrics) string {
 	var b strings.Builder
 	m.Render(&b)
 	return b.String()
@@ -30,7 +30,7 @@ func TestOrchestrationWorker_WithMetrics_NilSafe(t *testing.T) {
 // TestOrchestrationWorker_RecordOutcome_Processed asserts the success path increments
 // the bounded "processed" outbox result counter.
 func TestOrchestrationWorker_RecordOutcome_Processed(t *testing.T) {
-	m := metrics.NewFulfillmentMetrics()
+	m := obsmetrics.NewFulfillmentMetrics()
 	w := NewOrchestrationWorker(nil, nil, nil, nil, 0, nil).WithMetrics(m)
 
 	w.recordOutcome("processed")
@@ -43,7 +43,7 @@ func TestOrchestrationWorker_RecordOutcome_Processed(t *testing.T) {
 // TestOrchestrationWorker_RecordOutcome_Failed asserts the failure path increments the
 // bounded "failed" outbox result counter.
 func TestOrchestrationWorker_RecordOutcome_Failed(t *testing.T) {
-	m := metrics.NewFulfillmentMetrics()
+	m := obsmetrics.NewFulfillmentMetrics()
 	w := NewOrchestrationWorker(nil, nil, nil, nil, 0, nil).WithMetrics(m)
 
 	w.recordOutcome("failed")
@@ -55,7 +55,7 @@ func TestOrchestrationWorker_RecordOutcome_Failed(t *testing.T) {
 // TestOrchestrationWorker_RecordClaimed asserts each claimed event is counted and the
 // queue-depth gauge is published.
 func TestOrchestrationWorker_RecordClaimedAndQueueDepth(t *testing.T) {
-	m := metrics.NewFulfillmentMetrics()
+	m := obsmetrics.NewFulfillmentMetrics()
 	w := NewOrchestrationWorker(nil, nil, nil, nil, 0, nil).WithMetrics(m)
 
 	w.recordClaimed(4)

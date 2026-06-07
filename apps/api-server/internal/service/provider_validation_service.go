@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/obsmetrics"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
@@ -33,6 +34,10 @@ type ProviderValidationService struct {
 	vers *repository.ProviderVersionRepository
 	caps *repository.ProviderCapabilityRepository
 	val  *repository.ProviderValidationRepository
+	// metrics is an OPTIONAL, best-effort observability handle (OPE-422). nil-receiver
+	// safe, so every record call is a no-op when it is not wired and can never affect
+	// the validation run.
+	metrics *obsmetrics.FulfillmentMetrics
 }
 
 // NewProviderValidationService wires the service to the pool and repositories.
@@ -43,6 +48,16 @@ func NewProviderValidationService(
 	val *repository.ProviderValidationRepository,
 ) *ProviderValidationService {
 	return &ProviderValidationService{pool: pool, vers: vers, caps: caps, val: val}
+}
+
+// WithMetrics wires the OPTIONAL metrics collector (OPE-422). Returns the service
+// for chaining. Safe to omit: the collector is nil-receiver safe.
+func (s *ProviderValidationService) WithMetrics(m *obsmetrics.FulfillmentMetrics) *ProviderValidationService {
+	if s == nil {
+		return nil
+	}
+	s.metrics = m
+	return s
 }
 
 func (s *ProviderValidationService) inTx(ctx context.Context, fn func(pgx.Tx) error) error {
@@ -170,6 +185,16 @@ func (s *ProviderValidationService) CompleteRun(ctx context.Context, runID uuid.
 		return nil
 	}); err != nil {
 		return nil, err
+	}
+	// Best-effort metrics AFTER the run is finalized (OPE-422). verdict is a bounded
+	// enum (pending|passed|failed|error); the collector coerces anything else to
+	// "other". Each failed/errored probe result is counted once as a validation
+	// failure. nil-safe; never affects the returned run.
+	s.metrics.RecordValidationRun(verdict)
+	for _, r := range results {
+		if r.Status == model.ResultStatusFailed || r.Status == model.ResultStatusError {
+			s.metrics.RecordValidationFailure()
+		}
 	}
 	return s.GetRunWithResults(ctx, runID)
 }

@@ -13,19 +13,22 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/obsmetrics"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
 // newReadService builds the OPE-419 read service over the RLS-scoped app pool,
-// mirroring production wiring (same repos as OPE-414..418).
+// mirroring production wiring (same repos as OPE-414..418). OPE-422 best-effort
+// metrics + audit are wired so the operator-action audit + gauge paths are
+// exercised end-to-end against the real DB.
 func newReadService() *service.FulfillmentReadService {
 	return service.NewFulfillmentReadService(
 		appPool,
 		repository.NewFulfillmentRepository(),
 		repository.NewFulfillmentAttemptRepository(),
 		repository.NewOrchestrationRepository(),
-	)
+	).WithMetrics(obsmetrics.NewFulfillmentMetrics()).WithAudit(repository.NewAuditRepository())
 }
 
 // seedProcessWithStatus creates a fulfillment process for an order and forces its
@@ -221,14 +224,22 @@ func TestFulfillmentReadAPI_ResolveBlockerAndRetryStep(t *testing.T) {
 	blockerA := seedBlocker(t, ctx, tenantA, procA.ID, model.BlockerIntegrationCapabilityMissing)
 	stepA := seedFailedStep(t, ctx, tenantA, procA.ID)
 
+	// Seed a real user as the operator: audit_log.user_id has a FK to users, so a
+	// non-existent actor would (correctly, best-effort) be dropped without writing an
+	// audit row. We assert the audit row IS written for a valid operator.
+	actor := seedUser(t, ctx, tenantA)
+	const actorIP = "203.0.113.7"
 	svc := newReadService()
 
 	// --- ResolveBlocker happy path ---
-	resolved, err := svc.ResolveBlocker(ctx, tenantA, blockerA.ID)
+	resolved, err := svc.ResolveBlocker(ctx, tenantA, blockerA.ID, actor, actorIP)
 	require.NoError(t, err)
 	require.NotNil(t, resolved)
 	assert.Equal(t, model.BlockerStatusResolved, resolved.Status)
 	require.NotNil(t, resolved.ResolvedAt)
+
+	// OPE-422: the operator action wrote a best-effort tenant audit entry.
+	assertAuditEntry(t, ctx, tenantA, "fulfillment_blocker", blockerA.ID, "fulfillment.blocker.resolved")
 
 	// Resolving is reflected in the detail's open-blocker-free view.
 	detail, err := svc.GetProcessDetail(ctx, tenantA, procA.ID)
@@ -237,22 +248,46 @@ func TestFulfillmentReadAPI_ResolveBlockerAndRetryStep(t *testing.T) {
 	assert.Equal(t, model.BlockerStatusResolved, detail.Blockers[0].Status)
 
 	// Tenant B cannot resolve tenant A's blocker.
-	_, err = svc.ResolveBlocker(ctx, tenantB, blockerA.ID)
+	_, err = svc.ResolveBlocker(ctx, tenantB, blockerA.ID, uuid.New(), actorIP)
 	require.ErrorIs(t, err, service.ErrFulfillmentNotFound, "tenant B must NOT resolve tenant A's blocker")
 
 	// --- RetryStep happy path: failed -> pending ---
-	retried, err := svc.RetryStep(ctx, tenantA, stepA.ID)
+	retried, err := svc.RetryStep(ctx, tenantA, stepA.ID, actor, actorIP)
 	require.NoError(t, err)
 	require.NotNil(t, retried)
 	assert.Equal(t, model.FulfillmentStatusPending, retried.Status)
 	assert.Equal(t, stepA.Attempts, retried.Attempts, "attempts preserved on retry")
 
+	// OPE-422: the retry action wrote a best-effort tenant audit entry.
+	assertAuditEntry(t, ctx, tenantA, "fulfillment_step", stepA.ID, "fulfillment.step.retried")
+
 	// Retrying a now-pending step is not retryable -> ValidationError.
-	_, err = svc.RetryStep(ctx, tenantA, stepA.ID)
+	_, err = svc.RetryStep(ctx, tenantA, stepA.ID, actor, actorIP)
 	var ve *service.ValidationError
 	require.ErrorAs(t, err, &ve, "retrying a non-failed/blocked step yields a ValidationError")
 
 	// Tenant B cannot retry tenant A's step.
-	_, err = svc.RetryStep(ctx, tenantB, stepA.ID)
+	_, err = svc.RetryStep(ctx, tenantB, stepA.ID, uuid.New(), actorIP)
 	require.ErrorIs(t, err, service.ErrFulfillmentNotFound, "tenant B must NOT retry tenant A's step")
+}
+
+// assertAuditEntry verifies a best-effort operator-action audit row was written for
+// the given entity with the expected action (OPE-422), scoped to the tenant (RLS).
+func assertAuditEntry(t *testing.T, ctx context.Context, tenantID uuid.UUID, entityType string, entityID uuid.UUID, action string) {
+	t.Helper()
+	auditRepo := repository.NewAuditRepository()
+	var entries []model.AuditLogEntry
+	require.NoError(t, database.WithTenant(ctx, appPool, tenantID, func(tx pgx.Tx) error {
+		e, err := auditRepo.ListByEntity(ctx, tx, entityType, entityID)
+		entries = e
+		return err
+	}))
+	found := false
+	for _, e := range entries {
+		if e.Action == action {
+			found = true
+			break
+		}
+	}
+	assert.Truef(t, found, "expected audit entry %q for %s %s", action, entityType, entityID)
 }

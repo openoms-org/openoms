@@ -160,7 +160,11 @@ func (s *FulfillmentService) RecordUnitTransition(ctx context.Context, tenantID,
 	if err != nil {
 		slog.Warn("fulfillment: unit transition failed (best-effort, ignored)",
 			"tenant_id", tenantID, "unit_id", unitID, "status", status, "error", err)
+		return
 	}
+	// Best-effort metric AFTER the DB write. status is a validated bounded enum;
+	// the collector coerces anything unexpected to "other". Never an identifier.
+	s.metrics.RecordUnitTransition(status)
 }
 
 // RecordStep upserts a canonical step on a unit and sets its status (BEST-EFFORT,
@@ -216,6 +220,12 @@ func (s *FulfillmentService) RecordStep(ctx context.Context, tenantID, unitID uu
 			"tenant_id", tenantID, "unit_id", unitID, "step_key", stepKey, "error", err)
 		return nil
 	}
+	// Best-effort metric: count the step transition by its bounded status, only when
+	// a step row was actually upserted. step_key is intentionally NOT a metric label
+	// (high-cardinality enum) — it stays in the persisted step + logs.
+	if step != nil {
+		s.metrics.RecordStepTransition(status)
+	}
 	return step
 }
 
@@ -259,6 +269,11 @@ func (s *FulfillmentService) CreateSupplierBlocker(ctx context.Context, tenantID
 		slog.Warn("fulfillment: create supplier blocker failed (best-effort, ignored)",
 			"tenant_id", tenantID, "order_id", orderID, "code", code, "error", err)
 		return nil
+	}
+	// Best-effort metric: count the blocker by its bounded category, only when a
+	// blocker row was actually created (no process => blocker is nil => no count).
+	if blocker != nil {
+		s.metrics.RecordBlocker(model.BlockerCategory(code))
 	}
 	return blocker
 }

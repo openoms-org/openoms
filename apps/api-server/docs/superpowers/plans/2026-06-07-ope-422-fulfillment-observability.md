@@ -46,11 +46,11 @@ NEVER tenant_id / order_id / process_id / unit_id / user_id / any UUID as a labe
 - Create: `internal/metrics/fulfillment_metrics.go`
 - Test: `internal/metrics/fulfillment_metrics_test.go`
 
-- [ ] **Step 1: Write failing tests** asserting: counters increment; unknown label coerced to `other`; gauge set; `Render` output contains the metric names + `# TYPE` lines; an assertion that no rendered line contains an id-like label key (`tenant_id`,`order_id`,`process_id`,`unit_id`,`user_id`).
-- [ ] **Step 2:** Run `go test ./internal/metrics/...` → FAIL (package missing).
-- [ ] **Step 3:** Implement collector: `PromCollector` interface (`Render(*strings.Builder)`); `FulfillmentMetrics` with atomic counter maps keyed by joined bounded labels + atomic gauges; constructor `NewFulfillmentMetrics`; record methods (`RecordProviderAttempt(op,status)`, `RecordBlocker(category)`, `RecordOutboxEvent(result)`, `SetOutboxQueueDepth(n)`, `SetStuckProcesses(n)`, `SetBlockedProcesses(n)`, `RecordValidationRun(verdict)`, `RecordValidationFailure()`, `RecordPublicationTransition(toState)`, `RecordUnitTransition(status)`, `RecordStepTransition(status)`); bounded-set coercion helper; `Render`. All record methods are nil-receiver-safe.
-- [ ] **Step 4:** Run `go test ./internal/metrics/...` → PASS.
-- [ ] **Step 5:** Commit.
+- [x] **Step 1: Write failing tests** asserting: counters increment; unknown label coerced to `other`; gauge set; `Render` output contains the metric names + `# TYPE` lines; an assertion that no rendered line contains an id-like label key (`tenant_id`,`order_id`,`process_id`,`unit_id`,`user_id`).
+- [x] **Step 2:** Run `go test ./internal/metrics/...` → FAIL (package missing).
+- [x] **Step 3:** Implement collector: `PromCollector` interface (`Render(*strings.Builder)`); `FulfillmentMetrics` with atomic counter maps keyed by joined bounded labels + atomic gauges; constructor `NewFulfillmentMetrics`; record methods (`RecordProviderAttempt(op,status)`, `RecordBlocker(category)`, `RecordOutboxEvent(result)`, `SetOutboxQueueDepth(n)`, `SetStuckProcesses(n)`, `SetBlockedProcesses(n)`, `RecordValidationRun(verdict)`, `RecordValidationFailure()`, `RecordPublicationTransition(toState)`, `RecordUnitTransition(status)`, `RecordStepTransition(status)`); bounded-set coercion helper; `Render`. All record methods are nil-receiver-safe.
+- [x] **Step 4:** Run `go test ./internal/metrics/...` → PASS.
+- [x] **Step 5:** Commit.
 
 ### Task 2: MetricsCollector extra renderers
 
@@ -58,20 +58,20 @@ NEVER tenant_id / order_id / process_id / unit_id / user_id / any UUID as a labe
 - Modify: `internal/middleware/metrics.go`
 - Test: `internal/middleware/metrics_test.go`
 
-- [ ] **Step 1:** Test that `MetricsCollector` with a registered extra collector renders the extra collector's output in `Handler()`.
-- [ ] **Step 2:** Run → FAIL.
-- [ ] **Step 3:** Add `extra []PromCollector` field + `Register(PromCollector)` (or constructor variadic) where `PromCollector` is a tiny local interface `{ Render(*strings.Builder) }` (structurally satisfied by metrics.FulfillmentMetrics — no import of metrics pkg → no cycle); append their output at the end of `Handler()`.
-- [ ] **Step 4:** Run → PASS.
-- [ ] **Step 5:** Commit.
+- [x] **Step 1:** Test that `MetricsCollector` with a registered extra collector renders the extra collector's output in `Handler()`.
+- [x] **Step 2:** Run → FAIL.
+- [x] **Step 3:** Add `extra []PromCollector` field + `Register(PromCollector)` (or constructor variadic) where `PromCollector` is a tiny local interface `{ Render(*strings.Builder) }` (structurally satisfied by metrics.FulfillmentMetrics — no import of metrics pkg → no cycle); append their output at the end of `Handler()`.
+- [x] **Step 4:** Run → PASS.
+- [x] **Step 5:** Commit.
 
 ### Task 3: Orchestration repo CountPending
 
 **Files:**
 - Modify: `internal/repository/orchestration_repository.go`
 
-- [ ] **Step 1:** Add `CountPending(ctx, q) (int, error)` → `SELECT COUNT(*) FROM orchestration_outbox WHERE status='pending'` (runs on privileged pool, cross-tenant — same as ClaimDue). (No new test file: covered by existing repo test conventions / build + vet; queue-depth wiring tested at worker level.)
-- [ ] **Step 2:** `go build ./...` → OK.
-- [ ] **Step 3:** Commit.
+- [x] **Step 1:** Add `CountPending(ctx, q) (int, error)` → `SELECT COUNT(*) FROM orchestration_outbox WHERE status='pending'` (runs on privileged pool, cross-tenant — same as ClaimDue). (No new test file: covered by existing repo test conventions / build + vet; queue-depth wiring tested at worker level.)
+- [x] **Step 2:** `go build ./...` → OK.
+- [x] **Step 3:** Commit.
 
 ### Task 4: Orchestration worker metrics + correlation logging
 
@@ -79,11 +79,11 @@ NEVER tenant_id / order_id / process_id / unit_id / user_id / any UUID as a labe
 - Modify: `internal/worker/orchestration_worker.go`
 - Test: `internal/worker/orchestration_worker_test.go` (create if absent — pure metrics behavior on the record calls)
 
-- [ ] **Step 1:** Tests: a fake dispatcher + a metrics collector assert that processing increments `processed` on success and `failed` on permanent failure; correlation-id log field present (capture slog). Use nil-safe metrics in constructor so existing callers unaffected; add `WithMetrics(*FulfillmentMetrics)` style setter OR new constructor param. Prefer a setter to avoid touching the existing 21-worker registration signature widely — but the worker is constructed once in main, so adding a constructor param is acceptable; use a setter to keep the diff minimal and nil-safe.
-- [ ] **Step 2:** Run → FAIL.
-- [ ] **Step 3:** Implement: add `metrics *metrics.FulfillmentMetrics` field + `WithMetrics` setter; in `Run`, after `ClaimDue`, record `claimed` per event and set queue-depth gauge via `repo.CountPending`; in `processEvent` record `processed`/`failed`; add `correlation_id` (event idempotency key) + `event_type` + `process_id` as structured log fields (process_id is a LOG field, allowed — NOT a metric label). All metrics calls nil-safe + best-effort (no error propagation).
-- [ ] **Step 4:** Run → PASS.
-- [ ] **Step 5:** Commit.
+- [x] **Step 1:** Tests: a fake dispatcher + a metrics collector assert that processing increments `processed` on success and `failed` on permanent failure; correlation-id log field present (capture slog). Use nil-safe metrics in constructor so existing callers unaffected; add `WithMetrics(*FulfillmentMetrics)` style setter OR new constructor param. Prefer a setter to avoid touching the existing 21-worker registration signature widely — but the worker is constructed once in main, so adding a constructor param is acceptable; use a setter to keep the diff minimal and nil-safe.
+- [x] **Step 2:** Run → FAIL.
+- [x] **Step 3:** Implement: add `metrics *metrics.FulfillmentMetrics` field + `WithMetrics` setter; in `Run`, after `ClaimDue`, record `claimed` per event and set queue-depth gauge via `repo.CountPending`; in `processEvent` record `processed`/`failed`; add `correlation_id` (event idempotency key) + `event_type` + `process_id` as structured log fields (process_id is a LOG field, allowed — NOT a metric label). All metrics calls nil-safe + best-effort (no error propagation).
+- [x] **Step 4:** Run → PASS.
+- [x] **Step 5:** Commit.
 
 ### Task 5: FulfillmentService metrics (attempts + blockers)
 
@@ -92,11 +92,11 @@ NEVER tenant_id / order_id / process_id / unit_id / user_id / any UUID as a labe
 - Modify: `internal/service/fulfillment_unit_service.go`
 - Test: `internal/service/fulfillment_metrics_test.go` (new — pure: call a tiny exported recording shim with a collector)
 
-- [ ] **Step 1:** Tests asserting RecordProviderAttempt increments `(operation,status)`; CreateCarrierBlocker/CreateSupplierBlocker increment `(category)`; RecordUnitTransition/RecordStep increment transition counters. Because these methods need a DB pool, test the metric emission through the nil-safe collector hooks directly (extract emission into best-effort helper methods on the service that take already-known bounded values, callable without a DB).
-- [ ] **Step 2:** Run → FAIL.
-- [ ] **Step 3:** Add `metrics *metrics.FulfillmentMetrics` field + `WithMetrics` setter on `FulfillmentService`; call nil-safe metric records at the success points of RecordProviderAttempt, CreateCarrierBlocker, CreateSupplierBlocker, RecordUnitTransition, RecordStep. Category derived via `model.BlockerCategory(code)`.
-- [ ] **Step 4:** Run → PASS.
-- [ ] **Step 5:** Commit.
+- [x] **Step 1:** Tests asserting RecordProviderAttempt increments `(operation,status)`; CreateCarrierBlocker/CreateSupplierBlocker increment `(category)`; RecordUnitTransition/RecordStep increment transition counters. Because these methods need a DB pool, test the metric emission through the nil-safe collector hooks directly (extract emission into best-effort helper methods on the service that take already-known bounded values, callable without a DB).
+- [x] **Step 2:** Run → FAIL.
+- [x] **Step 3:** Add `metrics *metrics.FulfillmentMetrics` field + `WithMetrics` setter on `FulfillmentService`; call nil-safe metric records at the success points of RecordProviderAttempt, CreateCarrierBlocker, CreateSupplierBlocker, RecordUnitTransition, RecordStep. Category derived via `model.BlockerCategory(code)`.
+- [x] **Step 4:** Run → PASS.
+- [x] **Step 5:** Commit.
 
 ### Task 6: FulfillmentReadService — stuck/blocked gauge + operator-action audit
 
@@ -104,11 +104,11 @@ NEVER tenant_id / order_id / process_id / unit_id / user_id / any UUID as a labe
 - Modify: `internal/service/fulfillment_read_service.go`
 - Test: `internal/service/fulfillment_read_metrics_test.go` (new — pure gauge math via OperationsSummaryResult → gauge values)
 
-- [ ] **Step 1:** Test a pure helper `processGaugesFromSummary(OperationsSummaryResult) (stuck, blocked int)` returns the stuck + blocked bucket counts; and that ResolveBlocker/RetryStep write a tenant audit entry (assert the audit-entry construction via an injected fake AuditRepository-like — use the real `*repository.AuditRepository` with a nil-safe guard so absence of audit repo = no-op).
-- [ ] **Step 2:** Run → FAIL.
-- [ ] **Step 3:** Add nil-safe `metrics` + `audit *repository.AuditRepository` to the read service via setters; after `OperationsSummary` set stuck/blocked gauges; in ResolveBlocker and RetryStep, write a best-effort audit entry (`fulfillment.blocker.resolved`, `fulfillment.step.retried`) inside the same tenant tx, log-and-continue on error (must not fail the action). Operator user id taken from a new optional `actorID uuid.UUID` param OR from context — inspect how the handler passes actor; if not available, audit with `UserID: uuid.Nil` (nilIfUUIDEmpty handles it) and entity ids.
-- [ ] **Step 4:** Run → PASS.
-- [ ] **Step 5:** Commit.
+- [x] **Step 1:** Test a pure helper `processGaugesFromSummary(OperationsSummaryResult) (stuck, blocked int)` returns the stuck + blocked bucket counts; and that ResolveBlocker/RetryStep write a tenant audit entry (assert the audit-entry construction via an injected fake AuditRepository-like — use the real `*repository.AuditRepository` with a nil-safe guard so absence of audit repo = no-op).
+- [x] **Step 2:** Run → FAIL.
+- [x] **Step 3:** Add nil-safe `metrics` + `audit *repository.AuditRepository` to the read service via setters; after `OperationsSummary` set stuck/blocked gauges; in ResolveBlocker and RetryStep, write a best-effort audit entry (`fulfillment.blocker.resolved`, `fulfillment.step.retried`) inside the same tenant tx, log-and-continue on error (must not fail the action). Operator user id taken from a new optional `actorID uuid.UUID` param OR from context — inspect how the handler passes actor; if not available, audit with `UserID: uuid.Nil` (nilIfUUIDEmpty handles it) and entity ids.
+- [x] **Step 4:** Run → PASS.
+- [x] **Step 5:** Commit.
 
 ### Task 7: Provider validation + publication transition metrics
 
@@ -117,25 +117,25 @@ NEVER tenant_id / order_id / process_id / unit_id / user_id / any UUID as a labe
 - Modify: `internal/service/provider_registry_service.go`
 - Test: covered via metrics-collector unit tests (Task 1) + build/vet; add a small pure test if a helper is extracted.
 
-- [ ] **Step 1:** Add nil-safe `metrics` setter to both services; in `CompleteRun` record `RecordValidationRun(verdict)` and `RecordValidationFailure()` per failed/errored result; in `Transition` record `RecordPublicationTransition(toState)` after successful commit. Best-effort, nil-safe.
-- [ ] **Step 2:** `go build ./... && go vet ./...` → OK.
-- [ ] **Step 3:** Commit.
+- [x] **Step 1:** Add nil-safe `metrics` setter to both services; in `CompleteRun` record `RecordValidationRun(verdict)` and `RecordValidationFailure()` per failed/errored result; in `Transition` record `RecordPublicationTransition(toState)` after successful commit. Best-effort, nil-safe.
+- [x] **Step 2:** `go build ./... && go vet ./...` → OK.
+- [x] **Step 3:** Commit.
 
 ### Task 8: Wire in main.go
 
 **Files:**
 - Modify: `cmd/server/main.go`
 
-- [ ] **Step 1:** Construct `fulfillmentMetrics := metrics.NewFulfillmentMetrics()` before the fulfillment services (move/insert near line 320). Inject via the new setters into fulfillmentService, fulfillmentReadService, providerRegistryService, providerValidationService, and the orchestration worker (line 1005). Register it with `metricsCollector` (`metricsCollector.Register(fulfillmentMetrics)`).
-- [ ] **Step 2:** `go build ./...` → OK.
-- [ ] **Step 3:** Commit.
+- [x] **Step 1:** Construct `fulfillmentMetrics := metrics.NewFulfillmentMetrics()` before the fulfillment services (move/insert near line 320). Inject via the new setters into fulfillmentService, fulfillmentReadService, providerRegistryService, providerValidationService, and the orchestration worker (line 1005). Register it with `metricsCollector` (`metricsCollector.Register(fulfillmentMetrics)`).
+- [x] **Step 2:** `go build ./...` → OK.
+- [x] **Step 3:** Commit.
 
 ### Task 9: Full validation + final commit
 
-- [ ] `gofmt -w -s .` then `gofmt -l .` clean.
-- [ ] `go build ./...`, `go vet ./...`, `go test ./...` all pass.
-- [ ] `golangci-lint run` → 0 issues.
-- [ ] Final squash/clean commit with the required subject.
+- [x] `gofmt -w -s .` then `gofmt -l .` clean.
+- [x] `go build ./...`, `go vet ./...`, `go test ./...` all pass.
+- [x] `golangci-lint run` → 0 issues.
+- [x] Final squash/clean commit with the required subject.
 
 ## Deferred (enterprise repo / separate tasks)
 

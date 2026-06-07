@@ -11,8 +11,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
-	"github.com/openoms-org/openoms/apps/api-server/internal/metrics"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/obsmetrics"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
@@ -40,13 +40,13 @@ type OrchestrationWorker struct {
 	// metrics is an OPTIONAL, best-effort observability handle (OPE-422). It is
 	// nil-receiver safe, so every record call is a no-op when it is not wired and
 	// can never affect outbox processing.
-	metrics *metrics.FulfillmentMetrics
+	metrics *obsmetrics.FulfillmentMetrics
 }
 
 // WithMetrics wires the optional fulfillment metrics collector for additive,
 // best-effort outbox observability. Returns the worker for chaining. Safe to omit:
 // when unset every metric call is a no-op.
-func (w *OrchestrationWorker) WithMetrics(m *metrics.FulfillmentMetrics) *OrchestrationWorker {
+func (w *OrchestrationWorker) WithMetrics(m *obsmetrics.FulfillmentMetrics) *OrchestrationWorker {
 	w.metrics = m
 	return w
 }
@@ -59,7 +59,7 @@ func (w *OrchestrationWorker) recordOutcome(result string) {
 
 // recordClaimed counts n newly claimed outbox events. Best-effort, nil-safe.
 func (w *OrchestrationWorker) recordClaimed(n int) {
-	for i := 0; i < n; i++ {
+	for range n {
 		w.metrics.RecordOutboxEvent("claimed")
 	}
 }

@@ -1,4 +1,4 @@
-// Package metrics holds additive, dependency-free Prometheus-compatible
+// Package obsmetrics holds additive, dependency-free Prometheus-compatible
 // collectors for the fulfillment / orchestration / provider-validation paths
 // (OPE-422). It deliberately reuses the same hand-rolled atomic-counter +
 // Prometheus text-exposition approach as internal/middleware.MetricsCollector —
@@ -11,7 +11,7 @@
 // allow-list and coerced to "other" when unknown, so a calling bug cannot cause a
 // cardinality explosion. Identifiers belong in logs and audit entries, not in metric
 // label sets.
-package metrics
+package obsmetrics
 
 import (
 	"fmt"
@@ -119,8 +119,6 @@ type FulfillmentMetrics struct {
 	validationFailures atomic.Int64
 
 	outboxQueueDepth atomic.Int64
-	stuckProcesses   atomic.Int64
-	blockedProcesses atomic.Int64
 }
 
 // NewFulfillmentMetrics creates an initialized collector.
@@ -212,22 +210,6 @@ func (m *FulfillmentMetrics) SetOutboxQueueDepth(n int) {
 	m.outboxQueueDepth.Store(int64(n))
 }
 
-// SetStuckProcesses sets the current stuck (system-error/unhealthy) process gauge.
-func (m *FulfillmentMetrics) SetStuckProcesses(n int) {
-	if m == nil {
-		return
-	}
-	m.stuckProcesses.Store(int64(n))
-}
-
-// SetBlockedProcesses sets the current blocked process gauge.
-func (m *FulfillmentMetrics) SetBlockedProcesses(n int) {
-	if m == nil {
-		return
-	}
-	m.blockedProcesses.Store(int64(n))
-}
-
 // labelKeyToProm converts an internal "k1=v1\x00k2=v2" counter key into a Prometheus
 // label set "{k1=\"v1\",k2=\"v2\"}". An empty key yields an empty string (no braces).
 func labelKeyToProm(key string) string {
@@ -278,10 +260,6 @@ func (m *FulfillmentMetrics) Render(b *strings.Builder) {
 
 	writeGauge(b, "openoms_orchestration_outbox_queue_depth",
 		"Pending orchestration outbox events awaiting processing.", m.outboxQueueDepth.Load())
-	writeGauge(b, "openoms_fulfillment_stuck_processes",
-		"Fulfillment processes in a stuck (system-error) state.", m.stuckProcesses.Load())
-	writeGauge(b, "openoms_fulfillment_blocked_processes",
-		"Fulfillment processes currently blocked.", m.blockedProcesses.Load())
 }
 
 func writeCounter(b *strings.Builder, name, help string, c *counter) {

@@ -15,6 +15,7 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/obsmetrics"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
@@ -43,6 +44,12 @@ type FulfillmentService struct {
 	fulfillment   *repository.FulfillmentRepository
 	orchestration *repository.OrchestrationRepository
 	attempts      *repository.FulfillmentAttemptRepository
+	// metrics is an OPTIONAL, best-effort observability handle (OPE-422). It is
+	// nil-receiver safe, so every record call is a no-op when it is not wired and
+	// can never affect or slow the primary recording operation. Metrics are emitted
+	// only AFTER the underlying DB write succeeds, using already-validated bounded
+	// values (operation/status/category) — never an unbounded identifier.
+	metrics *obsmetrics.FulfillmentMetrics
 }
 
 // NewFulfillmentService creates a FulfillmentService. When enabled is false every
@@ -67,6 +74,18 @@ func (s *FulfillmentService) WithRecording(pool *pgxpool.Pool, attempts *reposit
 	}
 	s.pool = pool
 	s.attempts = attempts
+	return s
+}
+
+// WithMetrics wires the OPTIONAL fulfillment metrics collector (OPE-422) for
+// additive, best-effort observability. Returns the service for chaining. Safe to
+// omit: the collector is nil-receiver safe, so every metric call is a no-op when
+// it is not wired and can never affect or slow the primary recording operation.
+func (s *FulfillmentService) WithMetrics(m *obsmetrics.FulfillmentMetrics) *FulfillmentService {
+	if s == nil {
+		return nil
+	}
+	s.metrics = m
 	return s
 }
 
@@ -194,6 +213,10 @@ func (s *FulfillmentService) RecordProviderAttempt(ctx context.Context, in Provi
 			"tenant_id", in.TenantID, "provider", in.Provider, "operation", in.Operation, "error", err)
 		return nil
 	}
+	// Best-effort metric AFTER the DB write succeeds. Operation/status are bounded
+	// enums (mirroring the DB CHECK constraint); the collector coerces any unexpected
+	// value to "other", so cardinality is bounded regardless. Never an identifier.
+	s.metrics.RecordProviderAttempt(in.Operation, in.Status)
 	return attempt
 }
 
@@ -337,6 +360,12 @@ func (s *FulfillmentService) CreateCarrierBlocker(ctx context.Context, tenantID,
 		slog.Warn("fulfillment: create carrier blocker failed (best-effort, ignored)",
 			"tenant_id", tenantID, "order_id", orderID, "code", code, "error", err)
 		return nil
+	}
+	// Best-effort metric: count the blocker by its bounded category, only when a
+	// blocker row was actually created (no process => blocker is nil => no count).
+	// model.BlockerCategory maps the code to one of the bounded category enums.
+	if blocker != nil {
+		s.metrics.RecordBlocker(model.BlockerCategory(code))
 	}
 	return blocker
 }

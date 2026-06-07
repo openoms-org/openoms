@@ -1,4 +1,4 @@
-package metrics_test
+package obsmetrics_test
 
 import (
 	"strings"
@@ -7,21 +7,21 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/openoms-org/openoms/apps/api-server/internal/metrics"
+	"github.com/openoms-org/openoms/apps/api-server/internal/obsmetrics"
 )
 
-func render(m *metrics.FulfillmentMetrics) string {
+func render(m *obsmetrics.FulfillmentMetrics) string {
 	var b strings.Builder
 	m.Render(&b)
 	return b.String()
 }
 
 func TestNewFulfillmentMetrics_NotNil(t *testing.T) {
-	assert.NotNil(t, metrics.NewFulfillmentMetrics())
+	assert.NotNil(t, obsmetrics.NewFulfillmentMetrics())
 }
 
 func TestFulfillmentMetrics_NilReceiver_NoPanic(t *testing.T) {
-	var m *metrics.FulfillmentMetrics // nil
+	var m *obsmetrics.FulfillmentMetrics // nil
 	// None of the record methods may panic on a nil collector — this is the
 	// guarantee that wiring it in is always safe and best-effort.
 	require.NotPanics(t, func() {
@@ -29,8 +29,6 @@ func TestFulfillmentMetrics_NilReceiver_NoPanic(t *testing.T) {
 		m.RecordBlocker("capability")
 		m.RecordOutboxEvent("processed")
 		m.SetOutboxQueueDepth(5)
-		m.SetStuckProcesses(1)
-		m.SetBlockedProcesses(2)
 		m.RecordValidationRun("passed")
 		m.RecordValidationFailure()
 		m.RecordPublicationTransition("available")
@@ -42,7 +40,7 @@ func TestFulfillmentMetrics_NilReceiver_NoPanic(t *testing.T) {
 }
 
 func TestFulfillmentMetrics_ProviderAttemptCounter(t *testing.T) {
-	m := metrics.NewFulfillmentMetrics()
+	m := obsmetrics.NewFulfillmentMetrics()
 	m.RecordProviderAttempt("generate_label", "failed")
 	m.RecordProviderAttempt("generate_label", "failed")
 	out := render(m)
@@ -51,7 +49,7 @@ func TestFulfillmentMetrics_ProviderAttemptCounter(t *testing.T) {
 }
 
 func TestFulfillmentMetrics_UnknownLabelCoercedToOther(t *testing.T) {
-	m := metrics.NewFulfillmentMetrics()
+	m := obsmetrics.NewFulfillmentMetrics()
 	// An unbounded / unexpected value (e.g. an id leaked by a bug) must NOT create
 	// a new high-cardinality series — it is coerced to the bounded "other" bucket.
 	m.RecordProviderAttempt("11111111-2222-3333-4444-555555555555", "weird-status")
@@ -63,7 +61,7 @@ func TestFulfillmentMetrics_UnknownLabelCoercedToOther(t *testing.T) {
 }
 
 func TestFulfillmentMetrics_BlockerCategoryCounter(t *testing.T) {
-	m := metrics.NewFulfillmentMetrics()
+	m := obsmetrics.NewFulfillmentMetrics()
 	m.RecordBlocker("supplier")
 	out := render(m)
 	assert.Contains(t, out, "# TYPE openoms_fulfillment_blockers_total counter")
@@ -71,7 +69,7 @@ func TestFulfillmentMetrics_BlockerCategoryCounter(t *testing.T) {
 }
 
 func TestFulfillmentMetrics_OutboxCountersAndGauge(t *testing.T) {
-	m := metrics.NewFulfillmentMetrics()
+	m := obsmetrics.NewFulfillmentMetrics()
 	m.RecordOutboxEvent("claimed")
 	m.RecordOutboxEvent("processed")
 	m.RecordOutboxEvent("failed")
@@ -85,19 +83,8 @@ func TestFulfillmentMetrics_OutboxCountersAndGauge(t *testing.T) {
 	assert.Contains(t, out, "openoms_orchestration_outbox_queue_depth 7")
 }
 
-func TestFulfillmentMetrics_StuckBlockedGauges(t *testing.T) {
-	m := metrics.NewFulfillmentMetrics()
-	m.SetStuckProcesses(3)
-	m.SetBlockedProcesses(4)
-	out := render(m)
-	assert.Contains(t, out, "# TYPE openoms_fulfillment_stuck_processes gauge")
-	assert.Contains(t, out, "openoms_fulfillment_stuck_processes 3")
-	assert.Contains(t, out, "# TYPE openoms_fulfillment_blocked_processes gauge")
-	assert.Contains(t, out, "openoms_fulfillment_blocked_processes 4")
-}
-
 func TestFulfillmentMetrics_ValidationCounters(t *testing.T) {
-	m := metrics.NewFulfillmentMetrics()
+	m := obsmetrics.NewFulfillmentMetrics()
 	m.RecordValidationRun("failed")
 	m.RecordValidationFailure()
 	m.RecordValidationFailure()
@@ -109,7 +96,7 @@ func TestFulfillmentMetrics_ValidationCounters(t *testing.T) {
 }
 
 func TestFulfillmentMetrics_PublicationTransitionCounter(t *testing.T) {
-	m := metrics.NewFulfillmentMetrics()
+	m := obsmetrics.NewFulfillmentMetrics()
 	m.RecordPublicationTransition("available")
 	out := render(m)
 	assert.Contains(t, out, "# TYPE openoms_provider_publication_transitions_total counter")
@@ -117,7 +104,7 @@ func TestFulfillmentMetrics_PublicationTransitionCounter(t *testing.T) {
 }
 
 func TestFulfillmentMetrics_UnitAndStepTransitions(t *testing.T) {
-	m := metrics.NewFulfillmentMetrics()
+	m := obsmetrics.NewFulfillmentMetrics()
 	m.RecordUnitTransition("running")
 	m.RecordStepTransition("succeeded")
 	out := render(m)
@@ -131,14 +118,12 @@ func TestFulfillmentMetrics_UnitAndStepTransitions(t *testing.T) {
 // rendered exposition MUST NOT contain any unbounded id-like label key. If a future
 // change introduces tenant_id/order_id/etc. as a metric label, this test fails.
 func TestFulfillmentMetrics_NoIDLikeLabels(t *testing.T) {
-	m := metrics.NewFulfillmentMetrics()
+	m := obsmetrics.NewFulfillmentMetrics()
 	// Exercise every metric so all label keys appear in the output.
 	m.RecordProviderAttempt("create_shipment", "succeeded")
 	m.RecordBlocker("capability")
 	m.RecordOutboxEvent("processed")
 	m.SetOutboxQueueDepth(1)
-	m.SetStuckProcesses(1)
-	m.SetBlockedProcesses(1)
 	m.RecordValidationRun("passed")
 	m.RecordValidationFailure()
 	m.RecordPublicationTransition("available")

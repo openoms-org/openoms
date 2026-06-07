@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/obsmetrics"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
@@ -32,6 +34,14 @@ type FulfillmentReadService struct {
 	fulfillment   *repository.FulfillmentRepository
 	attempts      *repository.FulfillmentAttemptRepository
 	orchestration *repository.OrchestrationRepository
+	// metrics is an OPTIONAL, best-effort observability handle (OPE-422). It is
+	// nil-receiver safe, so every gauge/record call is a no-op when it is not wired
+	// and can never affect or slow a read/action.
+	metrics *obsmetrics.FulfillmentMetrics
+	// audit is an OPTIONAL, best-effort tenant audit-log writer (OPE-422). When wired,
+	// operator actions (resolve blocker / retry step) write an audit entry inside the
+	// same tenant transaction; on any error the action still succeeds (log-and-continue).
+	audit repository.AuditRepo
 }
 
 // NewFulfillmentReadService creates a FulfillmentReadService over the app
@@ -48,6 +58,27 @@ func NewFulfillmentReadService(
 		attempts:      attempts,
 		orchestration: orchestration,
 	}
+}
+
+// WithMetrics wires the OPTIONAL fulfillment metrics collector (OPE-422). Returns
+// the service for chaining. Safe to omit: the collector is nil-receiver safe.
+func (s *FulfillmentReadService) WithMetrics(m *obsmetrics.FulfillmentMetrics) *FulfillmentReadService {
+	if s == nil {
+		return nil
+	}
+	s.metrics = m
+	return s
+}
+
+// WithAudit wires the OPTIONAL tenant audit-log writer (OPE-422) used to record
+// operator actions (resolve blocker / retry step). Returns the service for
+// chaining. Safe to omit: when unset the audit write is skipped.
+func (s *FulfillmentReadService) WithAudit(audit repository.AuditRepo) *FulfillmentReadService {
+	if s == nil {
+		return nil
+	}
+	s.audit = audit
+	return s
 }
 
 // ErrFulfillmentNotFound is returned when a requested process/blocker/step does not
@@ -291,6 +322,13 @@ func (s *FulfillmentReadService) OperationsSummary(ctx context.Context, tenantID
 	if err != nil {
 		return OperationsSummaryResult{}, fmt.Errorf("operations summary: %w", err)
 	}
+	// NOTE (OPE-422 followup): global stuck/blocked process GAUGES are intentionally
+	// NOT published here. This read path is tenant-scoped (RLS), so a gauge set on
+	// each per-tenant summary read — with no tenant label — would flap to the
+	// last-observed tenant's value, which is misleading for ops/alerting. A correct
+	// global gauge must come from a periodic cross-tenant sweep (privileged pool);
+	// that is deferred to a follow-up. The event-time counters (attempts, blockers,
+	// validation, publication) and the worker-published outbox-depth gauge remain.
 	return out, nil
 }
 
@@ -468,9 +506,12 @@ func (s *FulfillmentReadService) IntegrationCapabilitySummary(ctx context.Contex
 // ---- Actions ----
 
 // ResolveBlocker marks a blocker resolved (status=resolved, resolved_at=now) for the
-// tenant (RLS-scoped write). Returns ErrFulfillmentNotFound when the blocker does not
-// exist for the tenant.
-func (s *FulfillmentReadService) ResolveBlocker(ctx context.Context, tenantID, blockerID uuid.UUID) (*model.FulfillmentBlocker, error) {
+// tenant (RLS-scoped write) and writes a best-effort operator-action audit entry in
+// the SAME tenant transaction. Returns ErrFulfillmentNotFound when the blocker does
+// not exist for the tenant. actorID is the operator's user id (uuid.Nil when
+// unknown); ip is the request client IP (empty when unknown) — both feed the audit
+// entry only, never a metric label.
+func (s *FulfillmentReadService) ResolveBlocker(ctx context.Context, tenantID, blockerID, actorID uuid.UUID, ip string) (*model.FulfillmentBlocker, error) {
 	var out *model.FulfillmentBlocker
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		if _, e := s.fulfillment.GetBlocker(ctx, tx, blockerID); errors.Is(e, pgx.ErrNoRows) {
@@ -488,6 +529,18 @@ func (s *FulfillmentReadService) ResolveBlocker(ctx context.Context, tenantID, b
 	if err != nil {
 		return nil, err
 	}
+	// Best-effort audit AFTER the action commits, in its OWN transaction, so an audit
+	// failure can NEVER abort/roll back the operator action. No secret/PII is recorded
+	// (only ids + bounded code/category/status).
+	s.auditAction(ctx, tenantID, model.AuditEntry{
+		TenantID:   tenantID,
+		UserID:     actorID,
+		Action:     "fulfillment.blocker.resolved",
+		EntityType: "fulfillment_blocker",
+		EntityID:   blockerID,
+		Changes:    map[string]string{"code": out.Code, "category": out.Category, "status": model.BlockerStatusResolved},
+		IPAddress:  ip,
+	})
 	return out, nil
 }
 
@@ -502,8 +555,9 @@ func (s *FulfillmentReadService) ResolveBlocker(ctx context.Context, tenantID, b
 // the enqueued event. When no outbox is wired, the step state is reset and the
 // worker dependency is recorded in the returned step's metadata-free response — the
 // caller (and operator) is responsible for re-driving it.
-func (s *FulfillmentReadService) RetryStep(ctx context.Context, tenantID, stepID uuid.UUID) (*model.FulfillmentStep, error) {
+func (s *FulfillmentReadService) RetryStep(ctx context.Context, tenantID, stepID, actorID uuid.UUID, ip string) (*model.FulfillmentStep, error) {
 	var out *model.FulfillmentStep
+	var fromStatus string
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		step, e := s.fulfillment.GetStep(ctx, tx, stepID)
 		if errors.Is(e, pgx.ErrNoRows) {
@@ -515,6 +569,7 @@ func (s *FulfillmentReadService) RetryStep(ctx context.Context, tenantID, stepID
 		if step.Status != model.FulfillmentStatusFailed && step.Status != model.FulfillmentStatusBlocked {
 			return NewValidationError(fmt.Errorf("step in status %q is not retryable (must be failed or blocked)", step.Status))
 		}
+		fromStatus = step.Status
 
 		// Reset the step toward pending; keep the attempts count so history is preserved.
 		reset, e := s.fulfillment.UpdateStepStatus(ctx, tx, step.ID, model.FulfillmentStatusPending, step.Attempts)
@@ -553,7 +608,38 @@ func (s *FulfillmentReadService) RetryStep(ctx context.Context, tenantID, stepID
 	if err != nil {
 		return nil, err
 	}
+	// Best-effort audit + transition metric AFTER the action commits, in its OWN
+	// transaction, so neither can abort the retry. step_key is a bounded enum but is
+	// NOT used as a metric label (the transition counter is keyed on the bounded
+	// target status only); it is recorded only in the audit changes.
+	s.auditAction(ctx, tenantID, model.AuditEntry{
+		TenantID:   tenantID,
+		UserID:     actorID,
+		Action:     "fulfillment.step.retried",
+		EntityType: "fulfillment_step",
+		EntityID:   stepID,
+		Changes:    map[string]string{"step_key": out.StepKey, "from_status": fromStatus, "to_status": model.FulfillmentStatusPending},
+		IPAddress:  ip,
+	})
+	s.metrics.RecordStepTransition(model.FulfillmentStatusPending)
 	return out, nil
+}
+
+// auditAction writes a best-effort audit entry in its OWN tenant transaction (after
+// the primary action has already committed). It is a no-op when no audit writer is
+// wired, and on ANY error it logs-and-continues — the audit write can never abort or
+// roll back the operator action it records (additive, never blocking).
+func (s *FulfillmentReadService) auditAction(ctx context.Context, tenantID uuid.UUID, entry model.AuditEntry) {
+	if s.audit == nil {
+		return
+	}
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		return s.audit.Log(ctx, tx, entry)
+	})
+	if err != nil {
+		slog.Warn("fulfillment: operator-action audit failed (best-effort, ignored)",
+			"action", entry.Action, "entity_type", entry.EntityType, "entity_id", entry.EntityID, "error", err)
+	}
 }
 
 // clampScan bounds a caller-supplied scan/limit param: non-positive falls back to

@@ -27,8 +27,8 @@ type stubFulfillmentReader struct {
 	opsSummary        func(ctx context.Context, tenantID uuid.UUID) (service.OperationsSummaryResult, error)
 	opsExceptions     func(ctx context.Context, tenantID uuid.UUID, limit int) ([]service.ExceptionItem, error)
 	capabilitySummary func(ctx context.Context, tenantID uuid.UUID, scanLimit int) (service.IntegrationCapabilitySummaryResult, error)
-	resolveBlocker    func(ctx context.Context, tenantID, blockerID uuid.UUID) (*model.FulfillmentBlocker, error)
-	retryStep         func(ctx context.Context, tenantID, stepID uuid.UUID) (*model.FulfillmentStep, error)
+	resolveBlocker    func(ctx context.Context, tenantID, blockerID, actorID uuid.UUID, ip string) (*model.FulfillmentBlocker, error)
+	retryStep         func(ctx context.Context, tenantID, stepID, actorID uuid.UUID, ip string) (*model.FulfillmentStep, error)
 }
 
 func (s *stubFulfillmentReader) ListProcesses(ctx context.Context, tenantID uuid.UUID, agg, health []string, limit, offset int) (service.ProcessListResult, error) {
@@ -73,16 +73,16 @@ func (s *stubFulfillmentReader) IntegrationCapabilitySummary(ctx context.Context
 	return service.IntegrationCapabilitySummaryResult{}, nil
 }
 
-func (s *stubFulfillmentReader) ResolveBlocker(ctx context.Context, tenantID, blockerID uuid.UUID) (*model.FulfillmentBlocker, error) {
+func (s *stubFulfillmentReader) ResolveBlocker(ctx context.Context, tenantID, blockerID, actorID uuid.UUID, ip string) (*model.FulfillmentBlocker, error) {
 	if s.resolveBlocker != nil {
-		return s.resolveBlocker(ctx, tenantID, blockerID)
+		return s.resolveBlocker(ctx, tenantID, blockerID, actorID, ip)
 	}
 	return nil, service.ErrFulfillmentNotFound
 }
 
-func (s *stubFulfillmentReader) RetryStep(ctx context.Context, tenantID, stepID uuid.UUID) (*model.FulfillmentStep, error) {
+func (s *stubFulfillmentReader) RetryStep(ctx context.Context, tenantID, stepID, actorID uuid.UUID, ip string) (*model.FulfillmentStep, error) {
 	if s.retryStep != nil {
-		return s.retryStep(ctx, tenantID, stepID)
+		return s.retryStep(ctx, tenantID, stepID, actorID, ip)
 	}
 	return nil, service.ErrFulfillmentNotFound
 }
@@ -219,7 +219,7 @@ func TestFulfillmentHandler_ResolveBlocker_HappyPath(t *testing.T) {
 	blockerID := uuid.New()
 	resolved := &model.FulfillmentBlocker{ID: blockerID, TenantID: tenantID, Status: model.BlockerStatusResolved}
 	stub := &stubFulfillmentReader{
-		resolveBlocker: func(_ context.Context, tid, bid uuid.UUID) (*model.FulfillmentBlocker, error) {
+		resolveBlocker: func(_ context.Context, tid, bid, _ uuid.UUID, _ string) (*model.FulfillmentBlocker, error) {
 			assert.Equal(t, tenantID, tid)
 			assert.Equal(t, blockerID, bid)
 			return resolved, nil
@@ -253,7 +253,7 @@ func TestFulfillmentHandler_RetryStep_ValidationError(t *testing.T) {
 	tenantID := uuid.New()
 	stepID := uuid.New()
 	stub := &stubFulfillmentReader{
-		retryStep: func(_ context.Context, _, _ uuid.UUID) (*model.FulfillmentStep, error) {
+		retryStep: func(_ context.Context, _, _, _ uuid.UUID, _ string) (*model.FulfillmentStep, error) {
 			return nil, service.NewValidationError(errors.New("step is not retryable"))
 		},
 	}
@@ -271,7 +271,7 @@ func TestFulfillmentHandler_RetryStep_HappyPath(t *testing.T) {
 	stepID := uuid.New()
 	step := &model.FulfillmentStep{ID: stepID, TenantID: tenantID, Status: model.FulfillmentStatusPending}
 	stub := &stubFulfillmentReader{
-		retryStep: func(_ context.Context, tid, sid uuid.UUID) (*model.FulfillmentStep, error) {
+		retryStep: func(_ context.Context, tid, sid, _ uuid.UUID, _ string) (*model.FulfillmentStep, error) {
 			assert.Equal(t, tenantID, tid)
 			assert.Equal(t, stepID, sid)
 			return step, nil

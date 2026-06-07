@@ -25,8 +25,8 @@ type FulfillmentReader interface {
 	OperationsSummary(ctx context.Context, tenantID uuid.UUID) (service.OperationsSummaryResult, error)
 	OperationsExceptions(ctx context.Context, tenantID uuid.UUID, limit int) ([]service.ExceptionItem, error)
 	IntegrationCapabilitySummary(ctx context.Context, tenantID uuid.UUID, scanLimit int) (service.IntegrationCapabilitySummaryResult, error)
-	ResolveBlocker(ctx context.Context, tenantID, blockerID uuid.UUID) (*model.FulfillmentBlocker, error)
-	RetryStep(ctx context.Context, tenantID, stepID uuid.UUID) (*model.FulfillmentStep, error)
+	ResolveBlocker(ctx context.Context, tenantID, blockerID, actorID uuid.UUID, ip string) (*model.FulfillmentBlocker, error)
+	RetryStep(ctx context.Context, tenantID, stepID, actorID uuid.UUID, ip string) (*model.FulfillmentStep, error)
 }
 
 // FulfillmentHandler serves the tenant-scoped fulfillment read + operator-action
@@ -122,7 +122,7 @@ func (h *FulfillmentHandler) ResolveBlocker(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	blocker, err := h.svc.ResolveBlocker(r.Context(), tenantID, blockerID)
+	blocker, err := h.svc.ResolveBlocker(r.Context(), tenantID, blockerID, middleware.UserIDFromContext(r.Context()), clientIP(r))
 	if err != nil {
 		if errors.Is(err, service.ErrFulfillmentNotFound) {
 			writeError(w, http.StatusNotFound, "blocker not found")
@@ -145,7 +145,7 @@ func (h *FulfillmentHandler) RetryStep(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	step, err := h.svc.RetryStep(r.Context(), tenantID, stepID)
+	step, err := h.svc.RetryStep(r.Context(), tenantID, stepID, middleware.UserIDFromContext(r.Context()), clientIP(r))
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrFulfillmentNotFound):
