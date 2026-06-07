@@ -83,7 +83,175 @@
       "new": "Nowe",
       "totalOrders": "Wszystkie zamówienia"
     },
-    "title": "Pulpit"
+    "title": "Pulpit",
+    "fulfillment": {
+      "actions": {
+        "blockerResolved": "Blokada rozwiązana.",
+        "resolve": "Rozwiąż",
+        "resolveConfirmDescription": "Oznacz tę blokadę jako rozwiązaną. Proces może ruszyć dalej po usunięciu wszystkich blokad.",
+        "resolveConfirmTitle": "Rozwiązać blokadę?",
+        "resolveError": "Nie udało się rozwiązać blokady.",
+        "retry": "Ponów",
+        "retryConfirmDescription": "Zresetuj ten krok i skieruj go do kolejnej próby.",
+        "retryConfirmTitle": "Ponowić krok?",
+        "retryError": "Nie udało się ponowić kroku.",
+        "stepRetried": "Krok skierowany do ponowienia."
+      },
+      "aggregateStatus": {
+        "blocked": "Zablokowane",
+        "cancelled": "Anulowane",
+        "completed": "Zakończone",
+        "in_progress": "W realizacji",
+        "new": "Nowe",
+        "ready": "Gotowe",
+        "validating": "Walidacja",
+        "waiting_external": "Czeka na zewnętrzne"
+      },
+      "blockerCode": {
+        "channel_stock_stale": "Dane stanu w kanale są nieaktualne",
+        "external_status_unmapped": "Status zewnętrzny nie ma mapowania",
+        "integration_capability_degraded": "Funkcja integracji działa z ograniczeniami",
+        "integration_capability_missing": "Brak wymaganej funkcji integracji",
+        "manual_stock_review_required": "Wymagana ręczna weryfikacja stanu",
+        "stock_ack_missing": "Brak potwierdzenia stanu z kanału",
+        "stock_sync_failed": "Synchronizacja stanu do kanału nie powiodła się",
+        "stock_write_unsupported": "Zapis stanu nie jest wspierany przez tę integrację",
+        "supplier_availability_stale": "Dane dostępności u dostawcy są nieaktualne",
+        "supplier_availability_unknown": "Dostępność u dostawcy jest nieznana",
+        "supplier_preflight_required": "Zamówienie u dostawcy wymaga wstępnej weryfikacji"
+      },
+      "buckets": {
+        "blocked": {
+          "hint": "Wstrzymane przez blokadę",
+          "label": "Zablokowane"
+        },
+        "missing_data": {
+          "hint": "Wymaga danych od operatora",
+          "label": "Brak danych"
+        },
+        "processing": {
+          "hint": "Aktywnie w realizacji",
+          "label": "W realizacji"
+        },
+        "provider_issue": {
+          "hint": "Zewnętrzny dostawca lub funkcja",
+          "label": "Czeka na dostawcę"
+        },
+        "ready": {
+          "hint": "Gotowe do realizacji",
+          "label": "Gotowe"
+        },
+        "stuck": {
+          "hint": "Błąd systemu — wymaga uwagi",
+          "label": "Utknięte"
+        }
+      },
+      "capability": {
+        "automationCoverage": "Pokrycie automatyzacją",
+        "coverageHint": "Spośród {count} procesów",
+        "failedAttempts": "Nieudane próby u dostawcy",
+        "loadError": "Nie udało się załadować pokrycia automatyzacją.",
+        "manualIntervention": "Interwencja ręczna",
+        "missingMapping": "Brak mapowania",
+        "staleData": "Nieaktualne dane",
+        "title": "Pokrycie automatyzacją integracji",
+        "unsupportedCapability": "Niewspierana funkcja"
+      },
+      "controlTower": {
+        "loadError": "Nie udało się załadować wieży kontroli.",
+        "pageSubtitle": "Kondycja operacji oparta na procesach, pokrycie automatyzacją i wyjątki do działania.",
+        "pageTitle": "Wieża kontroli realizacji",
+        "subtitle": "Widok kondycji realizacji zamówień oparty na procesach.",
+        "title": "Wieża kontroli realizacji",
+        "totalProcesses": "{count} procesów",
+        "viewAll": "Zobacz wszystkie"
+      },
+      "detail": {
+        "attempts": "{count} prób",
+        "attemptsHeading": "Próby u dostawcy",
+        "blockersHeading": "Aktywne blokady",
+        "loadError": "Nie udało się załadować szczegółów realizacji.",
+        "noAttempts": "Nie zarejestrowano prób u dostawcy.",
+        "noBlockers": "Brak aktywnych blokad",
+        "noSteps": "Nie zarejestrowano jeszcze kroków.",
+        "noUnits": "Nie zarejestrowano jeszcze jednostek.",
+        "notFoundDescription": "Dla tej pozycji nie zarejestrowano jeszcze procesu realizacji.",
+        "notFoundTitle": "Brak danych realizacji",
+        "orderRef": "Zamówienie {orderId}",
+        "subtitle": "Jednostki, kroki, blokady i próby u dostawcy.",
+        "title": "Szczegóły realizacji",
+        "unitsHeading": "Jednostki i kroki",
+        "updatedAt": "Zaktualizowano {time}"
+      },
+      "exceptions": {
+        "emptyDescription": "Żaden proces realizacji nie wymaga teraz działania.",
+        "emptyTitle": "Brak wyjątków",
+        "loadError": "Nie udało się załadować wyjątków.",
+        "noBlocker": "Wymaga uwagi",
+        "orderRef": "Zamówienie {orderId}",
+        "title": "Wymaga działania"
+      },
+      "healthStatus": {
+        "action_required": "Wymaga działania",
+        "ok": "OK",
+        "system_error": "Błąd systemu",
+        "warning": "Ostrzeżenie"
+      },
+      "providerOp": {
+        "create_shipment": "Utworzenie przesyłki",
+        "download_label": "Pobranie etykiety",
+        "generate_label": "Wygenerowanie etykiety",
+        "sync_tracking": "Synchronizacja trackingu"
+      },
+      "providerStatus": {
+        "failed": "Nieudany",
+        "pending": "Oczekuje",
+        "succeeded": "Zakończony"
+      },
+      "retry": "Spróbuj ponownie",
+      "stepKey": {
+        "allocate_units": "Przydział jednostek realizacji",
+        "await_tracking": "Oczekiwanie na tracking",
+        "close_process": "Zamknięcie procesu",
+        "confirm_supplier_order": "Potwierdzenie zamówienia u dostawcy",
+        "create_dispatch_order": "Utworzenie zlecenia odbioru",
+        "create_dropship_order": "Utworzenie zamówienia dropshipping",
+        "create_purchase_order": "Utworzenie zamówienia zakupu",
+        "create_shipment": "Utworzenie przesyłki",
+        "generate_label": "Wygenerowanie etykiety",
+        "notify_customer": "Powiadomienie klienta",
+        "pack_items": "Pakowanie pozycji",
+        "pick_items": "Kompletacja pozycji",
+        "preflight_supplier_order": "Wstępna weryfikacja zamówienia u dostawcy",
+        "propagate_stock_to_channels": "Propagacja stanu do kanałów",
+        "recalculate_availability": "Przeliczenie dostępności",
+        "receive_purchase_order": "Przyjęcie zamówienia zakupu",
+        "release_stock": "Zwolnienie rezerwacji",
+        "reserve_stock": "Rezerwacja stanu",
+        "select_carrier_service": "Wybór usługi kuriera",
+        "select_fulfillment_policy": "Wybór polityki realizacji",
+        "sync_tracking_to_marketplace": "Synchronizacja trackingu z marketplace",
+        "validate_order": "Walidacja zamówienia"
+      },
+      "stepStatus": {
+        "blocked": "Zablokowany",
+        "cancelled": "Anulowany",
+        "failed": "Nieudany",
+        "pending": "Oczekuje",
+        "ready": "Gotowy",
+        "running": "W trakcie",
+        "skipped": "Pominięty",
+        "succeeded": "Zakończony",
+        "waiting_external": "Czeka na zewnętrzne"
+      },
+      "unitType": {
+        "backorder": "Zamówienie oczekujące",
+        "dropship": "Dropshipping",
+        "manual": "Ręczne",
+        "mixed_child": "Mieszane (podział)",
+        "warehouse": "Magazyn"
+      }
+    }
   },
   "onboarding": {
     "allDone": "Gotowe!",

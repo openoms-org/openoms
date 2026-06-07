@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { useAuthStore } from "@/lib/auth";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { useOperationsDashboard } from "@/hooks/use-operations-dashboard";
+import { FulfillmentControlTowerPanel } from "@/components/dashboard/fulfillment-control-tower-panel";
 import { IntegrationHealthPanel } from "@/components/dashboard/integration-health-panel";
 import { OperationalExceptions } from "@/components/dashboard/operational-exceptions";
 import { OperationsActivity } from "@/components/dashboard/operations-activity";
@@ -182,6 +183,11 @@ export default function DashboardPage() {
         </div>
 
         <IntegrationHealthPanel items={integrationHealth} isLoading={isLoading} />
+
+        {/* OPE-419 (additive): process-backed fulfillment control tower. Renders
+            intentional empty/zero states while FULFILLMENT_PROCESS_ENABLED is off;
+            self-guards on operator role. The heuristic dashboard above is unchanged. */}
+        <FulfillmentControlTowerPanel />
 
         <div className="space-y-4">
           <OnboardingWizard />

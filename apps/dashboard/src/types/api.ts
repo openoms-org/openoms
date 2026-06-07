@@ -10,3 +10,4 @@ export * from "./customers";
 export * from "./invoices";
 export * from "./automation";
 export * from "./operations";
+export * from "./fulfillment";
