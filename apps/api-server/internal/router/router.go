@@ -123,6 +123,8 @@ type RouterDeps struct { //nolint:revive
 	PlatformAdmin              middleware.PlatformAdminLookup
 	Provider                   *handler.ProviderHandler
 	ProviderValidation         *handler.ProviderValidationHandler
+	Fulfillment                *handler.FulfillmentHandler
+	Operations                 *handler.OperationsHandler
 }
 
 // New constructs the chi router with all routes registered.
@@ -1258,6 +1260,27 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/transactions/{id}/unmatch", deps.Reconciliation.Unmatch)
 				r.Get("/summary", deps.Reconciliation.GetSummary)
 			})
+
+			// Fulfillment read API + operator actions (OPE-419) — tenant-scoped,
+			// RLS-enforced. Reads guarded by orders.view, actions by orders.edit.
+			if deps.Fulfillment != nil {
+				r.Route("/fulfillment", func(r chi.Router) {
+					r.With(requirePermission(model.PermOrdersView)).Get("/processes", deps.Fulfillment.ListProcesses)
+					r.With(requirePermission(model.PermOrdersView)).Get("/processes/{id}", deps.Fulfillment.GetProcess)
+					r.With(requirePermission(model.PermOrdersView)).Get("/orders/{orderID}", deps.Fulfillment.GetOrderFulfillment)
+					r.With(requirePermission(model.PermOrdersEdit)).Post("/blockers/{id}/resolve", deps.Fulfillment.ResolveBlocker)
+					r.With(requirePermission(model.PermOrdersEdit)).Post("/steps/{id}/retry", deps.Fulfillment.RetryStep)
+				})
+			}
+
+			// Operations control tower (OPE-419) — tenant-scoped read aggregates.
+			if deps.Operations != nil {
+				r.Route("/operations", func(r chi.Router) {
+					r.With(requirePermission(model.PermOrdersView)).Get("/summary", deps.Operations.Summary)
+					r.With(requirePermission(model.PermOrdersView)).Get("/exceptions", deps.Operations.Exceptions)
+					r.With(requirePermission(model.PermOrdersView)).Get("/integration-capability-summary", deps.Operations.IntegrationCapabilitySummary)
+				})
+			}
 
 		})
 
