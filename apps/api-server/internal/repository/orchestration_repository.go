@@ -96,6 +96,17 @@ func (r *OrchestrationRepository) ClaimDue(ctx context.Context, q Querier, limit
 	return result, rows.Err()
 }
 
+// CountPending returns the number of pending outbox rows across all tenants. It is
+// used by the orchestration worker to publish a queue-depth gauge and, like ClaimDue,
+// runs on the privileged cross-tenant pool (not RLS-scoped).
+func (r *OrchestrationRepository) CountPending(ctx context.Context, q Querier) (int, error) {
+	var n int
+	if err := q.QueryRow(ctx, `SELECT COUNT(*) FROM orchestration_outbox WHERE status = 'pending'`).Scan(&n); err != nil {
+		return 0, fmt.Errorf("count pending outbox events: %w", err)
+	}
+	return n, nil
+}
+
 // MarkSucceeded marks an outbox row as succeeded.
 func (r *OrchestrationRepository) MarkSucceeded(ctx context.Context, q Querier, id uuid.UUID) error {
 	_, err := q.Exec(ctx, `UPDATE orchestration_outbox SET status='succeeded', updated_at=now() WHERE id=$1`, id)
