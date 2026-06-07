@@ -27,6 +27,7 @@ type stubFulfillmentReader struct {
 	opsSummary        func(ctx context.Context, tenantID uuid.UUID) (service.OperationsSummaryResult, error)
 	opsExceptions     func(ctx context.Context, tenantID uuid.UUID, limit int) ([]service.ExceptionItem, error)
 	capabilitySummary func(ctx context.Context, tenantID uuid.UUID, scanLimit int) (service.IntegrationCapabilitySummaryResult, error)
+	parityReport      func(ctx context.Context, tenantID uuid.UUID, threshold float64) (service.ParityReport, error)
 	resolveBlocker    func(ctx context.Context, tenantID, blockerID, actorID uuid.UUID, ip string) (*model.FulfillmentBlocker, error)
 	retryStep         func(ctx context.Context, tenantID, stepID, actorID uuid.UUID, ip string) (*model.FulfillmentStep, error)
 }
@@ -71,6 +72,13 @@ func (s *stubFulfillmentReader) IntegrationCapabilitySummary(ctx context.Context
 		return s.capabilitySummary(ctx, tenantID, scanLimit)
 	}
 	return service.IntegrationCapabilitySummaryResult{}, nil
+}
+
+func (s *stubFulfillmentReader) ParityReport(ctx context.Context, tenantID uuid.UUID, threshold float64) (service.ParityReport, error) {
+	if s.parityReport != nil {
+		return s.parityReport(ctx, tenantID, threshold)
+	}
+	return service.ParityReport{}, nil
 }
 
 func (s *stubFulfillmentReader) ResolveBlocker(ctx context.Context, tenantID, blockerID, actorID uuid.UUID, ip string) (*model.FulfillmentBlocker, error) {
@@ -369,4 +377,56 @@ func TestOperationsHandler_IntegrationCapabilitySummary_HappyPath(t *testing.T) 
 	require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
 	assert.InDelta(t, 0.75, resp.AutomationCoverage, 0.0001)
 	assert.Equal(t, 4, resp.TotalProcesses)
+}
+
+func TestOperationsHandler_Parity_HappyPath(t *testing.T) {
+	tenantID := uuid.New()
+	stub := &stubFulfillmentReader{
+		parityReport: func(_ context.Context, tid uuid.UUID, threshold float64) (service.ParityReport, error) {
+			assert.Equal(t, tenantID, tid)
+			assert.InDelta(t, 0.95, threshold, 1e-9, "coverage_threshold query param is forwarded")
+			return service.ParityReport{
+				NonTerminalOrders:    100,
+				FulfillmentProcesses: 100,
+				OrdersMissingProcess: 2,
+				ProcessCoverage:      0.98,
+				CoverageThreshold:    0.95,
+				ProcessCoverageMet:   true,
+			}, nil
+		},
+	}
+	h := NewOperationsHandler(stub)
+
+	req := reqWithTenant(http.MethodGet, "/v1/operations/parity?coverage_threshold=0.95", tenantID, nil)
+	rr := httptest.NewRecorder()
+	h.Parity(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+	var resp service.ParityReport
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
+	assert.Equal(t, 100, resp.NonTerminalOrders)
+	assert.Equal(t, 2, resp.OrdersMissingProcess)
+	assert.InDelta(t, 0.98, resp.ProcessCoverage, 1e-9)
+	assert.True(t, resp.ProcessCoverageMet)
+}
+
+// Parity with no coverage_threshold query param forwards 0, so the service applies
+// its default threshold.
+func TestOperationsHandler_Parity_DefaultThreshold(t *testing.T) {
+	tenantID := uuid.New()
+	var gotThreshold float64 = -1
+	stub := &stubFulfillmentReader{
+		parityReport: func(_ context.Context, _ uuid.UUID, threshold float64) (service.ParityReport, error) {
+			gotThreshold = threshold
+			return service.ParityReport{}, nil
+		},
+	}
+	h := NewOperationsHandler(stub)
+
+	req := reqWithTenant(http.MethodGet, "/v1/operations/parity", tenantID, nil)
+	rr := httptest.NewRecorder()
+	h.Parity(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, 0.0, gotThreshold, "absent threshold forwards 0 (service applies its default)")
 }

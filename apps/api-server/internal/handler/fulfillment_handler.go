@@ -25,6 +25,7 @@ type FulfillmentReader interface {
 	OperationsSummary(ctx context.Context, tenantID uuid.UUID) (service.OperationsSummaryResult, error)
 	OperationsExceptions(ctx context.Context, tenantID uuid.UUID, limit int) ([]service.ExceptionItem, error)
 	IntegrationCapabilitySummary(ctx context.Context, tenantID uuid.UUID, scanLimit int) (service.IntegrationCapabilitySummaryResult, error)
+	ParityReport(ctx context.Context, tenantID uuid.UUID, threshold float64) (service.ParityReport, error)
 	ResolveBlocker(ctx context.Context, tenantID, blockerID, actorID uuid.UUID, ip string) (*model.FulfillmentBlocker, error)
 	RetryStep(ctx context.Context, tenantID, stepID, actorID uuid.UUID, ip string) (*model.FulfillmentStep, error)
 }

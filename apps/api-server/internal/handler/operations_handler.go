@@ -63,6 +63,23 @@ func (h *OperationsHandler) IntegrationCapabilitySummary(w http.ResponseWriter, 
 	writeJSON(w, http.StatusOK, summary)
 }
 
+// Parity returns the legacy-vs-process-backed parity / verification report for the
+// tenant (OPE-423): non-terminal order coverage by fulfillment processes, the
+// coverage gap, the legacy "needs attention" order count vs the process-backed
+// exception total, and the rollout parity verdict. Read-only. Query param:
+// coverage_threshold (0<t<=1; defaults to service.DefaultParityCoverageThreshold).
+func (h *OperationsHandler) Parity(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	threshold := queryFloat(r, "coverage_threshold", 0)
+
+	report, err := h.svc.ParityReport(r.Context(), tenantID, threshold)
+	if err != nil {
+		writeServerError(w, "failed to load parity report", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, report)
+}
+
 // multiValueQuery returns all values for a query parameter, supporting both
 // repeated keys (?k=a&k=b) and comma-separated values (?k=a,b). Empty entries
 // are dropped.
@@ -84,6 +101,16 @@ func queryInt(r *http.Request, key string, def int) int {
 	if v := r.URL.Query().Get(key); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			return n
+		}
+	}
+	return def
+}
+
+// queryFloat parses a float query parameter, returning def when absent or invalid.
+func queryFloat(r *http.Request, key string, def float64) float64 {
+	if v := r.URL.Query().Get(key); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil {
+			return f
 		}
 	}
 	return def

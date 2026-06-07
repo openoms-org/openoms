@@ -121,6 +121,82 @@ func (r *FulfillmentRepository) ListOrderIDsMissingProcess(ctx context.Context, 
 	return ids, rows.Err()
 }
 
+// CountNonTerminalOrders returns how many of the tenant's orders are NOT in a
+// terminal status (RLS-scoped via tx). This is the LEGACY "active" order population
+// — every order still flowing through fulfillment — and the denominator for the
+// OPE-423 parity report's process coverage. terminalStatuses must be the caller's
+// terminal order status list (model.TerminalOrderStatuses); an empty list counts
+// every order. The explicit tenant_id predicate is defense-in-depth alongside RLS,
+// mirroring ListOrderIDsMissingProcess.
+func (r *FulfillmentRepository) CountNonTerminalOrders(ctx context.Context, tx pgx.Tx, terminalStatuses []string) (int, error) {
+	var n int
+	err := tx.QueryRow(ctx,
+		`SELECT count(*)
+		   FROM orders o
+		  WHERE NOT (o.status = ANY($1))
+		    AND o.tenant_id = current_setting('app.current_tenant_id', true)::uuid`,
+		terminalStatuses).Scan(&n)
+	if err != nil {
+		return 0, fmt.Errorf("count non-terminal orders: %w", err)
+	}
+	return n, nil
+}
+
+// CountOrdersMissingProcess returns how many of the tenant's non-terminal orders
+// have NO fulfillment process yet (RLS-scoped via tx). It is the COUNT analogue of
+// ListOrderIDsMissingProcess (same LEFT JOIN ... fp.id IS NULL eligibility set) and
+// feeds the OPE-423 parity report: this number must trend to 0 after the OPE-423a
+// backfill completes. terminalStatuses must be model.TerminalOrderStatuses; an empty
+// list matches every status.
+func (r *FulfillmentRepository) CountOrdersMissingProcess(ctx context.Context, tx pgx.Tx, terminalStatuses []string) (int, error) {
+	var n int
+	err := tx.QueryRow(ctx,
+		`SELECT count(*)
+		   FROM orders o
+		   LEFT JOIN fulfillment_processes fp ON fp.order_id = o.id
+		  WHERE fp.id IS NULL
+		    AND NOT (o.status = ANY($1))
+		    AND o.tenant_id = current_setting('app.current_tenant_id', true)::uuid`,
+		terminalStatuses).Scan(&n)
+	if err != nil {
+		return 0, fmt.Errorf("count orders missing fulfillment process: %w", err)
+	}
+	return n, nil
+}
+
+// CountLegacyProblemOrders returns how many of the tenant's non-terminal orders the
+// LEGACY operations dashboard would flag as "needs attention" (RLS-scoped via tx).
+// The legacy heuristic (apps/dashboard/src/lib/operations-dashboard.ts) flags an
+// order when it is on_hold OR has a problem shipment, so this counts the DISTINCT
+// union of: (a) non-terminal orders whose status is on_hold, and (b) non-terminal
+// orders with at least one shipment whose status is in problemShipmentStatuses
+// (e.g. {failed, error}). It is the legacy comparison point for the parity report's
+// ProcessBackedExceptions. terminalStatuses must be model.TerminalOrderStatuses.
+//
+// HONEST CAVEAT: the legacy dashboard ALSO surfaces integration-error exceptions,
+// but those are NOT order-scoped (an integration in error state is not an order), so
+// they are intentionally excluded here — this count is the order-comparable subset.
+func (r *FulfillmentRepository) CountLegacyProblemOrders(ctx context.Context, tx pgx.Tx, terminalStatuses, problemShipmentStatuses []string) (int, error) {
+	var n int
+	err := tx.QueryRow(ctx,
+		`SELECT count(DISTINCT o.id)
+		   FROM orders o
+		  WHERE NOT (o.status = ANY($1))
+		    AND o.tenant_id = current_setting('app.current_tenant_id', true)::uuid
+		    AND (
+		      o.status = 'on_hold'
+		      OR EXISTS (
+		        SELECT 1 FROM shipments s
+		         WHERE s.order_id = o.id AND s.status = ANY($2)
+		      )
+		    )`,
+		terminalStatuses, problemShipmentStatuses).Scan(&n)
+	if err != nil {
+		return 0, fmt.Errorf("count legacy problem orders: %w", err)
+	}
+	return n, nil
+}
+
 // ListProcesses returns the tenant's processes, newest first.
 func (r *FulfillmentRepository) ListProcesses(ctx context.Context, tx pgx.Tx) ([]model.FulfillmentProcess, error) {
 	rows, err := tx.Query(ctx, `SELECT `+fulfillmentProcessColumns+` FROM fulfillment_processes ORDER BY created_at DESC`)
