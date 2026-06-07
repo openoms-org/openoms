@@ -82,6 +82,45 @@ func (r *FulfillmentRepository) GetProcessByOrder(ctx context.Context, tx pgx.Tx
 		`SELECT `+fulfillmentProcessColumns+` FROM fulfillment_processes WHERE order_id = $1 ORDER BY created_at DESC LIMIT 1`, orderID))
 }
 
+// ListOrderIDsMissingProcess returns up to limit order ids (oldest first) for the
+// current tenant whose status is NOT terminal and which have NO fulfillment process
+// yet (RLS-scoped via tx). It is the eligibility query for the OPE-423a backfill:
+// the LEFT JOIN ... WHERE fp.id IS NULL selects exactly the still-missing set, so
+// the backfill is RESUMABLE by construction — already-processed orders fall out of
+// the result on the next call. terminalStatuses must be the caller's terminal order
+// status list (model.TerminalOrderStatuses); an empty list matches every status.
+func (r *FulfillmentRepository) ListOrderIDsMissingProcess(ctx context.Context, tx pgx.Tx, terminalStatuses []string, limit int) ([]uuid.UUID, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	// The explicit o.tenant_id predicate is defense-in-depth: RLS (FORCE ROW LEVEL
+	// SECURITY on orders + fulfillment_processes) already scopes this to the tx's
+	// app.current_tenant_id, but the predicate keeps the backfill tenant-safe even if
+	// the worker pool role were ever misconfigured with BYPASSRLS.
+	rows, err := tx.Query(ctx,
+		`SELECT o.id
+		   FROM orders o
+		   LEFT JOIN fulfillment_processes fp ON fp.order_id = o.id
+		  WHERE fp.id IS NULL
+		    AND NOT (o.status = ANY($1))
+		    AND o.tenant_id = current_setting('app.current_tenant_id', true)::uuid
+		  ORDER BY o.created_at
+		  LIMIT $2`, terminalStatuses, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list orders missing fulfillment process: %w", err)
+	}
+	defer rows.Close()
+	ids := []uuid.UUID{}
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan order id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
 // ListProcesses returns the tenant's processes, newest first.
 func (r *FulfillmentRepository) ListProcesses(ctx context.Context, tx pgx.Tx) ([]model.FulfillmentProcess, error) {
 	rows, err := tx.Query(ctx, `SELECT `+fulfillmentProcessColumns+` FROM fulfillment_processes ORDER BY created_at DESC`)

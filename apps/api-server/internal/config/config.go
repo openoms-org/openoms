@@ -71,6 +71,22 @@ type Config struct {
 	// events are durably enqueued but sit unprocessed in the outbox (expected, opt-in).
 	AutomationOrchestrationEnabled bool `env:"AUTOMATION_ORCHESTRATION_ENABLED" envDefault:"false"`
 
+	// FulfillmentBackfillEnabled turns the fulfillment-process backfill worker on
+	// (OPE-423a). When false (the default) the worker is a complete no-op: existing
+	// orders are never touched. It is the FIRST of two gates — see
+	// FulfillmentBackfillDryRun for the second. Backfilling closes the gap between
+	// legacy orders (created before fulfillment processes existed / while
+	// FULFILLMENT_PROCESS_ENABLED was off) and process-backed orchestration.
+	FulfillmentBackfillEnabled bool `env:"FULFILLMENT_BACKFILL_ENABLED" envDefault:"false"`
+
+	// FulfillmentBackfillDryRun is the SECOND gate (OPE-423a) and defaults to true:
+	// even when the backfill worker is ENABLED it only COUNTS the orders that would
+	// be backfilled (no writes) unless this is explicitly set to false. Writing
+	// therefore requires BOTH FULFILLMENT_BACKFILL_ENABLED=true AND
+	// FULFILLMENT_BACKFILL_DRY_RUN=false — a deliberate two-flag opt-in so a plain
+	// enable can never mutate production data by accident.
+	FulfillmentBackfillDryRun bool `env:"FULFILLMENT_BACKFILL_DRY_RUN" envDefault:"true"`
+
 	UploadDir     string `env:"UPLOAD_DIR" envDefault:"./uploads"`
 	MaxUploadSize int64  `env:"MAX_UPLOAD_SIZE" envDefault:"10485760"` // 10MB
 
