@@ -100,6 +100,124 @@ func (r *FulfillmentRepository) ListProcesses(ctx context.Context, tx pgx.Tx) ([
 	return result, rows.Err()
 }
 
+// ProcessListFilter narrows a paginated process listing. Empty filter fields are
+// ignored. AggregateStatuses / HealthStatuses are OR-ed within a field and AND-ed
+// across fields. The caller is responsible for validating the status values; only
+// known values should reach the repository (invalid ones simply match nothing).
+type ProcessListFilter struct {
+	AggregateStatuses []string
+	HealthStatuses    []string
+	Limit             int
+	Offset            int
+}
+
+// ListProcessesFiltered returns a tenant's processes (newest first) matching the
+// optional aggregate_status / health_status filters, plus the total count of
+// matching rows (ignoring limit/offset) for pagination. RLS-scoped via tx.
+func (r *FulfillmentRepository) ListProcessesFiltered(ctx context.Context, tx pgx.Tx, f ProcessListFilter) ([]model.FulfillmentProcess, int, error) {
+	where := ""
+	args := []any{}
+	if len(f.AggregateStatuses) > 0 {
+		args = append(args, f.AggregateStatuses)
+		where += fmt.Sprintf(" AND aggregate_status = ANY($%d)", len(args))
+	}
+	if len(f.HealthStatuses) > 0 {
+		args = append(args, f.HealthStatuses)
+		where += fmt.Sprintf(" AND health_status = ANY($%d)", len(args))
+	}
+
+	var total int
+	if err := tx.QueryRow(ctx,
+		`SELECT count(*) FROM fulfillment_processes WHERE 1=1`+where, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count fulfillment processes: %w", err)
+	}
+
+	limit := f.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+	offset := max(f.Offset, 0)
+	args = append(args, limit, offset)
+	query := `SELECT ` + fulfillmentProcessColumns + ` FROM fulfillment_processes WHERE 1=1` + where +
+		fmt.Sprintf(` ORDER BY created_at DESC LIMIT $%d OFFSET $%d`, len(args)-1, len(args))
+
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list fulfillment processes (filtered): %w", err)
+	}
+	defer rows.Close()
+	result := []model.FulfillmentProcess{}
+	for rows.Next() {
+		p, err := scanProcess(rows)
+		if err != nil {
+			return nil, 0, fmt.Errorf("scan process: %w", err)
+		}
+		result = append(result, *p)
+	}
+	return result, total, rows.Err()
+}
+
+// ListProcessesByAggregateStatuses returns the tenant's processes whose aggregate
+// status is one of statuses, newest first (RLS-scoped). Used to build the
+// actionable exceptions list (blocked / waiting_external / stuck).
+func (r *FulfillmentRepository) ListProcessesByAggregateStatuses(ctx context.Context, tx pgx.Tx, statuses []string, limit int) ([]model.FulfillmentProcess, error) {
+	if len(statuses) == 0 {
+		return []model.FulfillmentProcess{}, nil
+	}
+	if limit <= 0 {
+		limit = 100
+	}
+	rows, err := tx.Query(ctx,
+		`SELECT `+fulfillmentProcessColumns+`
+		   FROM fulfillment_processes
+		  WHERE aggregate_status = ANY($1)
+		  ORDER BY updated_at DESC
+		  LIMIT $2`, statuses, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list processes by aggregate status: %w", err)
+	}
+	defer rows.Close()
+	result := []model.FulfillmentProcess{}
+	for rows.Next() {
+		p, err := scanProcess(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan process: %w", err)
+		}
+		result = append(result, *p)
+	}
+	return result, rows.Err()
+}
+
+// ProcessStatusCount is one (aggregate_status, health_status, count) bucket.
+type ProcessStatusCount struct {
+	AggregateStatus string
+	HealthStatus    string
+	Count           int
+}
+
+// CountProcessesByStatus returns the per-(aggregate_status, health_status) row
+// counts for the tenant (RLS-scoped). The operator summary buckets are derived
+// from these in the service layer.
+func (r *FulfillmentRepository) CountProcessesByStatus(ctx context.Context, tx pgx.Tx) ([]ProcessStatusCount, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT aggregate_status, health_status, count(*)
+		   FROM fulfillment_processes
+		  GROUP BY aggregate_status, health_status`)
+	if err != nil {
+		return nil, fmt.Errorf("count processes by status: %w", err)
+	}
+	defer rows.Close()
+	result := []ProcessStatusCount{}
+	for rows.Next() {
+		var c ProcessStatusCount
+		if err := rows.Scan(&c.AggregateStatus, &c.HealthStatus, &c.Count); err != nil {
+			return nil, fmt.Errorf("scan process status count: %w", err)
+		}
+		result = append(result, c)
+	}
+	return result, rows.Err()
+}
+
 // UpdateProcessStatus updates a process's aggregate + health status.
 func (r *FulfillmentRepository) UpdateProcessStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, aggregate, health string) (*model.FulfillmentProcess, error) {
 	out, err := scanProcess(tx.QueryRow(ctx,
@@ -157,6 +275,11 @@ func (r *FulfillmentRepository) ListUnits(ctx context.Context, tx pgx.Tx, proces
 		result = append(result, *u)
 	}
 	return result, rows.Err()
+}
+
+// GetUnit returns a unit by id (RLS-scoped), or pgx.ErrNoRows.
+func (r *FulfillmentRepository) GetUnit(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.FulfillmentUnit, error) {
+	return scanUnit(tx.QueryRow(ctx, `SELECT `+fulfillmentUnitColumns+` FROM fulfillment_units WHERE id = $1`, id))
 }
 
 // UpdateUnitStatus updates a unit's status.
@@ -217,6 +340,11 @@ func (r *FulfillmentRepository) ListSteps(ctx context.Context, tx pgx.Tx, unitID
 	return result, rows.Err()
 }
 
+// GetStep returns a step by id (RLS-scoped), or pgx.ErrNoRows.
+func (r *FulfillmentRepository) GetStep(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.FulfillmentStep, error) {
+	return scanStep(tx.QueryRow(ctx, `SELECT `+fulfillmentStepColumns+` FROM fulfillment_steps WHERE id = $1`, id))
+}
+
 // UpdateStepStatus updates a step's status and attempt count.
 func (r *FulfillmentRepository) UpdateStepStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string, attempts int) (*model.FulfillmentStep, error) {
 	out, err := scanStep(tx.QueryRow(ctx,
@@ -261,6 +389,35 @@ func (r *FulfillmentRepository) ListBlockers(ctx context.Context, tx pgx.Tx, pro
 	rows, err := tx.Query(ctx, `SELECT `+fulfillmentBlockerColumns+` FROM fulfillment_blockers WHERE process_id = $1 ORDER BY created_at DESC`, processID)
 	if err != nil {
 		return nil, fmt.Errorf("list fulfillment blockers: %w", err)
+	}
+	defer rows.Close()
+	result := []model.FulfillmentBlocker{}
+	for rows.Next() {
+		b, err := scanBlocker(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan blocker: %w", err)
+		}
+		result = append(result, *b)
+	}
+	return result, rows.Err()
+}
+
+// GetBlocker returns a blocker by id (RLS-scoped), or pgx.ErrNoRows.
+func (r *FulfillmentRepository) GetBlocker(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.FulfillmentBlocker, error) {
+	return scanBlocker(tx.QueryRow(ctx, `SELECT `+fulfillmentBlockerColumns+` FROM fulfillment_blockers WHERE id = $1`, id))
+}
+
+// ListOpenBlockersByProcess returns a process's not-yet-resolved blockers (status
+// open or acknowledged), newest first (RLS-scoped). Used by the exceptions feed to
+// attach the top actionable blocker to a process.
+func (r *FulfillmentRepository) ListOpenBlockersByProcess(ctx context.Context, tx pgx.Tx, processID uuid.UUID) ([]model.FulfillmentBlocker, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT `+fulfillmentBlockerColumns+`
+		   FROM fulfillment_blockers
+		  WHERE process_id = $1 AND status <> 'resolved'
+		  ORDER BY created_at DESC`, processID)
+	if err != nil {
+		return nil, fmt.Errorf("list open blockers by process: %w", err)
 	}
 	defer rows.Close()
 	result := []model.FulfillmentBlocker{}

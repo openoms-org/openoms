@@ -324,6 +324,12 @@ func run() error {
 	// It stays a no-op until FULFILLMENT_PROCESS_ENABLED is set.
 	fulfillmentService := service.NewFulfillmentService(cfg.FulfillmentProcessEnabled, fulfillmentRepo, orchestrationRepo).
 		WithRecording(pool, fulfillmentAttemptRepo)
+	// OPE-419: tenant-safe operations/fulfillment READ API over the canonical
+	// fulfillment model. Always active (read endpoints return empty results until
+	// fulfillment data is recorded); reuses the OPE-414..418 repositories.
+	fulfillmentReadService := service.NewFulfillmentReadService(pool, fulfillmentRepo, fulfillmentAttemptRepo, orchestrationRepo)
+	fulfillmentHandler := handler.NewFulfillmentHandler(fulfillmentReadService)
+	operationsHandler := handler.NewOperationsHandler(fulfillmentReadService)
 	orderService := service.NewOrderService(orderRepo, auditRepo, tenantRepo, pool, emailService, webhookDispatchService, fulfillmentService)
 	returnService := service.NewReturnService(returnRepo, orderRepo, auditRepo, pool, webhookDispatchService)
 	shipmentService := service.NewShipmentService(shipmentRepo, orderRepo, productRepo, auditRepo, tenantRepo, pool, webhookDispatchService)
@@ -957,6 +963,8 @@ func run() error {
 		PlatformAdmin:              platformAdminRepo,
 		Provider:                   providerHandler,
 		ProviderValidation:         providerValidationHandler,
+		Fulfillment:                fulfillmentHandler,
+		Operations:                 operationsHandler,
 	})
 
 	// Start background workers (use workerPool for cross-tenant queries).
