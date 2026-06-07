@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/automation"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/obsmetrics"
@@ -177,15 +178,28 @@ func (w *OrchestrationWorker) processEvent(ctx context.Context, e model.Orchestr
 	w.recordOutcome("failed")
 }
 
+// blockerCodeForEvent maps an outbox event type to the fulfillment blocker code
+// opened when it fails permanently. Unknown/other event types keep the historical
+// default (integration_capability_missing) so existing behaviour is unchanged;
+// automation.set_status maps to its own automation_action_failed code (OPE-421) so
+// operators can see a failed automation distinctly from an integration gap.
+func blockerCodeForEvent(eventType string) string {
+	if eventType == automation.EventAutomationSetStatus {
+		return model.BlockerAutomationActionFailed
+	}
+	return model.BlockerIntegrationCapabilityMissing
+}
+
 // openBlocker records a fulfillment blocker for a permanently failed event, in
 // the event's own tenant context.
 func (w *OrchestrationWorker) openBlocker(ctx context.Context, e model.OrchestrationOutboxEvent, cause error) {
+	code := blockerCodeForEvent(e.EventType)
 	err := database.WithTenant(ctx, w.pool, e.TenantID, func(tx pgx.Tx) error {
 		_, err := w.fulfillment.CreateBlocker(ctx, tx, model.FulfillmentBlocker{
 			TenantID:    e.TenantID,
 			ProcessID:   e.ProcessID,
 			UnitID:      e.UnitID,
-			Code:        model.BlockerIntegrationCapabilityMissing,
+			Code:        code,
 			Description: fmt.Sprintf("orchestration event %q failed permanently: %s", e.EventType, cause.Error()),
 		})
 		return err
@@ -195,5 +209,5 @@ func (w *OrchestrationWorker) openBlocker(ctx context.Context, e model.Orchestra
 		return
 	}
 	// Best-effort: count the blocker by its bounded category (nil-safe).
-	w.metrics.RecordBlocker(model.BlockerCategory(model.BlockerIntegrationCapabilityMissing))
+	w.metrics.RecordBlocker(model.BlockerCategory(code))
 }

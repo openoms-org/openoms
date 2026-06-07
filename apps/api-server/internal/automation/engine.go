@@ -166,6 +166,13 @@ func (e *Engine) processRule(ctx context.Context, tx pgx.Tx, rule model.Automati
 
 	if conditionsMet {
 		for i, action := range actions {
+			// Stamp the rule id + action index onto the action so executors can build
+			// a stable idempotency key (OPE-421). action is a loop-local copy, so this
+			// affects both the immediate ExecuteAction call and the delayed snapshot
+			// (json.Marshal(action)) below without mutating the parsed rule.
+			action.RuleID = rule.ID
+			action.ActionIndex = i
+
 			actionResult := map[string]any{
 				"type":   action.Type,
 				"params": action.Params,

@@ -440,6 +440,14 @@ func run() error {
 		Pool:           pool,
 		IntegrationSvc: integrationService,
 	})
+	// OPE-421: gate set_status routing through the orchestration outbox. When
+	// AUTOMATION_ORCHESTRATION_ENABLED is on, executeSetStatus ensures the order's
+	// fulfillment process and enqueues an automation.set_status event instead of
+	// calling TransitionStatus directly; the handler (registered in the
+	// ORCHESTRATION_WORKER_ENABLED block below) drains it. This is the ENQUEUE half
+	// of the dual-flag dependency — processing additionally needs the worker flag.
+	// When the flag is off this is a no-op and automation behaviour is unchanged.
+	automationExecutor.SetOrchestration(cfg.AutomationOrchestrationEnabled, orchestrationRepo, fulfillmentRepo)
 	automationEngine := automation.NewEngine(automationRuleRepo, automationRuleLogRepo, pool, automationExecutor, slog.Default())
 	automationEngine.SetDelayedActionRepo(delayedActionRepo)
 	automationService := service.NewAutomationService(automationRuleRepo, automationRuleLogRepo, pool, automationEngine, slog.Default())
@@ -1017,6 +1025,18 @@ func run() error {
 	if cfg.OrchestrationWorkerEnabled {
 		orchestrationDispatcher := service.NewOrchestrationDispatcher()
 		orchestrationDispatcher.Register(service.EventOrderCreated, service.NewOrderCreatedHandler(pool, fulfillmentRepo))
+		// OPE-421: register the automation.set_status handler only when BOTH the
+		// orchestration worker AND automation orchestration routing are enabled. This
+		// is the PROCESSING half of the dual-flag dependency: the executor enqueues
+		// automation.set_status events when AUTOMATION_ORCHESTRATION_ENABLED is on, and
+		// this handler (which applies the idempotent transition via the order service)
+		// drains them only when ORCHESTRATION_WORKER_ENABLED is also on. With routing
+		// on but the worker off, events are durably enqueued but left unprocessed
+		// (expected, opt-in). orderService's Get/TransitionStatus set tenant context
+		// internally, matching the worker handler contract.
+		if cfg.AutomationOrchestrationEnabled {
+			orchestrationDispatcher.Register(automation.EventAutomationSetStatus, service.NewAutomationStatusTransitionHandler(orderService))
+		}
 		// OPE-422: best-effort outbox metrics (claimed/processed/failed + queue depth).
 		workerMgr.Register(worker.NewOrchestrationWorker(workerPool, orchestrationRepo, orchestrationDispatcher, fulfillmentRepo, 0, slog.Default()).
 			WithMetrics(fulfillmentMetrics))
