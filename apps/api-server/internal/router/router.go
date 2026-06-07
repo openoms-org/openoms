@@ -1279,6 +1279,8 @@ func New(deps RouterDeps) *chi.Mux {
 					r.With(requirePermission(model.PermOrdersView)).Get("/summary", deps.Operations.Summary)
 					r.With(requirePermission(model.PermOrdersView)).Get("/exceptions", deps.Operations.Exceptions)
 					r.With(requirePermission(model.PermOrdersView)).Get("/integration-capability-summary", deps.Operations.IntegrationCapabilitySummary)
+					// OPE-423: read-only legacy-vs-process parity / verification report.
+					r.With(requirePermission(model.PermOrdersView)).Get("/parity", deps.Operations.Parity)
 				})
 			}
 
