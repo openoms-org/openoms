@@ -88,6 +88,12 @@ const (
 	BlockerExternalStatusUnmapped        = "external_status_unmapped"
 	BlockerIntegrationCapabilityMissing  = "integration_capability_missing"
 	BlockerIntegrationCapabilityDegraded = "integration_capability_degraded"
+	// BlockerAutomationActionFailed marks a permanently failed orchestrated
+	// automation action (e.g. set_status with an unknown target status). Opened by
+	// the orchestration worker so operators see why an automation never applied
+	// (OPE-421). fulfillment_blockers.code has no DB CHECK constraint — codes are
+	// app-validated via IsValidBlockerCode — so no migration is required.
+	BlockerAutomationActionFailed = "automation_action_failed"
 )
 
 // Blocker lifecycle status.
@@ -129,6 +135,7 @@ var blockerCategories = map[string]string{
 	BlockerExternalStatusUnmapped:        "mapping",
 	BlockerIntegrationCapabilityMissing:  "capability",
 	BlockerIntegrationCapabilityDegraded: "capability",
+	BlockerAutomationActionFailed:        "automation",
 }
 
 // IsValidAggregateStatus reports whether s is a known process aggregate status.

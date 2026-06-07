@@ -60,6 +60,17 @@ type Config struct {
 	// Off by default — zero behavior change until enabled.
 	FulfillmentProcessEnabled bool `env:"FULFILLMENT_PROCESS_ENABLED" envDefault:"false"`
 
+	// AutomationOrchestrationEnabled routes set_status automation actions through
+	// the orchestration outbox (OPE-421) instead of calling OrderService.TransitionStatus
+	// directly: the action ensures a fulfillment process for the order and enqueues an
+	// automation.set_status event; the OrchestrationWorker drains it and a handler
+	// performs the idempotent transition. Off by default — automation behaviour is
+	// byte-for-byte unchanged until enabled. NOTE the dual-flag dependency: enqueue
+	// needs AUTOMATION_ORCHESTRATION_ENABLED, processing additionally needs
+	// ORCHESTRATION_WORKER_ENABLED. With the former on and the latter off, set_status
+	// events are durably enqueued but sit unprocessed in the outbox (expected, opt-in).
+	AutomationOrchestrationEnabled bool `env:"AUTOMATION_ORCHESTRATION_ENABLED" envDefault:"false"`
+
 	UploadDir     string `env:"UPLOAD_DIR" envDefault:"./uploads"`
 	MaxUploadSize int64  `env:"MAX_UPLOAD_SIZE" envDefault:"10485760"` // 10MB
 
