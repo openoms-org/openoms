@@ -1,0 +1,15 @@
+-- OPE-423a-followup: make a duplicate fulfillment process for one order structurally
+-- impossible. Idempotency was previously application-level only (GetProcessByOrder
+-- then create); under READ COMMITTED two concurrent creators (live EnsureProcessForOrder
+-- + the backfill worker, or two worker instances) could each pass the existence check
+-- and both insert, yielding two process rows for one order. A unique index on
+-- (tenant_id, order_id) enforces one process per order at the database level and lets
+-- CreateProcess use INSERT ... ON CONFLICT DO NOTHING. The table is gated-off /
+-- prod-empty (OPE-414), so the build is instant; the index-lock-ok marker documents
+-- that there is no large-table lock concern.
+--
+-- ADDITIVE-ONLY: the pre-existing non-unique idx_fulfillment_processes_order is left in
+-- place (the unique index makes it redundant for lookups, but dropping an index in the
+-- same migration is not blue-green-safe — the old image is still serving during the
+-- rollout). A separate later migration can drop the redundant index in its own deploy.
+CREATE UNIQUE INDEX uq_fulfillment_processes_tenant_order ON public.fulfillment_processes (tenant_id, order_id); -- migrate:index-lock-ok
