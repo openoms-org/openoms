@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -61,10 +62,22 @@ func (r *FulfillmentRepository) CreateProcess(ctx context.Context, tx pgx.Tx, p 
 	if p.HealthStatus == "" {
 		p.HealthStatus = model.ProcessHealthOK
 	}
+	// ON CONFLICT (tenant_id, order_id) DO NOTHING makes process creation idempotent and
+	// race-safe against the uq_fulfillment_processes_tenant_order unique index (migration
+	// 000040): all callers GetProcessByOrder-first, but under READ COMMITTED two concurrent
+	// creators can both miss the existing row and both insert. ON CONFLICT collapses that to
+	// a single row WITHOUT aborting the surrounding transaction (a bare unique-violation would
+	// abort it). On a conflict the INSERT returns no row, so we re-fetch the winner.
 	out, err := scanProcess(tx.QueryRow(ctx,
 		`INSERT INTO fulfillment_processes (tenant_id, order_id, aggregate_status, health_status, metadata)
-		 VALUES ($1,$2,$3,$4,$5::jsonb) RETURNING `+fulfillmentProcessColumns,
+		 VALUES ($1,$2,$3,$4,$5::jsonb)
+		 ON CONFLICT (tenant_id, order_id) DO NOTHING
+		 RETURNING `+fulfillmentProcessColumns,
 		p.TenantID, p.OrderID, p.AggregateStatus, p.HealthStatus, marshalMeta(p.Metadata)))
+	if errors.Is(err, pgx.ErrNoRows) {
+		// Lost the create race — a process already exists for this order; return it.
+		return r.GetProcessByOrder(ctx, tx, p.OrderID)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("create fulfillment process: %w", err)
 	}
