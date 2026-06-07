@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/obsmetrics"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
@@ -44,6 +45,10 @@ type ProviderRegistryService struct {
 	pub     *repository.ProviderPublicationRepository
 	schemas *repository.ProviderSchemaRepository
 	caps    *repository.ProviderCapabilityRepository
+	// metrics is an OPTIONAL, best-effort observability handle (OPE-422). nil-receiver
+	// safe, so every record call is a no-op when it is not wired and can never affect
+	// a lifecycle transition.
+	metrics *obsmetrics.FulfillmentMetrics
 }
 
 // NewProviderRegistryService wires the service to the pool and its repositories.
@@ -56,6 +61,16 @@ func NewProviderRegistryService(
 	caps *repository.ProviderCapabilityRepository,
 ) *ProviderRegistryService {
 	return &ProviderRegistryService{pool: pool, defs: defs, vers: vers, pub: pub, schemas: schemas, caps: caps}
+}
+
+// WithMetrics wires the OPTIONAL metrics collector (OPE-422). Returns the service
+// for chaining. Safe to omit: the collector is nil-receiver safe.
+func (s *ProviderRegistryService) WithMetrics(m *obsmetrics.FulfillmentMetrics) *ProviderRegistryService {
+	if s == nil {
+		return nil
+	}
+	s.metrics = m
+	return s
 }
 
 // SetCapabilities replaces the capability profile set of a version (frozen once
@@ -378,6 +393,10 @@ func (s *ProviderRegistryService) Transition(ctx context.Context, versionID uuid
 	if err != nil {
 		return nil, err
 	}
+	// Best-effort metric AFTER the transition commits (OPE-422). toState is a bounded
+	// publication-state enum (validated above); the collector coerces anything else to
+	// "other". version id / actor id are NEVER used as labels. nil-safe.
+	s.metrics.RecordPublicationTransition(toState)
 	return s.vers.GetByID(ctx, versionID)
 }
 

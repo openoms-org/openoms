@@ -18,6 +18,15 @@ import (
 // Default histogram bucket boundaries in seconds.
 var defaultBuckets = []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0}
 
+// PromCollector is implemented by additive metric collectors (e.g. the fulfillment
+// metrics in internal/metrics) that render their own Prometheus text exposition.
+// MetricsCollector renders any registered PromCollector through the same /metrics
+// handler. It is a tiny structural interface so the metrics package need not be
+// imported here, avoiding an import cycle.
+type PromCollector interface {
+	Render(b *strings.Builder)
+}
+
 // MetricsCollector collects HTTP request metrics in a Prometheus-compatible format.
 type MetricsCollector struct {
 	mu sync.RWMutex
@@ -33,6 +42,19 @@ type MetricsCollector struct {
 
 	// Counter: total response bytes written.
 	responseBytesTotal atomic.Int64
+
+	// Additive collectors rendered after the built-in HTTP metrics.
+	extra []PromCollector
+}
+
+// Register adds an extra PromCollector whose output is appended to the /metrics
+// response. Nil collectors are ignored. Registration is expected at startup (before
+// the server serves traffic), so it is not synchronized against concurrent reads.
+func (mc *MetricsCollector) Register(c PromCollector) {
+	if c == nil {
+		return
+	}
+	mc.extra = append(mc.extra, c)
 }
 
 type histogramData struct {
@@ -277,6 +299,13 @@ func (mc *MetricsCollector) Handler() http.HandlerFunc {
 		b.WriteString("# HELP openoms_http_response_bytes_total Total bytes written in HTTP responses.\n")
 		b.WriteString("# TYPE openoms_http_response_bytes_total counter\n")
 		fmt.Fprintf(&b, "openoms_http_response_bytes_total %d\n", mc.responseBytesTotal.Load())
+
+		// --- additive collectors (e.g. fulfillment/orchestration metrics) ---
+		for _, c := range mc.extra {
+			if c != nil {
+				c.Render(&b)
+			}
+		}
 
 		_, _ = w.Write([]byte(b.String()))
 	}
