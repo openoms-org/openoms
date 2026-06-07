@@ -76,7 +76,7 @@ type Pickup struct {
 	// Type is "SELF" (self-drop) or "COURIER" (courier pickup).
 	Type string `json:"type"`
 	// Date in "YYYY-MM-DD" format.
-	Date string `json:"date"`
+	Date string `json:"date,omitempty"`
 }
 
 // ValuationRequest is the payload sent to order_valuation/.

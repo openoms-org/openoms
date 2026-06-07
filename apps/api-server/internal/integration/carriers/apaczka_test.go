@@ -286,6 +286,50 @@ func TestApaczkaProviderBehaviours(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// TestApaczkaSearchPickupPoints — points/ → []PickupPoint
+// ---------------------------------------------------------------------------
+
+func TestApaczkaSearchPickupPoints(t *testing.T) {
+	srv := newApaczkaMockServer(t, map[string]http.HandlerFunc{
+		// Apaczka point search is carrier-type scoped; the provider calls points/INPOST/.
+		"/points/INPOST/": func(w http.ResponseWriter, r *http.Request) {
+			body := map[string]any{
+				"points": []map[string]any{
+					{
+						"id":          "KRA01",
+						"name":        "Paczkomat KRA01",
+						"line1":       "ul. Test 1",
+						"postal_code": "30-001",
+						"city":        "Kraków",
+						"lat":         50.06,
+						"lng":         19.94,
+					},
+				},
+			}
+			apaczkaWriteJSON(w, body)
+		},
+	})
+	defer srv.Close()
+
+	p := newTestApaczkaProvider(t, srv.URL+"/")
+
+	points, err := p.SearchPickupPoints(t.Context(), "30-001")
+	require.NoError(t, err)
+	require.Len(t, points, 1)
+
+	pt := points[0]
+	assert.Equal(t, "KRA01", pt.ID)
+	assert.Equal(t, "Paczkomat KRA01", pt.Name)
+	assert.Equal(t, "ul. Test 1", pt.Street) // mapped from Point.Line1
+	assert.Equal(t, "Kraków", pt.City)
+	assert.Equal(t, "30-001", pt.PostalCode)
+	assert.InDelta(t, 50.06, pt.Latitude, 0.001)
+	assert.InDelta(t, 19.94, pt.Longitude, 0.001)
+	// The provider does not populate Type for Apaczka points.
+	assert.Empty(t, pt.Type)
+}
+
+// ---------------------------------------------------------------------------
 // TestApaczkaNewProviderErrors — credential validation
 // ---------------------------------------------------------------------------
 
