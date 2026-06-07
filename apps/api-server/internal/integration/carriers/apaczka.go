@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"strconv"
 	"time"
 
@@ -105,6 +106,9 @@ func (p *ApaczkaProvider) GetRates(ctx context.Context, req integration.RateRequ
 			},
 			Shipment: []apaczka.ShipmentItem{
 				{
+					// req.Length maps to the same axis as CarrierParcel.DepthCm used in
+					// CreateShipment (Dimension1), so valuation and order dimension
+					// mappings stay intentionally consistent.
 					Dimension1:       int(req.Length),
 					Dimension2:       int(req.Width),
 					Dimension3:       int(req.Height),
@@ -211,7 +215,7 @@ func (p *ApaczkaProvider) CreateShipment(ctx context.Context, req integration.Ca
 			p.logger.Warn("apaczka: COD requested but cod_bank_account setting is empty — order may be rejected by API")
 		}
 		orderInput.COD = &apaczka.COD{
-			Amount:      int(req.CODAmount * 100), // PLN → grosze
+			Amount:      int(math.Round(req.CODAmount * 100)), // PLN → grosze
 			Currency:    defaultStr(req.CODCurrency, "PLN"),
 			BankAccount: p.settings.CODBankAccount,
 			Country:     "PL",
@@ -226,7 +230,7 @@ func (p *ApaczkaProvider) CreateShipment(ctx context.Context, req integration.Ca
 
 	return &integration.CarrierShipmentResponse{
 		ExternalID:     order.ID,
-		TrackingNumber: firstNonEmpty(order.WaybillNumber),
+		TrackingNumber: order.WaybillNumber,
 		Status:         order.Status,
 	}, nil
 }
@@ -313,14 +317,4 @@ func defaultStr(val, def string) string {
 		return val
 	}
 	return def
-}
-
-// firstNonEmpty returns the first non-empty string from the arguments.
-func firstNonEmpty(vals ...string) string {
-	for _, v := range vals {
-		if v != "" {
-			return v
-		}
-	}
-	return ""
 }
