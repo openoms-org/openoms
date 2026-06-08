@@ -362,7 +362,8 @@ func run() error {
 	orderService.SetSMSService(smsService)
 	orderService.SetShipmentService(shipmentService)
 	shipmentService.SetSMSService(smsService)
-	allegroSyncService := service.NewAllegroSyncService(integrationService)
+	allegroSyncService := service.NewAllegroSyncService(integrationService).
+		WithFulfillment(fulfillmentService) // OPE-417 followup: best-effort marketplace-sync provider attempts
 	orderService.SetAllegroSyncService(allegroSyncService)
 	shipmentService.SetAllegroSyncService(allegroSyncService)
 	supplierService := service.NewSupplierService(supplierRepo, supplierProductRepo, supplierCategoryMappingRepo, allegroParameterMappingRepo, productCategoryRepo, productRepo, auditRepo, pool, webhookDispatchService, integrationService, slog.Default())
