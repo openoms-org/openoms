@@ -60,6 +60,12 @@ type Config struct {
 	// Off by default — zero behavior change until enabled.
 	FulfillmentProcessEnabled bool `env:"FULFILLMENT_PROCESS_ENABLED" envDefault:"false"`
 
+	// SupplierAvailabilityEnabled turns on the OPE-418 supplier-availability read-model:
+	// the supplier sync writes snapshots and dropship routing / stock propagation consult
+	// the resolver. Default false -> the legacy supplier_products.stock_quantity path is
+	// unchanged.
+	SupplierAvailabilityEnabled bool `env:"SUPPLIER_AVAILABILITY_ENABLED" envDefault:"false"`
+
 	// AutomationOrchestrationEnabled routes set_status automation actions through
 	// the orchestration outbox (OPE-421) instead of calling OrderService.TransitionStatus
 	// directly: the action ensures a fulfillment process for the order and enqueues an
