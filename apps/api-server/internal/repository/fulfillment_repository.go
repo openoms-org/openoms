@@ -327,10 +327,27 @@ type ProcessStatusCount struct {
 // counts for the tenant (RLS-scoped). The operator summary buckets are derived
 // from these in the service layer.
 func (r *FulfillmentRepository) CountProcessesByStatus(ctx context.Context, tx pgx.Tx) ([]ProcessStatusCount, error) {
-	rows, err := tx.Query(ctx,
+	return scanProcessStatusCounts(tx.Query(ctx,
 		`SELECT aggregate_status, health_status, count(*)
 		   FROM fulfillment_processes
-		  GROUP BY aggregate_status, health_status`)
+		  GROUP BY aggregate_status, health_status`))
+}
+
+// CountAllProcessesByStatus is the CROSS-TENANT variant of CountProcessesByStatus: it
+// runs the same GROUP BY on a plain Querier (no per-call tenant context), so it counts
+// EVERY tenant's processes. It MUST be run on the privileged worker pool (which bypasses
+// RLS, like the orchestration worker's ClaimDue) — on the RLS-scoped app pool without a
+// tenant set, FORCE ROW LEVEL SECURITY would return zero rows. Used by the OPE-422 gauge
+// sweeper to publish a global stuck/blocked process gauge (no tenant label).
+func (r *FulfillmentRepository) CountAllProcessesByStatus(ctx context.Context, q Querier) ([]ProcessStatusCount, error) {
+	return scanProcessStatusCounts(q.Query(ctx,
+		`SELECT aggregate_status, health_status, count(*)
+		   FROM fulfillment_processes
+		  GROUP BY aggregate_status, health_status`))
+}
+
+// scanProcessStatusCounts collects (aggregate_status, health_status, count) rows.
+func scanProcessStatusCounts(rows pgx.Rows, err error) ([]ProcessStatusCount, error) {
 	if err != nil {
 		return nil, fmt.Errorf("count processes by status: %w", err)
 	}

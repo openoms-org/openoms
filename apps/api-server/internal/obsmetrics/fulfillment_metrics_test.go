@@ -83,6 +83,21 @@ func TestFulfillmentMetrics_OutboxCountersAndGauge(t *testing.T) {
 	assert.Contains(t, out, "openoms_orchestration_outbox_queue_depth 7")
 }
 
+func TestFulfillmentMetrics_GlobalProcessGauges(t *testing.T) {
+	m := obsmetrics.NewFulfillmentMetrics()
+	m.SetStuckProcesses(3)
+	m.SetBlockedProcesses(5)
+	out := render(m)
+	assert.Contains(t, out, "# TYPE openoms_fulfillment_stuck_processes gauge")
+	assert.Contains(t, out, "openoms_fulfillment_stuck_processes 3")
+	assert.Contains(t, out, "# TYPE openoms_fulfillment_blocked_processes gauge")
+	assert.Contains(t, out, "openoms_fulfillment_blocked_processes 5")
+	// Cardinality discipline: these are GLOBAL aggregates and must carry NO label set.
+	assert.NotContains(t, out, "openoms_fulfillment_stuck_processes{")
+	assert.NotContains(t, out, "openoms_fulfillment_blocked_processes{")
+	assert.NotContains(t, out, "tenant_id")
+}
+
 func TestFulfillmentMetrics_ValidationCounters(t *testing.T) {
 	m := obsmetrics.NewFulfillmentMetrics()
 	m.RecordValidationRun("failed")
@@ -124,6 +139,8 @@ func TestFulfillmentMetrics_NoIDLikeLabels(t *testing.T) {
 	m.RecordBlocker("capability")
 	m.RecordOutboxEvent("processed")
 	m.SetOutboxQueueDepth(1)
+	m.SetStuckProcesses(1)
+	m.SetBlockedProcesses(1)
 	m.RecordValidationRun("passed")
 	m.RecordValidationFailure()
 	m.RecordPublicationTransition("available")
