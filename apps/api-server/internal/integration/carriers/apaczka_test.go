@@ -292,7 +292,7 @@ func TestApaczkaProviderBehaviours(t *testing.T) {
 func TestApaczkaSearchPickupPoints(t *testing.T) {
 	srv := newApaczkaMockServer(t, map[string]http.HandlerFunc{
 		// Apaczka point search is carrier-type scoped; the provider calls points/INPOST/.
-		"/points/INPOST/": func(w http.ResponseWriter, r *http.Request) {
+		"/points/INPOST/": func(w http.ResponseWriter, _ *http.Request) {
 			body := map[string]any{
 				"points": []map[string]any{
 					{
