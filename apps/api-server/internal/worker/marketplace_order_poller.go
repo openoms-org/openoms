@@ -16,6 +16,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
+	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
 // OrderMapper converts a MarketplaceOrder into a model.Order for a specific provider.
@@ -42,6 +43,10 @@ type MarketplaceOrderPoller struct {
 	// mapOrder allows provider-specific customization of the order mapping.
 	// If nil, a default mapping is used.
 	mapOrder OrderMapper
+	// fulfillment optionally routes each newly imported marketplace order through the
+	// fulfillment commands (OPE-416). Gated/best-effort via the service itself; nil
+	// (or disabled) is a no-op. Wired by WithFulfillment.
+	fulfillment *service.FulfillmentService
 }
 
 // MarketplaceOrderPollerConfig configures a MarketplaceOrderPoller.
@@ -72,6 +77,18 @@ func NewMarketplaceOrderPoller(cfg MarketplaceOrderPollerConfig) *MarketplaceOrd
 		interval:       cfg.Interval,
 		mapOrder:       cfg.MapOrder,
 	}
+}
+
+// WithFulfillment wires the OPE-416 fulfillment service so each newly imported
+// marketplace order gets its fulfillment process + order.created orchestration event
+// created in the SAME transaction as the order insert. Returns the poller for
+// chaining. Safe to omit: the service is gated (no-op when nil/disabled).
+func (p *MarketplaceOrderPoller) WithFulfillment(f *service.FulfillmentService) *MarketplaceOrderPoller {
+	if p == nil {
+		return nil
+	}
+	p.fulfillment = f
+	return p
 }
 
 // Name returns the unique name of this worker.
@@ -176,6 +193,16 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 					}); err != nil {
 						p.logger.Error("worker: failed to log audit for order creation",
 							"order_id", order.ID, "error", err)
+					}
+				}
+
+				// Route the new marketplace order through the fulfillment commands
+				// (OPE-416): create its fulfillment process + enqueue the orchestration
+				// event in the SAME transaction as the order insert. No-op when the gated
+				// service is nil/disabled. Atomic with the import (mirrors OrderService.Create).
+				if p.fulfillment != nil {
+					if _, err := p.fulfillment.EnsureProcessForOrder(ctx, tx, ti.TenantID, order.ID); err != nil {
+						return err
 					}
 				}
 
