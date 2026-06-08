@@ -11,6 +11,8 @@ func TestProviderAttemptValidators(t *testing.T) {
 	assert.True(t, IsValidProviderAttemptOperation(ProviderOpGenerateLabel))
 	assert.True(t, IsValidProviderAttemptOperation(ProviderOpDownloadLabel))
 	assert.True(t, IsValidProviderAttemptOperation(ProviderOpSyncTracking))
+	assert.True(t, IsValidProviderAttemptOperation(ProviderOpSyncTrackingToMarketplace))
+	assert.True(t, IsValidProviderAttemptOperation(ProviderOpSyncFulfillmentStatus))
 	assert.False(t, IsValidProviderAttemptOperation("teleport_parcel"))
 
 	assert.True(t, IsValidProviderAttemptStatus(ProviderAttemptPending))

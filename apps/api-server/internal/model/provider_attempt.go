@@ -13,7 +13,15 @@ const (
 	ProviderOpCreateShipment = "create_shipment"
 	ProviderOpGenerateLabel  = "generate_label"
 	ProviderOpDownloadLabel  = "download_label"
-	ProviderOpSyncTracking   = "sync_tracking"
+	// ProviderOpSyncTracking is the inbound carrier tracking poll (TrackingPoller).
+	ProviderOpSyncTracking = "sync_tracking"
+	// ProviderOpSyncTrackingToMarketplace is the OUTBOUND push of a shipment's tracking
+	// number to the originating marketplace (e.g. Allegro AddTracking) — distinct from
+	// the inbound carrier poll so the two directions are separable in metrics (OPE-417 followup).
+	ProviderOpSyncTrackingToMarketplace = "sync_tracking_to_marketplace"
+	// ProviderOpSyncFulfillmentStatus is the outbound push of an order's fulfillment
+	// status to the originating marketplace (e.g. Allegro UpdateFulfillment).
+	ProviderOpSyncFulfillmentStatus = "sync_fulfillment_status"
 )
 
 // Provider attempt status lifecycle. Mirrors the DB CHECK constraint.
@@ -25,6 +33,7 @@ const (
 
 var validProviderAttemptOperations = []string{
 	ProviderOpCreateShipment, ProviderOpGenerateLabel, ProviderOpDownloadLabel, ProviderOpSyncTracking,
+	ProviderOpSyncTrackingToMarketplace, ProviderOpSyncFulfillmentStatus,
 }
 var validProviderAttemptStatuses = []string{ProviderAttemptPending, ProviderAttemptSucceeded, ProviderAttemptFailed}
 
