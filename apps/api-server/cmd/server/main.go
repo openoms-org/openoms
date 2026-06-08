@@ -1053,6 +1053,13 @@ func run() error {
 		workerMgr.Register(worker.NewFulfillmentBackfillWorker(
 			workerPool, fulfillmentBackfillService, cfg.FulfillmentBackfillEnabled, cfg.FulfillmentBackfillDryRun, slog.Default()))
 	}
+	// Global stuck/blocked process gauge sweeper (OPE-422 followup). Registered only
+	// when fulfillment recording is on (there are processes to count); it counts across
+	// all tenants on the privileged worker pool and publishes a single label-free
+	// aggregate per tick. Read-only, best-effort.
+	if cfg.FulfillmentProcessEnabled {
+		workerMgr.Register(worker.NewFulfillmentGaugeSweeper(workerPool, fulfillmentReadService, slog.Default()))
+	}
 	if cfg.WorkersEnabled {
 		go workerMgr.Start(context.Background())
 	}

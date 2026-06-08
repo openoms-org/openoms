@@ -357,6 +357,45 @@ func classifyProcessBucket(aggregate, health string) (OperatorBucket, bool) {
 	return "", false
 }
 
+// SweepGlobalProcessGauges publishes the GLOBAL (cross-tenant) stuck/blocked process
+// gauges (OPE-422 followup). Unlike every other method on this service, it is NOT
+// tenant-scoped: it counts processes across ALL tenants and so MUST be given the
+// privileged worker pool (which bypasses RLS) — passing the RLS-scoped app pool would
+// return zero. It is READ-ONLY and best-effort; a nil metrics handle is a no-op. The
+// gauges carry no tenant label, so cardinality stays bounded and the value does not
+// flap (the reason the earlier per-tenant-read version was removed in OPE-422).
+func (s *FulfillmentReadService) SweepGlobalProcessGauges(ctx context.Context, privilegedPool repository.Querier) error {
+	counts, err := s.fulfillment.CountAllProcessesByStatus(ctx, privilegedPool)
+	if err != nil {
+		return fmt.Errorf("sweep global process gauges: %w", err)
+	}
+	stuck, blocked := gaugeCountsFromStatusCounts(counts)
+	s.metrics.SetStuckProcesses(stuck)
+	s.metrics.SetBlockedProcesses(blocked)
+	return nil
+}
+
+// gaugeCountsFromStatusCounts buckets raw (aggregate_status, health_status, count) rows
+// into the stuck + blocked gauge totals, reusing classifyProcessBucket so the gauges stay
+// consistent with the operations summary. stuck = the stuck bucket; blocked = every
+// blocker-holding bucket (blocked + provider_issue + missing_data). PURE (no DB) so the
+// bucketing math is unit-testable. Terminal/healthy buckets are excluded.
+func gaugeCountsFromStatusCounts(counts []repository.ProcessStatusCount) (stuck, blocked int) {
+	for _, c := range counts {
+		b, ok := classifyProcessBucket(c.AggregateStatus, c.HealthStatus)
+		if !ok {
+			continue
+		}
+		switch b {
+		case BucketStuck:
+			stuck += c.Count
+		case BucketBlocked, BucketProviderIssue, BucketMissingData:
+			blocked += c.Count
+		}
+	}
+	return stuck, blocked
+}
+
 // OperationsExceptions returns the actionable processes — blocked, waiting_external,
 // or unhealthy/stuck — each annotated with its bucket and top open blocker
 // (RLS-scoped). limit caps the number of processes scanned (default 100). For
