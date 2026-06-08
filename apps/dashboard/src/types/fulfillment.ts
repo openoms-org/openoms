@@ -192,6 +192,38 @@ export interface IntegrationCapabilitySummary {
   total_processes: number;
 }
 
+// === Parity / verification report (OPE-423b) ===
+//
+// Mirrors service.ParityReport (apps/api-server/internal/service/
+// fulfillment_parity_service.go) served by GET /v1/operations/parity. It is a
+// READ-ONLY decision aid for the rollout cutover: process_coverage_met is the
+// only gate-relevant verdict (the two exception counts are advisory context,
+// counted on different primitives so they are NOT expected to be equal). Field
+// names/casing match the backend JSON tags exactly — no invented fields.
+export interface FulfillmentParityReport {
+  // Legacy active order population (the coverage denominator): orders whose
+  // status is NOT terminal (completed/cancelled/refunded).
+  non_terminal_orders: number;
+  // Total process-backed population recorded for the tenant.
+  fulfillment_processes: number;
+  // Non-terminal orders with NO process yet — the coverage GAP, must trend to 0.
+  orders_missing_process: number;
+  // Share (0..1) of non-terminal orders backed by a process; 1.0 when there are
+  // no non-terminal orders (vacuously covered).
+  process_coverage: number;
+  // Legacy "needs attention" order count (on_hold or problem-shipment), the
+  // order-comparable subset of the dashboard heuristic. Advisory context.
+  legacy_problem_orders: number;
+  // Process-backed "needs attention" total (blocked + provider_issue + stuck
+  // buckets). Advisory context — counted on processes, not orders.
+  process_backed_exceptions: number;
+  // The coverage threshold process_coverage_met was evaluated against.
+  coverage_threshold: number;
+  // The parity verdict: true when process_coverage >= coverage_threshold, i.e.
+  // it is safe to cut the dashboard over to process-backed counts.
+  process_coverage_met: boolean;
+}
+
 // === Query params ===
 
 export interface FulfillmentProcessListParams extends PaginationParams {

@@ -13,6 +13,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { OperationsBucketSummary } from "@/components/dashboard/operations-bucket-summary";
 import { FulfillmentExceptionsFeed } from "@/components/dashboard/fulfillment-exceptions-feed";
+import { ParityReadinessIndicator } from "@/components/dashboard/parity-readiness-indicator";
 import { FulfillmentDetailPanel } from "@/components/fulfillment/fulfillment-detail-panel";
 import {
   useFulfillmentExceptions,
@@ -75,6 +76,12 @@ export default function FulfillmentOperationsPage() {
               onSelect={setSelected}
             />
           </div>
+
+          {/* OPE-423c: cutover parity-readiness indicator. Informational only —
+              shows whether the process-backed model has reached parity with the
+              legacy heuristic so an operator can judge when it is safe to flip
+              the NEXT_PUBLIC_OPENOMS_FULFILLMENT_DASHBOARD flag to process-backed. */}
+          <ParityReadinessIndicator />
 
           <FulfillmentDetailPanel
             processId={selected?.process.id}
