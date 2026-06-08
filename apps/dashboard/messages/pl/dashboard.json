@@ -197,6 +197,25 @@
         "system_error": "Błąd systemu",
         "warning": "Ostrzeżenie"
       },
+      "parity": {
+        "coverageLabel": "Pokrycie procesami",
+        "emptyDescription": "Brak aktywnych zamówień do porównania — model oparty na procesach jest formalnie zgodny.",
+        "emptyTitle": "Brak danych do porównania",
+        "legacyProblemOrders": "Problemowe zamówienia (model dotychczasowy)",
+        "loadError": "Nie udało się załadować raportu zgodności.",
+        "missingProcesses": "Zamówienia bez procesu",
+        "missingProcessesHint": "Musi osiągnąć 0 przed przełączeniem.",
+        "nonTerminalOrders": "Aktywne zamówienia",
+        "notReady": "Brak zgodności",
+        "notReadyHint": "Utrzymaj dotychczasowy pulpit heurystyczny do czasu osiągnięcia progu pokrycia.",
+        "processBackedExceptions": "Wyjątki oparte na procesach",
+        "processCount": "Zarejestrowano {count} procesów",
+        "ready": "Gotowe do przełączenia",
+        "readyHint": "Pokrycie procesami osiągnęło próg — można przełączyć pulpit na widok oparty na procesach.",
+        "subtitle": "Dotychczasowa heurystyka a pokrycie procesami przed przełączeniem pulpitu.",
+        "thresholdHint": "Próg {threshold}%",
+        "title": "Gotowość zgodności do przełączenia"
+      },
       "providerOp": {
         "create_shipment": "Utworzenie przesyłki",
         "download_label": "Pobranie etykiety",

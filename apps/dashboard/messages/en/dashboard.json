@@ -197,6 +197,25 @@
         "system_error": "System error",
         "warning": "Warning"
       },
+      "parity": {
+        "coverageLabel": "Process coverage",
+        "emptyDescription": "No active orders to compare yet — the process-backed model is vacuously at parity.",
+        "emptyTitle": "Nothing to compare",
+        "legacyProblemOrders": "Legacy problem orders",
+        "loadError": "Could not load the parity report.",
+        "missingProcesses": "Orders missing a process",
+        "missingProcessesHint": "Must reach 0 before cutover.",
+        "nonTerminalOrders": "Active orders",
+        "notReady": "Not at parity yet",
+        "notReadyHint": "Keep the legacy heuristic dashboard primary until coverage reaches the threshold.",
+        "processBackedExceptions": "Process-backed exceptions",
+        "processCount": "{count} processes recorded",
+        "ready": "Ready to cut over",
+        "readyHint": "Process coverage meets the threshold — safe to switch the dashboard to the process-backed view.",
+        "subtitle": "Legacy heuristic vs process-backed coverage before the dashboard cutover.",
+        "thresholdHint": "Threshold {threshold}%",
+        "title": "Cutover parity readiness"
+      },
       "providerOp": {
         "create_shipment": "Create shipment",
         "download_label": "Download label",
