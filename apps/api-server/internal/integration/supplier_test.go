@@ -26,31 +26,31 @@ func TestSupplierCapabilitySubInterfaces(t *testing.T) {
 type fakeFullSupplier struct{}
 
 func (f *fakeFullSupplier) ProviderName() string { return "fake" }
-func (f *fakeFullSupplier) FetchProducts(ctx context.Context) ([]SupplierProduct, error) {
+func (f *fakeFullSupplier) FetchProducts(_ context.Context) ([]SupplierProduct, error) {
 	return nil, nil
 }
-func (f *fakeFullSupplier) FetchInventory(ctx context.Context) ([]SupplierProduct, error) {
+func (f *fakeFullSupplier) FetchInventory(_ context.Context) ([]SupplierProduct, error) {
 	return nil, nil
 }
-func (f *fakeFullSupplier) CreateOrder(ctx context.Context, req SupplierOrderRequest) (*SupplierOrderResult, error) {
+func (f *fakeFullSupplier) CreateOrder(_ context.Context, _ SupplierOrderRequest) (*SupplierOrderResult, error) {
 	return &SupplierOrderResult{ExternalOrderID: "x"}, nil
 }
-func (f *fakeFullSupplier) Preflight(ctx context.Context, req SupplierOrderRequest) (*SupplierPreflightResult, error) {
+func (f *fakeFullSupplier) Preflight(_ context.Context, _ SupplierOrderRequest) (*SupplierPreflightResult, error) {
 	return &SupplierPreflightResult{Accepted: true}, nil
 }
-func (f *fakeFullSupplier) GetOrderStatus(ctx context.Context, externalID string) (*SupplierOrderStatus, error) {
+func (f *fakeFullSupplier) GetOrderStatus(_ context.Context, _ string) (*SupplierOrderStatus, error) {
 	return &SupplierOrderStatus{RawStatus: "confirmed"}, nil
 }
 
 type fakeBareSupplier struct{}
 
 func (f *fakeBareSupplier) ProviderName() string { return "bare" }
-func (f *fakeBareSupplier) FetchProducts(ctx context.Context) ([]SupplierProduct, error) {
+func (f *fakeBareSupplier) FetchProducts(_ context.Context) ([]SupplierProduct, error) {
 	return nil, nil
 }
-func (f *fakeBareSupplier) FetchInventory(ctx context.Context) ([]SupplierProduct, error) {
+func (f *fakeBareSupplier) FetchInventory(_ context.Context) ([]SupplierProduct, error) {
 	return nil, nil
 }
-func (f *fakeBareSupplier) CreateOrder(ctx context.Context, req SupplierOrderRequest) (*SupplierOrderResult, error) {
+func (f *fakeBareSupplier) CreateOrder(_ context.Context, _ SupplierOrderRequest) (*SupplierOrderResult, error) {
 	return &SupplierOrderResult{ExternalOrderID: "y"}, nil
 }
