@@ -77,17 +77,18 @@ const (
 
 // Blocker codes (ADR-424).
 const (
-	BlockerStockSyncFailed               = "stock_sync_failed"
-	BlockerChannelStockStale             = "channel_stock_stale"
-	BlockerSupplierAvailabilityStale     = "supplier_availability_stale"
-	BlockerSupplierAvailabilityUnknown   = "supplier_availability_unknown"
-	BlockerSupplierPreflightRequired     = "supplier_preflight_required"
-	BlockerManualStockReviewRequired     = "manual_stock_review_required"
-	BlockerStockWriteUnsupported         = "stock_write_unsupported"
-	BlockerStockAckMissing               = "stock_ack_missing"
-	BlockerExternalStatusUnmapped        = "external_status_unmapped"
-	BlockerIntegrationCapabilityMissing  = "integration_capability_missing"
-	BlockerIntegrationCapabilityDegraded = "integration_capability_degraded"
+	BlockerStockSyncFailed                  = "stock_sync_failed"
+	BlockerChannelStockStale                = "channel_stock_stale"
+	BlockerSupplierAvailabilityStale        = "supplier_availability_stale"
+	BlockerSupplierAvailabilityUnknown      = "supplier_availability_unknown"
+	BlockerSupplierPreflightRequired        = "supplier_preflight_required"
+	BlockerSupplierAvailabilityInsufficient = "supplier_availability_insufficient"
+	BlockerManualStockReviewRequired        = "manual_stock_review_required"
+	BlockerStockWriteUnsupported            = "stock_write_unsupported"
+	BlockerStockAckMissing                  = "stock_ack_missing"
+	BlockerExternalStatusUnmapped           = "external_status_unmapped"
+	BlockerIntegrationCapabilityMissing     = "integration_capability_missing"
+	BlockerIntegrationCapabilityDegraded    = "integration_capability_degraded"
 	// BlockerAutomationActionFailed marks a permanently failed orchestrated
 	// automation action (e.g. set_status with an unknown target status). Opened by
 	// the orchestration worker so operators see why an automation never applied
@@ -124,18 +125,19 @@ var validBlockerStatuses = []string{BlockerStatusOpen, BlockerStatusAcknowledged
 
 // blockerCategories maps each blocker code to its category.
 var blockerCategories = map[string]string{
-	BlockerStockSyncFailed:               "integration",
-	BlockerChannelStockStale:             "integration",
-	BlockerSupplierAvailabilityStale:     "supplier",
-	BlockerSupplierAvailabilityUnknown:   "supplier",
-	BlockerSupplierPreflightRequired:     "supplier",
-	BlockerManualStockReviewRequired:     "operator",
-	BlockerStockWriteUnsupported:         "capability",
-	BlockerStockAckMissing:               "capability",
-	BlockerExternalStatusUnmapped:        "mapping",
-	BlockerIntegrationCapabilityMissing:  "capability",
-	BlockerIntegrationCapabilityDegraded: "capability",
-	BlockerAutomationActionFailed:        "automation",
+	BlockerStockSyncFailed:                  "integration",
+	BlockerChannelStockStale:                "integration",
+	BlockerSupplierAvailabilityStale:        "supplier",
+	BlockerSupplierAvailabilityUnknown:      "supplier",
+	BlockerSupplierPreflightRequired:        "supplier",
+	BlockerSupplierAvailabilityInsufficient: "supplier",
+	BlockerManualStockReviewRequired:        "operator",
+	BlockerStockWriteUnsupported:            "capability",
+	BlockerStockAckMissing:                  "capability",
+	BlockerExternalStatusUnmapped:           "mapping",
+	BlockerIntegrationCapabilityMissing:     "capability",
+	BlockerIntegrationCapabilityDegraded:    "capability",
+	BlockerAutomationActionFailed:           "automation",
 }
 
 // IsValidAggregateStatus reports whether s is a known process aggregate status.

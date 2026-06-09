@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -43,6 +44,7 @@ type DropshipService struct {
 	webhookDispatch  *WebhookDispatchService
 	logger           *slog.Logger
 	fulfillment      *FulfillmentService
+	availability     *SupplierAvailabilityService
 }
 
 // NewDropshipService creates a new DropshipService.
@@ -79,13 +81,20 @@ func (s *DropshipService) SetFulfillmentService(f *FulfillmentService) {
 	s.fulfillment = f
 }
 
+// SetAvailabilityService wires the gated supplier-availability resolver (OPE-418) used to
+// gate auto-routing of dropship units. Nil-safe and a complete no-op until
+// SUPPLIER_AVAILABILITY_ENABLED is set.
+func (s *DropshipService) SetAvailabilityService(svc *SupplierAvailabilityService) {
+	s.availability = svc
+}
+
 // recordDropshipUnit ensures a dropship fulfillment unit for the order/supplier and
 // records the create_dropship_order step + supplier capability (OPE-418, gated
 // best-effort). When the supplier cannot accept API orders it records a manual or
 // portal preflight step; when the supplier is configured with an integration whose
 // format has no provider it raises a typed capability-missing blocker. It never
 // affects the dropship operation: all FulfillmentService calls are best-effort.
-func (s *DropshipService) recordDropshipUnit(ctx context.Context, tenantID, orderID, supplierID uuid.UUID, supplierName string) {
+func (s *DropshipService) recordDropshipUnit(ctx context.Context, tenantID, orderID, supplierID uuid.UUID, supplierName string, items []model.DropshipOrderItem) {
 	if !s.fulfillment.Enabled() {
 		return
 	}
@@ -99,6 +108,17 @@ func (s *DropshipService) recordDropshipUnit(ctx context.Context, tenantID, orde
 
 	switch capability {
 	case SupplierCapAPI:
+		// OPE-418 (gated): before treating the auto-submit path as ready, consult the
+		// supplier-availability resolver. When availability is stale/unknown/insufficient
+		// (or a backorder ETA applies) the unit is held with a typed blocker / backorder
+		// instead of being marked ready for auto-submit. Off by default -> the legacy
+		// always-ready behaviour is unchanged.
+		if s.availability.Enabled() {
+			if s.gateDropshipAvailability(ctx, tenantID, orderID, supplierID, unit.ID, items) {
+				s.fulfillment.AggregateMixedOrder(ctx, tenantID, orderID)
+				return
+			}
+		}
 		// API-capable: the create_dropship_order step is ready to run programmatically.
 		s.fulfillment.RecordStep(ctx, tenantID, unit.ID, model.StepCreateDropshipOrder, model.FulfillmentStatusReady,
 			map[string]any{"capability": string(capability), "supplier_id": supplierID.String()})
@@ -118,6 +138,45 @@ func (s *DropshipService) recordDropshipUnit(ctx context.Context, tenantID, orde
 			fmt.Sprintf("supplier %q has an integration with no registered order provider", supplierName))
 	}
 	s.fulfillment.AggregateMixedOrder(ctx, tenantID, orderID)
+}
+
+// gateDropshipAvailability consults the supplier-availability resolver for each dropship
+// line (OPE-418, gated best-effort). It returns true when the unit was HELD — either a
+// typed blocker was opened (stale / unknown / insufficient availability) or a backorder
+// unit was surfaced (insufficient now but an ETA is known) — so the caller does NOT mark
+// the create_dropship_order step ready for auto-submit. It returns false when every line
+// is trusted + sufficient (auto_routable), so the caller proceeds as before. Any resolver
+// error or missing product link is treated as "do not gate" so the legacy path stands.
+func (s *DropshipService) gateDropshipAvailability(ctx context.Context, tenantID, orderID, supplierID, unitID uuid.UUID, items []model.DropshipOrderItem) bool {
+	now := time.Now()
+	for _, item := range items {
+		if item.ProductID == nil {
+			continue // unmapped line — nothing to resolve against
+		}
+		decision, ok, err := s.availability.ResolveForProduct(ctx, tenantID, supplierID, *item.ProductID, nil, nil, item.Quantity, false, now)
+		if err != nil || !ok {
+			continue // best-effort: a resolver failure never blocks routing
+		}
+		if decision.BlockerCode != nil {
+			// stale / unknown / insufficient -> typed blocker on the unit, do NOT auto-submit.
+			s.fulfillment.RecordStep(ctx, tenantID, unitID, model.StepCreateDropshipOrder, model.FulfillmentStatusBlocked,
+				map[string]any{"supplier_id": supplierID.String(), "reason": *decision.BlockerCode})
+			s.fulfillment.RecordUnitTransition(ctx, tenantID, unitID, model.FulfillmentStatusBlocked)
+			s.fulfillment.CreateSupplierBlocker(ctx, tenantID, orderID, &unitID, *decision.BlockerCode,
+				"supplier availability not safe for auto-routing")
+			return true
+		}
+		if decision.Backorder {
+			// Insufficient now but an ETA is known -> backorder unit carrying the ETA.
+			s.fulfillment.EnsureUnit(ctx, tenantID, orderID, model.UnitTypeBackorder, supplierID.String(),
+				map[string]any{"supplier_id": supplierID.String(), "reason": "supplier_backorder"})
+			s.fulfillment.RecordStep(ctx, tenantID, unitID, model.StepCreateDropshipOrder, model.FulfillmentStatusWaitingExternal,
+				map[string]any{"supplier_id": supplierID.String(), "reason": "supplier_backorder"})
+			s.fulfillment.RecordUnitTransition(ctx, tenantID, unitID, model.FulfillmentStatusWaitingExternal)
+			return true
+		}
+	}
+	return false
 }
 
 // supplierCapability loads a supplier and classifies its fulfillment capability
@@ -411,7 +470,7 @@ func (s *DropshipService) AutoRouteOrder(ctx context.Context, tenantID, orderID,
 	// OPE-418: record a dropship unit per supplier + supplier capability (gated,
 	// best-effort — never affects the routing result above).
 	for _, ds := range result {
-		s.recordDropshipUnit(ctx, tenantID, ds.OrderID, ds.SupplierID, ds.SupplierName)
+		s.recordDropshipUnit(ctx, tenantID, ds.OrderID, ds.SupplierID, ds.SupplierName, ds.Items)
 	}
 	return result, nil
 }
@@ -501,7 +560,7 @@ func (s *DropshipService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.created", d) })
 	}
 	// OPE-418: record the dropship unit + supplier capability (gated, best-effort).
-	s.recordDropshipUnit(ctx, tenantID, d.OrderID, d.SupplierID, d.SupplierName)
+	s.recordDropshipUnit(ctx, tenantID, d.OrderID, d.SupplierID, d.SupplierName, d.Items)
 	return d, nil
 }
 

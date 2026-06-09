@@ -1,0 +1,136 @@
+//go:build integration
+
+package integration
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/openoms-org/openoms/apps/api-server/internal/database"
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
+)
+
+// seedSupplierAndProduct inserts a supplier + supplier_product for the tenant (RLS-scoped
+// via WithTenant) and returns their ids.
+func seedSupplierAndProduct(t *testing.T, ctx context.Context, tenantID uuid.UUID) (supplierID, supplierProductID uuid.UUID) {
+	t.Helper()
+	require.NoError(t, database.WithTenant(ctx, appPool, tenantID, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx,
+			`INSERT INTO suppliers (tenant_id, name, feed_format) VALUES ($1,'Acme','iof') RETURNING id`,
+			tenantID).Scan(&supplierID); err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx,
+			`INSERT INTO supplier_products (tenant_id, supplier_id, external_id, name, stock_quantity)
+			 VALUES ($1,$2,'EXT-1','Widget',100) RETURNING id`,
+			tenantID, supplierID).Scan(&supplierProductID)
+	}))
+	return supplierID, supplierProductID
+}
+
+// TestSupplierAvailability_UpsertIdempotent proves the snapshot upsert is idempotent on
+// (tenant, supplier_product, warehouse) — two upserts leave exactly one row, updated.
+func TestSupplierAvailability_UpsertIdempotent(t *testing.T) {
+	ctx := context.Background()
+	tenantID := seedTenant(t, ctx)
+	supplierID, spID := seedSupplierAndProduct(t, ctx, tenantID)
+	repo := repository.NewSupplierAvailabilityRepository()
+
+	upsert := func(qty int) {
+		require.NoError(t, database.WithTenant(ctx, appPool, tenantID, func(tx pgx.Tx) error {
+			_, e := repo.UpsertSnapshot(ctx, tx, model.SupplierAvailability{
+				TenantID: tenantID, SupplierID: supplierID, SupplierProductID: spID,
+				WarehouseExternalID: "", SourceQuantity: qty,
+				AvailabilityType: model.AvailabilityExactQuantity, FreshnessObservedAt: time.Now(),
+			})
+			return e
+		}))
+	}
+	upsert(100)
+	upsert(80)
+
+	require.NoError(t, database.WithTenant(ctx, appPool, tenantID, func(tx pgx.Tx) error {
+		var n, qty int
+		if e := tx.QueryRow(ctx, `SELECT count(*), max(source_quantity) FROM supplier_availability WHERE supplier_product_id=$1`, spID).Scan(&n, &qty); e != nil {
+			return e
+		}
+		assert.Equal(t, 1, n, "exactly one snapshot row")
+		assert.Equal(t, 80, qty, "second upsert updated the quantity")
+		return nil
+	}))
+}
+
+// TestSupplierAvailability_RLSIsolation proves tenant A never sees tenant B's snapshots.
+func TestSupplierAvailability_RLSIsolation(t *testing.T) {
+	ctx := context.Background()
+	tenantA := seedTenant(t, ctx)
+	tenantB := seedTenant(t, ctx)
+	sa, spa := seedSupplierAndProduct(t, ctx, tenantA)
+	sb, spb := seedSupplierAndProduct(t, ctx, tenantB)
+	repo := repository.NewSupplierAvailabilityRepository()
+
+	seed := func(tenant, supplier, sp uuid.UUID) {
+		require.NoError(t, database.WithTenant(ctx, appPool, tenant, func(tx pgx.Tx) error {
+			_, e := repo.UpsertSnapshot(ctx, tx, model.SupplierAvailability{
+				TenantID: tenant, SupplierID: supplier, SupplierProductID: sp,
+				SourceQuantity: 50, AvailabilityType: model.AvailabilityExactQuantity, FreshnessObservedAt: time.Now(),
+			})
+			return e
+		}))
+	}
+	seed(tenantA, sa, spa)
+	seed(tenantB, sb, spb)
+
+	require.NoError(t, database.WithTenant(ctx, appPool, tenantA, func(tx pgx.Tx) error {
+		var n int
+		if e := tx.QueryRow(ctx, `SELECT count(*) FROM supplier_availability`).Scan(&n); e != nil {
+			return e
+		}
+		assert.Equal(t, 1, n, "tenant A sees only its own snapshot")
+		return nil
+	}))
+}
+
+// TestSupplierAvailability_PolicyChainResolves proves the 4-scope policy load returns the
+// applicable rows for a (supplier, product) context (supplier + product scopes).
+func TestSupplierAvailability_PolicyChainResolves(t *testing.T) {
+	ctx := context.Background()
+	tenantID := seedTenant(t, ctx)
+	supplierID, _ := seedSupplierAndProduct(t, ctx, tenantID)
+	repo := repository.NewSupplierAvailabilityRepository()
+
+	var productID uuid.UUID
+	require.NoError(t, database.WithTenant(ctx, appPool, tenantID, func(tx pgx.Tx) error {
+		if e := tx.QueryRow(ctx, `INSERT INTO products (tenant_id, name, price) VALUES ($1,'P',10) RETURNING id`, tenantID).Scan(&productID); e != nil {
+			return e
+		}
+		fw := 7200
+		if _, e := repo.UpsertPolicy(ctx, tx, model.SupplierAvailabilityPolicy{
+			TenantID: tenantID, Scope: model.PolicyScopeSupplier, SupplierID: &supplierID,
+			Mode: model.PolicyModeAuto, SafetyBuffer: 5, FreshnessWindowSecs: &fw,
+		}); e != nil {
+			return e
+		}
+		_, e := repo.UpsertPolicy(ctx, tx, model.SupplierAvailabilityPolicy{
+			TenantID: tenantID, Scope: model.PolicyScopeProduct, SupplierID: &supplierID, ProductID: &productID,
+			Mode: model.PolicyModeAuto, SafetyBuffer: 9,
+		})
+		return e
+	}))
+
+	require.NoError(t, database.WithTenant(ctx, appPool, tenantID, func(tx pgx.Tx) error {
+		policies, e := repo.ListPoliciesForContext(ctx, tx, supplierID, productID, nil, nil)
+		if e != nil {
+			return e
+		}
+		assert.Len(t, policies, 2, "supplier + product scope rows both apply")
+		return nil
+	}))
+}
