@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/obsmetrics"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
+	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
 // orchestrationBatchLimit caps how many due outbox rows are processed per run.
@@ -151,6 +153,22 @@ func (w *OrchestrationWorker) processEvent(ctx context.Context, e model.Orchestr
 	}
 
 	dispErr := w.dispatcher.Dispatch(ctx, e)
+
+	// OPE-421: a DeferUntil sentinel means the dispatch SUCCEEDED but the event must stay
+	// pending-callback until a deadline (next_attempt_at). The outbound POST happened, so the
+	// attempt is recorded succeeded; the outbox row is re-queued (pending) at the deadline and
+	// attempts is incremented so a re-dispatch past the deadline (Attempts>0) is treated as a
+	// timeout by the handler. This is NOT a failure outcome.
+	var deferErr *service.DeferUntil
+	if errors.As(dispErr, &deferErr) {
+		_ = w.repo.FinishAttempt(ctx, w.pool, att.ID, model.AttemptStatusSucceeded, "")
+		if err := w.repo.MarkFailedRetry(ctx, w.pool, e.ID, "awaiting external workflow callback", deferErr.At); err != nil {
+			log.Error("orchestration mark pending-callback failed", "error", err)
+		}
+		w.recordOutcome("claimed")
+		return
+	}
+
 	if dispErr == nil {
 		_ = w.repo.FinishAttempt(ctx, w.pool, att.ID, model.AttemptStatusSucceeded, "")
 		if err := w.repo.MarkSucceeded(ctx, w.pool, e.ID); err != nil {
@@ -184,10 +202,15 @@ func (w *OrchestrationWorker) processEvent(ctx context.Context, e model.Orchestr
 // automation.set_status maps to its own automation_action_failed code (OPE-421) so
 // operators can see a failed automation distinctly from an integration gap.
 func blockerCodeForEvent(eventType string) string {
-	if eventType == automation.EventAutomationSetStatus {
+	switch eventType {
+	case automation.EventAutomationSetStatus:
 		return model.BlockerAutomationActionFailed
+	case service.EventExternalWorkflow:
+		// OPE-421: a permanently failed external-workflow event is a callback timeout.
+		return model.BlockerExternalWorkflowTimeout
+	default:
+		return model.BlockerIntegrationCapabilityMissing
 	}
-	return model.BlockerIntegrationCapabilityMissing
 }
 
 // openBlocker records a fulfillment blocker for a permanently failed event, in
