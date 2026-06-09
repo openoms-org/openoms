@@ -25,12 +25,9 @@ CREATE TABLE public.supplier_availability (
     created_at            timestamptz NOT NULL DEFAULT now(),
     updated_at            timestamptz NOT NULL DEFAULT now()
 );
-CREATE UNIQUE INDEX uq_supplier_availability_product_wh
-    ON public.supplier_availability (tenant_id, supplier_product_id, warehouse_external_id); -- migrate:index-lock-ok
-CREATE INDEX idx_supplier_availability_supplier
-    ON public.supplier_availability (tenant_id, supplier_id); -- migrate:index-lock-ok
-CREATE INDEX idx_supplier_availability_product
-    ON public.supplier_availability (tenant_id, product_id); -- migrate:index-lock-ok
+CREATE UNIQUE INDEX uq_supplier_availability_product_wh ON public.supplier_availability (tenant_id, supplier_product_id, warehouse_external_id); -- migrate:index-lock-ok
+CREATE INDEX idx_supplier_availability_supplier ON public.supplier_availability (tenant_id, supplier_id); -- migrate:index-lock-ok
+CREATE INDEX idx_supplier_availability_product ON public.supplier_availability (tenant_id, product_id); -- migrate:index-lock-ok
 
 CREATE TABLE public.supplier_availability_policy (
     id              uuid PRIMARY KEY DEFAULT public.uuid_generate_v4(),
