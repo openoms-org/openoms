@@ -45,12 +45,21 @@ type SupplierService struct {
 	webhookDispatch     *WebhookDispatchService
 	integrationSvc      *IntegrationService
 	stockSyncService    *StockSyncService
+	availability        *SupplierAvailabilityService
 	logger              *slog.Logger
 }
 
 // SetStockSyncService sets the stock sync service for propagating stock changes after supplier sync.
 func (s *SupplierService) SetStockSyncService(svc *StockSyncService) {
 	s.stockSyncService = svc
+}
+
+// WithAvailability wires the gated supplier-availability service (OPE-418) so the catalog
+// sync additionally writes per-product availability snapshots. Nil-safe and a complete
+// no-op until SUPPLIER_AVAILABILITY_ENABLED is set.
+func (s *SupplierService) WithAvailability(svc *SupplierAvailabilityService) *SupplierService {
+	s.availability = svc
+	return s
 }
 
 // NewSupplierService creates a new SupplierService.
@@ -1016,6 +1025,28 @@ func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, 
 					} else {
 						sp.ProductID = &productID
 					}
+				}
+			}
+
+			// OPE-418: write the supplier-availability snapshot (gated, best-effort).
+			// Off by default — the legacy supplier_products.stock_quantity path is unchanged.
+			// A snapshot-write failure must never fail a catalog sync, so the error is logged
+			// and the loop continues. Single-warehouse feeds use the '' warehouse id;
+			// multi-warehouse enrichment is a later per-format task.
+			if s.availability.Enabled() {
+				if _, snapErr := s.availability.Repo().UpsertSnapshot(ctx, tx, model.SupplierAvailability{
+					TenantID:             tenantID,
+					SupplierID:           supplierID,
+					SupplierProductID:    sp.ID,
+					ProductID:            sp.ProductID, // *uuid.UUID, nil until mapped
+					WarehouseExternalID:  "",
+					SourceQuantity:       sp.StockQuantity,
+					AvailabilityType:     model.AvailabilityExactQuantity,
+					ReservationSupported: false,
+					FreshnessObservedAt:  syncedAt,
+				}); snapErr != nil {
+					s.logger.Error("failed to upsert supplier availability snapshot",
+						"supplier_id", supplierID, "supplier_product_id", sp.ID, "error", snapErr)
 				}
 			}
 

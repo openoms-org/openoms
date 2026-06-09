@@ -331,6 +331,12 @@ func run() error {
 	fulfillmentService := service.NewFulfillmentService(cfg.FulfillmentProcessEnabled, fulfillmentRepo, orchestrationRepo).
 		WithRecording(pool, fulfillmentAttemptRepo).
 		WithMetrics(fulfillmentMetrics)
+	// OPE-418: gated supplier-availability read-model. The supplier sync writes snapshots
+	// and dropship routing / stock propagation consult the resolver. A complete no-op
+	// (Enabled()==false) until SUPPLIER_AVAILABILITY_ENABLED is set.
+	supplierAvailabilityRepo := repository.NewSupplierAvailabilityRepository()
+	supplierAvailabilityService := service.NewSupplierAvailabilityService(
+		cfg.SupplierAvailabilityEnabled, pool, supplierAvailabilityRepo, auditRepo)
 	// OPE-419: tenant-safe operations/fulfillment READ API over the canonical
 	// fulfillment model. Always active (read endpoints return empty results until
 	// fulfillment data is recorded); reuses the OPE-414..418 repositories.
@@ -366,7 +372,8 @@ func run() error {
 		WithFulfillment(fulfillmentService) // OPE-417 followup: best-effort marketplace-sync provider attempts
 	orderService.SetAllegroSyncService(allegroSyncService)
 	shipmentService.SetAllegroSyncService(allegroSyncService)
-	supplierService := service.NewSupplierService(supplierRepo, supplierProductRepo, supplierCategoryMappingRepo, allegroParameterMappingRepo, productCategoryRepo, productRepo, auditRepo, pool, webhookDispatchService, integrationService, slog.Default())
+	supplierService := service.NewSupplierService(supplierRepo, supplierProductRepo, supplierCategoryMappingRepo, allegroParameterMappingRepo, productCategoryRepo, productRepo, auditRepo, pool, webhookDispatchService, integrationService, slog.Default()).
+		WithAvailability(supplierAvailabilityService) // OPE-418: gated snapshot upsert during catalog sync
 	marketplaceCategoryMappingRepo := repository.NewMarketplaceCategoryMappingRepository()
 	productCategoryService := service.NewProductCategoryService(productCategoryRepo, marketplaceCategoryMappingRepo, auditRepo, pool)
 	variantService := service.NewVariantService(variantRepo, productRepo, auditRepo, pool)
@@ -389,7 +396,8 @@ func run() error {
 	pickPackService := service.NewPickPackService(pickPackRepo, orderRepo, productRepo, variantRepo, auditRepo, pool)
 	pickPackService.SetFulfillmentService(fulfillmentService) // OPE-418: gated best-effort unit/step recording
 	dropshipService := service.NewDropshipService(dropshipRepo, dropshipItemRepo, orderRepo, productRepo, supplierRepo, auditRepo, integrationService, pool, webhookDispatchService, slog.Default())
-	dropshipService.SetFulfillmentService(fulfillmentService) // OPE-418: gated best-effort unit/step recording
+	dropshipService.SetFulfillmentService(fulfillmentService)           // OPE-418: gated best-effort unit/step recording
+	dropshipService.SetAvailabilityService(supplierAvailabilityService) // OPE-418: gated availability-based auto-routing gate
 	recurringOrderService := service.NewRecurringOrderService(recurringOrderRepo, orderRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 
 	// Product listing repo (needed by both stock sync and allegro listings)
@@ -997,7 +1005,7 @@ func run() error {
 	workerMgr := worker.NewManager(workerPool, slog.Default(), redisClient)
 	workerMgr.Register(worker.NewOAuthRefresher(workerPool, encryptionKey, slog.Default()))
 	workerMgr.Register(worker.NewAllegroOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, labelService, slog.Default()).WithFulfillment(fulfillmentService))
-	workerMgr.Register(worker.NewStockSyncWorker(workerPool, encryptionKey, slog.Default()))
+	workerMgr.Register(worker.NewStockSyncWorker(workerPool, encryptionKey, slog.Default()).WithAvailability(supplierAvailabilityService)) // OPE-418: gated channel-increase gate
 	workerMgr.Register(worker.NewPriceSyncWorker(workerPool, encryptionKey, slog.Default()))
 	trackingPoller := worker.NewTrackingPoller(workerPool, encryptionKey, shipmentRepo, shipmentService, slog.Default())
 	trackingPoller.SetFulfillmentRecorder(fulfillmentService) // OPE-417: gated best-effort recording
