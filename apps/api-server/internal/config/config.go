@@ -66,6 +66,12 @@ type Config struct {
 	// unchanged.
 	SupplierAvailabilityEnabled bool `env:"SUPPLIER_AVAILABILITY_ENABLED" envDefault:"false"`
 
+	// SupplierOrderEnabled turns on the OPE-418/Phase-7 supplier-order engine: the dropship
+	// gate enqueues supplier.order.submit for API-capable routable units, and the handler +
+	// status poller run. Default false -> the gate's API branch keeps its current behavior
+	// (mark the create_dropship_order step ready, no auto-submit).
+	SupplierOrderEnabled bool `env:"SUPPLIER_ORDER_ENABLED" envDefault:"false"`
+
 	// AutomationOrchestrationEnabled routes set_status automation actions through
 	// the orchestration outbox (OPE-421) instead of calling OrderService.TransitionStatus
 	// directly: the action ensures a fulfillment process for the order and enqueues an

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -45,6 +46,7 @@ type DropshipService struct {
 	logger           *slog.Logger
 	fulfillment      *FulfillmentService
 	availability     *SupplierAvailabilityService
+	supplierOrder    *SupplierOrderService
 }
 
 // NewDropshipService creates a new DropshipService.
@@ -88,6 +90,13 @@ func (s *DropshipService) SetAvailabilityService(svc *SupplierAvailabilityServic
 	s.availability = svc
 }
 
+// SetSupplierOrderService wires the gated supplier-order engine (OPE-418/Phase-7). Nil-safe
+// and a complete no-op until SUPPLIER_ORDER_ENABLED is set: the gate's API branch keeps its
+// current behavior (mark the create_dropship_order step ready, no auto-submit).
+func (s *DropshipService) SetSupplierOrderService(svc *SupplierOrderService) {
+	s.supplierOrder = svc
+}
+
 // recordDropshipUnit ensures a dropship fulfillment unit for the order/supplier and
 // records the create_dropship_order step + supplier capability (OPE-418, gated
 // best-effort). When the supplier cannot accept API orders it records a manual or
@@ -122,12 +131,25 @@ func (s *DropshipService) recordDropshipUnit(ctx context.Context, tenantID, orde
 		// API-capable: the create_dropship_order step is ready to run programmatically.
 		s.fulfillment.RecordStep(ctx, tenantID, unit.ID, model.StepCreateDropshipOrder, model.FulfillmentStatusReady,
 			map[string]any{"capability": string(capability), "supplier_id": supplierID.String()})
+		// OPE-418/Phase-7: when the supplier-order engine is enabled, enqueue the submit
+		// event so the SupplierOrderHandler runs prepare->preflight->submit. Off by default
+		// -> the step stays "ready" with no auto-submit (current behavior).
+		if s.supplierOrder.Enabled() {
+			s.supplierOrder.EnqueueSubmit(ctx, tenantID, orderID, supplierID, unit.ID, unit.ProcessID)
+		}
 	case SupplierCapPortal, SupplierCapManual:
 		// No API: a human must place the order via portal/out-of-band — surface a
 		// preflight step waiting on the operator.
 		s.fulfillment.RecordStep(ctx, tenantID, unit.ID, model.StepPreflightSupplierOrder, model.FulfillmentStatusWaitingExternal,
 			map[string]any{"capability": string(capability), "supplier_id": supplierID.String()})
 		s.fulfillment.RecordUnitTransition(ctx, tenantID, unit.ID, model.FulfillmentStatusWaitingExternal)
+		// OPE-418/Phase-7: when the engine is enabled, surface an actionable operator
+		// blocker so portal/manual suppliers are an explicit step, not a silent waiting unit.
+		if s.supplierOrder.Enabled() {
+			s.fulfillment.CreateSupplierBlocker(ctx, tenantID, orderID, &unit.ID,
+				model.BlockerSupplierManualSubmissionRequired,
+				fmt.Sprintf("supplier %q requires manual order submission (capability %s)", supplierName, capability))
+		}
 	case SupplierCapUnsupported:
 		// Integration linked but no provider for its format — capability missing.
 		s.fulfillment.RecordStep(ctx, tenantID, unit.ID, model.StepPreflightSupplierOrder, model.FulfillmentStatusBlocked,
@@ -587,8 +609,12 @@ func (s *DropshipService) UpdateStatus(ctx context.Context, tenantID, id uuid.UU
 			return NewValidationError(fmt.Errorf("cannot transition from %s to %s", existing.Status, req.Status))
 		}
 
-		// Auto-submit to supplier API when transitioning to "sent"
-		if req.Status == "sent" && existing.Status == "pending" {
+		// Auto-submit to supplier API when transitioning to "sent" — but never re-submit an
+		// order that already carries a supplier reference. This idempotency guard prevents a
+		// double-submit when the OPE-418/Phase-7 supplier-order engine (supplier.order.submit
+		// handler) has already placed the order and set the reference on this row.
+		alreadySubmitted := existing.SupplierReference != nil && strings.TrimSpace(*existing.SupplierReference) != ""
+		if req.Status == "sent" && existing.Status == "pending" && !alreadySubmitted {
 			if result, err := s.submitToSupplierAPI(ctx, tx, tenantID, existing); err != nil {
 				s.logger.Error("failed to submit dropship order to supplier API",
 					"dropship_order_id", id, "supplier_id", existing.SupplierID, "error", err)
