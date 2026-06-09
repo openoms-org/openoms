@@ -12,6 +12,7 @@ func TestIsValidActionType(t *testing.T) {
 	for _, ty := range []string{
 		"webhook", "set_status", "add_tag", "send_email", "create_invoice",
 		"activate_listing", "deactivate_listing", "send_marketplace_message",
+		"external_workflow",
 	} {
 		assert.Truef(t, IsValidActionType(ty), "%q should be a valid action type", ty)
 	}
