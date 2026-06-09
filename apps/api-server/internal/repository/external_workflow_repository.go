@@ -24,6 +24,7 @@ func NewExternalWorkflowTokenRepository() *ExternalWorkflowTokenRepository {
 	return &ExternalWorkflowTokenRepository{}
 }
 
+// #nosec G101 -- SQL column list, not credential material (token_hash is a column name).
 const externalWorkflowTokenColumns = `id, tenant_id, integration_id, token_hash, scopes, expires_at, last_used_at, created_at`
 
 // Issue stores a new token (the caller hashes the raw token first) and returns it.
