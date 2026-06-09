@@ -47,3 +47,9 @@ func TestBlockerSupplierAvailabilityInsufficient_IsValidWithCategory(t *testing.
 	assert.Equal(t, "supplier_availability_insufficient", BlockerSupplierAvailabilityInsufficient)
 	assert.Equal(t, "supplier", blockerCategories[BlockerSupplierAvailabilityInsufficient])
 }
+
+func TestBlockerExternalWorkflowTimeout(t *testing.T) {
+	assert.True(t, IsValidBlockerCode(BlockerExternalWorkflowTimeout))
+	assert.Equal(t, "external_workflow_timeout", BlockerExternalWorkflowTimeout)
+	assert.Equal(t, "integration", blockerCategories[BlockerExternalWorkflowTimeout])
+}

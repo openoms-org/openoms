@@ -137,6 +137,20 @@ func (s *FulfillmentService) EnsureProcessForOrder(ctx context.Context, tx pgx.T
 	return proc, nil
 }
 
+// EnsureProcessForOrderUnconditional creates/reuses the order's fulfillment process WITHOUT
+// the FULFILLMENT_PROCESS_ENABLED gate, for callers gated by their own flag (OPE-421
+// external-workflow). Idempotent (GetProcessByOrder first). Unlike EnsureProcessForOrder it
+// does NOT enqueue an order.created event — it only guarantees the outbox process_id FK has
+// a process to anchor to.
+func (s *FulfillmentService) EnsureProcessForOrderUnconditional(ctx context.Context, tx pgx.Tx, tenantID, orderID uuid.UUID) (*model.FulfillmentProcess, error) {
+	if existing, err := s.fulfillment.GetProcessByOrder(ctx, tx, orderID); err == nil {
+		return existing, nil
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("lookup process: %w", err)
+	}
+	return s.fulfillment.CreateProcess(ctx, tx, model.FulfillmentProcess{TenantID: tenantID, OrderID: orderID})
+}
+
 // ProviderAttemptInput describes a carrier/provider attempt to record. OrderID is
 // optional and used only to correlate the attempt to an existing fulfillment
 // process; CorrelationID (typically the shipment id) is always recorded so the

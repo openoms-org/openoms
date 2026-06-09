@@ -22,6 +22,7 @@ var automationActionSpecs = map[string][]string{
 	"activate_listing":         {},
 	"deactivate_listing":       {},
 	"send_marketplace_message": {"template_id"},
+	"external_workflow":        {"integration_id"},
 }
 
 // IsValidActionType reports whether t is a known automation action type.

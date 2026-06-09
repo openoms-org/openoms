@@ -93,6 +93,11 @@ type Config struct {
 	// enable can never mutate production data by accident.
 	FulfillmentBackfillDryRun bool `env:"FULFILLMENT_BACKFILL_DRY_RUN" envDefault:"true"`
 
+	// ExternalWorkflowEnabled turns on the OPE-421/Phase-13 external-workflow connector:
+	// the external_workflow action dispatches + the callback route is registered. Default
+	// false -> the action is a no-op and the callback route returns 404.
+	ExternalWorkflowEnabled bool `env:"EXTERNAL_WORKFLOW_ENABLED" envDefault:"false"`
+
 	UploadDir     string `env:"UPLOAD_DIR" envDefault:"./uploads"`
 	MaxUploadSize int64  `env:"MAX_UPLOAD_SIZE" envDefault:"10485760"` // 10MB
 

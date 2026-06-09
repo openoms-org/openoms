@@ -95,6 +95,11 @@ const (
 	// (OPE-421). fulfillment_blockers.code has no DB CHECK constraint — codes are
 	// app-validated via IsValidBlockerCode — so no migration is required.
 	BlockerAutomationActionFailed = "automation_action_failed"
+	// BlockerExternalWorkflowTimeout marks an external-workflow dispatch whose
+	// correlated callback never arrived within the integration's timeout
+	// (OPE-421/Phase-13). Opened by the orchestration worker when the dispatch
+	// handler permanently fails the timed-out event. Category "integration".
+	BlockerExternalWorkflowTimeout = "external_workflow_timeout"
 )
 
 // Blocker lifecycle status.
@@ -138,6 +143,7 @@ var blockerCategories = map[string]string{
 	BlockerIntegrationCapabilityMissing:     "capability",
 	BlockerIntegrationCapabilityDegraded:    "capability",
 	BlockerAutomationActionFailed:           "automation",
+	BlockerExternalWorkflowTimeout:          "integration",
 }
 
 // IsValidAggregateStatus reports whether s is a known process aggregate status.
