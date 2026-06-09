@@ -65,6 +65,10 @@ func (h *ExternalWorkflowHandler) Handle(ctx context.Context, event model.Orches
 	if cfg.OutboundURL == "" {
 		return model.Permanent(fmt.Errorf("external workflow: integration %s has no outbound_url", integrationID))
 	}
+	if cfg.SigningSecret == "" {
+		// Refuse to dispatch unsigned (an empty key would produce a forgeable signature).
+		return model.Permanent(fmt.Errorf("external workflow: integration %s has no signing_secret", integrationID))
+	}
 
 	body, _ := json.Marshal(payload["redacted_payload"])
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.OutboundURL, bytes.NewReader(body))

@@ -162,6 +162,12 @@ func (s *ExternalWorkflowService) ResolveCallbackHTTP(ctx context.Context, token
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("external workflow: load integration config: %w", err)
 	}
+	// Defense in depth: a misconfigured integration with an empty signing secret would make
+	// VerifyExternalWorkflowSignature compute HMAC under an empty key (forgeable). Reject
+	// before verifying rather than accepting an unsigned-equivalent callback.
+	if cfg.SigningSecret == "" {
+		return uuid.Nil, ErrExternalWorkflowBadSignature
+	}
 	if !model.VerifyExternalWorkflowSignature(body, sigHeader, cfg.SigningSecret) {
 		return uuid.Nil, ErrExternalWorkflowBadSignature
 	}
@@ -172,6 +178,12 @@ func (s *ExternalWorkflowService) ResolveCallbackHTTP(ctx context.Context, token
 // succeeded/failed, optionally enqueues one in-scope follow-on command, records the external
 // exec id, touches last_used_at, and audits. The token is already authenticated.
 func (s *ExternalWorkflowService) resolveCallback(ctx context.Context, tok *model.ExternalWorkflowToken, req model.ExternalWorkflowCallbackRequest, ip string) error {
+	// Accept only the two documented statuses. An unexpected/blank value must NOT silently
+	// fail-permanent (consume) the correlated event — reject without touching it so a buggy
+	// engine that sends a typo cannot blocker an in-flight event.
+	if req.Status != "succeeded" && req.Status != "failed" {
+		return ErrCorrelationNotResolvable
+	}
 	tenantID := tok.TenantID
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		event, e := s.orchestration.FindPendingByEventAndNonce(ctx, tx, EventExternalWorkflow, req.CorrelationNonce, tok.IntegrationID)

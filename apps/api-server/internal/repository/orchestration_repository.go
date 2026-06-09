@@ -177,11 +177,15 @@ func (r *OrchestrationRepository) GetEvent(ctx context.Context, q Querier, id uu
 // carries the correlation nonce AND integration id (tenant-scoped). Used by the callback to
 // find the one event it may resolve; not-found / already-resolved -> pgx.ErrNoRows.
 func (r *OrchestrationRepository) FindPendingByEventAndNonce(ctx context.Context, q Querier, eventType, nonce string, integrationID uuid.UUID) (*model.OrchestrationOutboxEvent, error) {
+	// FOR UPDATE locks the matched row so a concurrent worker claim (FOR UPDATE SKIP LOCKED)
+	// at the timeout boundary skips it — the callback and a deadline re-dispatch can never
+	// interleave on the same event, so a racing callback can't overwrite a just-claimed row.
 	row := q.QueryRow(ctx, `SELECT `+orchestrationOutboxColumns+`
 		FROM orchestration_outbox
 		WHERE status = 'pending' AND event_type = $1
 		  AND payload->>'correlation_nonce' = $2
-		  AND payload->>'integration_id' = $3`, eventType, nonce, integrationID.String())
+		  AND payload->>'integration_id' = $3
+		FOR UPDATE`, eventType, nonce, integrationID.String())
 	return scanOutbox(row)
 }
 
