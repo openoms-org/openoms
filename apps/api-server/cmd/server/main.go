@@ -401,6 +401,83 @@ func run() error {
 	dropshipService := service.NewDropshipService(dropshipRepo, dropshipItemRepo, orderRepo, productRepo, supplierRepo, auditRepo, integrationService, pool, webhookDispatchService, slog.Default())
 	dropshipService.SetFulfillmentService(fulfillmentService)           // OPE-418: gated best-effort unit/step recording
 	dropshipService.SetAvailabilityService(supplierAvailabilityService) // OPE-418: gated availability-based auto-routing gate
+	// OPE-418/Phase-7: gated supplier-order engine. When SUPPLIER_ORDER_ENABLED is off the
+	// service's Enabled() is false, so the gate's API branch keeps its current behavior (mark
+	// the create_dropship_order step ready, no auto-submit) and no manual blocker is added.
+	supplierOrderService := service.NewSupplierOrderService(cfg.SupplierOrderEnabled, pool, fulfillmentService, orchestrationRepo)
+	dropshipService.SetSupplierOrderService(supplierOrderService)
+	// newSupplierProvider builds a SupplierProvider for a supplier inside a tenant tx: it loads
+	// the supplier, resolves the provider name (xml feed -> btp), decrypts the linked
+	// integration credentials, and constructs the adapter. Returns (nil, nil) when the supplier
+	// has no API provider — mirrors DropshipService.submitToSupplierAPI's provider construction.
+	// Shared by the supplier-order handler (submit) and the status poller (reconcile).
+	newSupplierProvider := func(ctx context.Context, tx pgx.Tx, tenantID, supplierID uuid.UUID) (integration.SupplierProvider, error) {
+		supplier, err := supplierRepo.FindByID(ctx, tx, supplierID)
+		if err != nil {
+			return nil, fmt.Errorf("load supplier: %w", err)
+		}
+		if supplier == nil || supplier.IntegrationID == nil {
+			return nil, nil // no integration — manual process
+		}
+		providerName := supplier.FeedFormat
+		if providerName == "xml" {
+			providerName = "btp"
+		}
+		if !integration.HasSupplierProvider(providerName) {
+			return nil, nil // no provider registered for this format
+		}
+		credJSON, err := integrationService.GetDecryptedCredentialsByID(ctx, tenantID, *supplier.IntegrationID)
+		if err != nil {
+			return nil, fmt.Errorf("decrypt credentials: %w", err)
+		}
+		provider, err := integration.NewSupplierProvider(providerName, credJSON, supplier.Settings)
+		if err != nil {
+			return nil, fmt.Errorf("create provider: %w", err)
+		}
+		return provider, nil
+	}
+	// dropshipItemsLoader resolves the dropship lines for an (order, supplier) into the
+	// supplier-order builder's input shape: it finds the pending dropship_orders row for the
+	// supplier, loads its items, and resolves each item's identity (its product's EAN + the
+	// supplier SKU). Returns the resolved lines + the ids of any line whose product lookup
+	// failed (so the handler can surface a missing-data blocker). Runs inside the handler's tx.
+	dropshipItemsLoader := func(ctx context.Context, tx pgx.Tx, orderID, supplierID uuid.UUID) ([]service.SupplierOrderInputLine, []string, error) {
+		dsOrders, err := dropshipRepo.FindByOrderID(ctx, tx, orderID)
+		if err != nil {
+			return nil, nil, fmt.Errorf("find dropship orders: %w", err)
+		}
+		var lines []service.SupplierOrderInputLine
+		var missing []string
+		for di := range dsOrders {
+			if dsOrders[di].SupplierID != supplierID {
+				continue
+			}
+			items, ierr := dropshipItemRepo.ListByDropshipOrderID(ctx, tx, dsOrders[di].ID)
+			if ierr != nil {
+				return nil, nil, fmt.Errorf("list dropship items: %w", ierr)
+			}
+			for ii := range items {
+				line := service.SupplierOrderInputLine{
+					LineID:      items[ii].ID,
+					SupplierSKU: items[ii].SKU,
+					Quantity:    items[ii].Quantity,
+				}
+				// Prefer the product's canonical EAN/SKU when the line is mapped to a product.
+				if items[ii].ProductID != nil {
+					if product, perr := productRepo.FindByID(ctx, tx, *items[ii].ProductID); perr == nil && product != nil {
+						if product.EAN != nil && *product.EAN != "" {
+							line.EAN = *product.EAN
+						}
+						if product.SKU != nil && *product.SKU != "" {
+							line.SupplierSKU = *product.SKU
+						}
+					}
+				}
+				lines = append(lines, line)
+			}
+		}
+		return lines, missing, nil
+	}
 	recurringOrderService := service.NewRecurringOrderService(recurringOrderRepo, orderRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 
 	// Product listing repo (needed by both stock sync and allegro listings)
@@ -1089,6 +1166,16 @@ func run() error {
 				service.NewExternalWorkflowHandler(externalWorkflowHTTPClient, loadExternalWorkflowConfig))
 			orchestrationDispatcher.Register(service.EventExternalWorkflowCommand,
 				service.NewExternalWorkflowCommandHandler(orderService))
+		}
+		// OPE-418/Phase-7: register the supplier-order submit handler + the reconcile poller
+		// only when SUPPLIER_ORDER_ENABLED is also on. Off => unregistered, so a stray
+		// supplier.order.submit event becomes a visible blocker rather than dispatching, and the
+		// poller never runs — the default build is byte-for-byte unchanged.
+		if cfg.SupplierOrderEnabled {
+			orchestrationDispatcher.Register(service.EventSupplierOrderSubmit,
+				service.NewSupplierOrderHandler(pool, fulfillmentService, dropshipRepo, orderRepo, dropshipItemsLoader, newSupplierProvider))
+			workerMgr.Register(worker.NewSupplierOrderStatusPoller(
+				workerPool, cfg.SupplierOrderEnabled, fulfillmentService, dropshipRepo, newSupplierProvider, slog.Default()))
 		}
 		// OPE-422: best-effort outbox metrics (claimed/processed/failed + queue depth).
 		workerMgr.Register(worker.NewOrchestrationWorker(workerPool, orchestrationRepo, orchestrationDispatcher, fulfillmentRepo, 0, slog.Default()).

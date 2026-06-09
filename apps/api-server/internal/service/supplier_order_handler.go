@@ -22,6 +22,7 @@ const EventSupplierOrderSubmit = "supplier.order.submit"
 type dropshipOrderWriter interface {
 	FindByOrderID(ctx context.Context, tx pgx.Tx, orderID uuid.UUID) ([]model.DropshipOrder, error)
 	Create(ctx context.Context, tx pgx.Tx, d *model.DropshipOrder) error
+	UpdateFields(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateDropshipStatusRequest) error
 }
 
 // orderReader is the narrow order repo surface the handler needs.
@@ -96,16 +97,23 @@ func (h *SupplierOrderHandler) Handle(ctx context.Context, event model.Orchestra
 	tenantID := event.TenantID
 
 	return database.WithTenant(ctx, h.pool, tenantID, func(tx pgx.Tx) error {
-		// Idempotency: already submitted? (a dropship_orders row with a supplier_reference)
+		// Idempotency: already submitted? (a dropship_orders row with a supplier_reference).
+		// Also capture the existing pending row for this (order, supplier) — the dropship gate
+		// creates it before enqueuing the submit, so success UPDATES it rather than inserting a
+		// duplicate. existingID == uuid.Nil means no row yet (defensive create).
 		existing, ferr := h.dropshipRepo.FindByOrderID(ctx, tx, orderID)
 		if ferr != nil {
 			return fmt.Errorf("lookup existing dropship orders: %w", ferr) // retryable
 		}
+		var existingID uuid.UUID
 		for i := range existing {
-			if existing[i].SupplierID == supplierID &&
-				existing[i].SupplierReference != nil && strings.TrimSpace(*existing[i].SupplierReference) != "" {
+			if existing[i].SupplierID != supplierID {
+				continue
+			}
+			if existing[i].SupplierReference != nil && strings.TrimSpace(*existing[i].SupplierReference) != "" {
 				return nil // already placed — idempotent no-op
 			}
+			existingID = existing[i].ID // pending row to update on success
 		}
 
 		// PREPARE
@@ -186,8 +194,9 @@ func (h *SupplierOrderHandler) Handle(ctx context.Context, event model.Orchestra
 			}
 			return fmt.Errorf("supplier create order: %w", serr) // retryable
 		}
-		// Persist the supplier order id on a dropship_orders row.
-		if e := h.recordSubmitted(ctx, tx, tenantID, orderID, supplierID, ord.Currency, result); e != nil {
+		// Persist the supplier order id: update the gate's pending dropship_orders row when one
+		// exists, otherwise create one (defensive). Either way exactly one row carries the ref.
+		if e := h.recordSubmitted(ctx, tx, tenantID, orderID, supplierID, existingID, ord.Currency, result); e != nil {
 			return e
 		}
 		ref := result.ExternalOrderID
@@ -212,16 +221,27 @@ func (h *SupplierOrderHandler) blocker(ctx context.Context, tenantID, orderID, u
 	h.fulfillment.AggregateMixedOrder(ctx, tenantID, orderID)
 }
 
-// recordSubmitted creates the dropship_orders row carrying the supplier order id (external
-// order id, or the supplier's order number when present). Runs inside the handler's tx so the
-// supplier_reference write commits with the idempotency guard's read.
-func (h *SupplierOrderHandler) recordSubmitted(ctx context.Context, tx pgx.Tx, tenantID, orderID, supplierID uuid.UUID, currency string, result *integration.SupplierOrderResult) error {
+// recordSubmitted persists the supplier order id (external order id, or the supplier's order
+// number when present) onto the dropship_orders row: it updates the gate's pending row when
+// existingID is set, otherwise creates a new one (defensive — the gate normally pre-creates
+// it). Runs inside the handler's tx so the supplier_reference write commits with the
+// idempotency guard's read, guaranteeing exactly one row carries the reference.
+func (h *SupplierOrderHandler) recordSubmitted(ctx context.Context, tx pgx.Tx, tenantID, orderID, supplierID, existingID uuid.UUID, currency string, result *integration.SupplierOrderResult) error {
 	ref := result.ExternalOrderID
 	if result.OrderNumber != "" {
 		ref = result.OrderNumber
 	}
 	if currency == "" {
 		currency = "PLN"
+	}
+	if existingID != uuid.Nil {
+		if err := h.dropshipRepo.UpdateFields(ctx, tx, existingID, model.UpdateDropshipStatusRequest{
+			Status:            "sent",
+			SupplierReference: &ref,
+		}); err != nil {
+			return fmt.Errorf("update dropship order with supplier reference: %w", err)
+		}
+		return nil
 	}
 	d := &model.DropshipOrder{
 		ID:                uuid.New(),
