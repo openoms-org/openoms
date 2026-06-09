@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -608,8 +609,12 @@ func (s *DropshipService) UpdateStatus(ctx context.Context, tenantID, id uuid.UU
 			return NewValidationError(fmt.Errorf("cannot transition from %s to %s", existing.Status, req.Status))
 		}
 
-		// Auto-submit to supplier API when transitioning to "sent"
-		if req.Status == "sent" && existing.Status == "pending" {
+		// Auto-submit to supplier API when transitioning to "sent" — but never re-submit an
+		// order that already carries a supplier reference. This idempotency guard prevents a
+		// double-submit when the OPE-418/Phase-7 supplier-order engine (supplier.order.submit
+		// handler) has already placed the order and set the reference on this row.
+		alreadySubmitted := existing.SupplierReference != nil && strings.TrimSpace(*existing.SupplierReference) != ""
+		if req.Status == "sent" && existing.Status == "pending" && !alreadySubmitted {
 			if result, err := s.submitToSupplierAPI(ctx, tx, tenantID, existing); err != nil {
 				s.logger.Error("failed to submit dropship order to supplier API",
 					"dropship_order_id", id, "supplier_id", existing.SupplierID, "error", err)

@@ -5,6 +5,7 @@ package integration
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"testing"
 
 	"github.com/google/uuid"
@@ -542,6 +543,144 @@ func TestSupplierOrder_EnqueueAndManualBranch(t *testing.T) {
 	svcOff.EnqueueSubmit(ctx, tenantA, orderID2, supplierID2, unit2.ID, unit2.ProcessID)
 	assert.Equal(t, 0, countOutboxByType(t, ctx, tenantA, processID2, service.EventSupplierOrderSubmit),
 		"disabled service enqueues nothing")
+}
+
+// dropshipServiceFor builds a DropshipService wired for the gate path with the given
+// SupplierOrderService. integrationSvc + webhookDispatch are unused on the manual/portal
+// branch (Create nil-guards webhookDispatch; supplierCapability uses the package-level
+// integration.HasSupplierProvider, not the service), so both are nil here.
+func dropshipServiceFor(supplierOrder *service.SupplierOrderService, fSvc *service.FulfillmentService) *service.DropshipService {
+	ds := service.NewDropshipService(
+		repository.NewDropshipOrderRepository(),
+		repository.NewDropshipOrderItemRepository(),
+		repository.NewOrderRepository(),
+		repository.NewProductRepository(),
+		repository.NewSupplierRepository(),
+		repository.NewAuditRepository(),
+		nil, // integrationSvc — unused on the manual/portal gate branch
+		appPool,
+		nil, // webhookDispatch — nil-guarded in Create
+		slog.Default(),
+	)
+	ds.SetFulfillmentService(fSvc)
+	ds.SetSupplierOrderService(supplierOrder)
+	return ds
+}
+
+// TestSupplierOrder_GateManualBranch exercises the dropship gate itself (DropshipService.Create
+// → recordDropshipUnit) for a manual-capability supplier (no integration, portal disabled →
+// SupplierCapManual), proving the OPE-418/Phase-7 behavior contract:
+//   - engine ENABLED  → the gate records a preflight_supplier_order step waiting_external, opens
+//     exactly one supplier_manual_submission_required blocker, and enqueues NO submit event.
+//   - engine DISABLED → the gate records the waiting step (legacy #556 behavior) but opens NO
+//     blocker and enqueues NO submit — proving the blocker is strictly behind the engine flag.
+func TestSupplierOrder_GateManualBranch(t *testing.T) {
+	ctx := context.Background()
+	tenantA := seedTenant(t, ctx)
+	actorID := seedUser(t, ctx, tenantA) // audit_log.user_id has a FK to users
+	orchRepo := repository.NewOrchestrationRepository()
+	fRepo := repository.NewFulfillmentRepository()
+	dsRepo := repository.NewDropshipOrderRepository()
+
+	createReq := func(orderID, supplierID uuid.UUID) model.CreateDropshipOrderRequest {
+		return model.CreateDropshipOrderRequest{
+			OrderID:    orderID,
+			SupplierID: supplierID,
+			Currency:   "PLN",
+			Items: []model.CreateDropshipOrderItemReq{
+				{SKU: "SKU-MANUAL", ProductName: "Manual Item", Quantity: 2, UnitCost: 9.50},
+			},
+		}
+	}
+
+	// ── Engine ENABLED: manual supplier → waiting step + manual blocker, no submit ──
+	orderID, processID := seedFulfillmentOrder(t, ctx, tenantA, "Manual Gate Customer")
+	supplierID := seedSupplier(t, ctx, tenantA) // feed_format iof, no integration → manual
+	fSvc := newUnitService()
+	dsOn := dropshipServiceFor(service.NewSupplierOrderService(true, appPool, fSvc, orchRepo), fSvc)
+
+	created, err := dsOn.Create(ctx, tenantA, createReq(orderID, supplierID), actorID, "127.0.0.1")
+	require.NoError(t, err)
+	require.NotNil(t, created)
+
+	require.NoError(t, database.WithTenant(ctx, appPool, tenantA, func(tx pgx.Tx) error {
+		// The dropship row stays pending — the manual branch never auto-submits.
+		orders, e := dsRepo.FindByOrderID(ctx, tx, orderID)
+		if e != nil {
+			return e
+		}
+		require.Len(t, orders, 1)
+		assert.Equal(t, "pending", orders[0].Status)
+		assert.Nil(t, orders[0].SupplierReference, "manual supplier is never auto-submitted")
+
+		units, e := fRepo.ListUnits(ctx, tx, processID)
+		if e != nil {
+			return e
+		}
+		require.Len(t, units, 1)
+		assert.Equal(t, model.FulfillmentStatusWaitingExternal, units[0].Status)
+
+		steps, e := fRepo.ListSteps(ctx, tx, units[0].ID)
+		if e != nil {
+			return e
+		}
+		var preflight *model.FulfillmentStep
+		for i := range steps {
+			if steps[i].StepKey == model.StepPreflightSupplierOrder {
+				preflight = &steps[i]
+			}
+		}
+		require.NotNil(t, preflight, "preflight_supplier_order step recorded for the operator")
+		assert.Equal(t, model.FulfillmentStatusWaitingExternal, preflight.Status)
+
+		blockers, e := fRepo.ListBlockers(ctx, tx, processID)
+		if e != nil {
+			return e
+		}
+		require.Len(t, blockers, 1, "engine enabled → exactly one operator blocker")
+		assert.Equal(t, model.BlockerSupplierManualSubmissionRequired, blockers[0].Code)
+		return nil
+	}))
+	assert.Equal(t, 0, countOutboxByType(t, ctx, tenantA, processID, service.EventSupplierOrderSubmit),
+		"manual capability must never enqueue a supplier.order.submit event")
+
+	// ── Engine DISABLED: waiting step recorded, but NO blocker and NO submit ──
+	orderID2, processID2 := seedFulfillmentOrder(t, ctx, tenantA, "Manual Gate Off Customer")
+	supplierID2 := seedSupplier(t, ctx, tenantA)
+	fSvc2 := newUnitService()
+	dsOff := dropshipServiceFor(service.NewSupplierOrderService(false, appPool, fSvc2, orchRepo), fSvc2)
+
+	created2, err := dsOff.Create(ctx, tenantA, createReq(orderID2, supplierID2), actorID, "127.0.0.1")
+	require.NoError(t, err)
+	require.NotNil(t, created2)
+
+	require.NoError(t, database.WithTenant(ctx, appPool, tenantA, func(tx pgx.Tx) error {
+		units, e := fRepo.ListUnits(ctx, tx, processID2)
+		if e != nil {
+			return e
+		}
+		require.Len(t, units, 1)
+		steps, e := fRepo.ListSteps(ctx, tx, units[0].ID)
+		if e != nil {
+			return e
+		}
+		var preflight *model.FulfillmentStep
+		for i := range steps {
+			if steps[i].StepKey == model.StepPreflightSupplierOrder {
+				preflight = &steps[i]
+			}
+		}
+		require.NotNil(t, preflight, "waiting step is legacy behavior, recorded regardless of the engine flag")
+
+		blockers, e := fRepo.ListBlockers(ctx, tx, processID2)
+		if e != nil {
+			return e
+		}
+		assert.Empty(t, blockers, "engine disabled → the manual blocker is suppressed")
+		return nil
+	}))
+	assert.Equal(t, 0, countOutboxByType(t, ctx, tenantA, processID2, service.EventSupplierOrderSubmit),
+		"disabled engine enqueues nothing")
 }
 
 // countOutboxByType counts orchestration_outbox rows for a process + event type (app pool, RLS).

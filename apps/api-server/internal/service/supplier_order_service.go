@@ -51,11 +51,15 @@ func BuildSupplierOrderRequest(clientOrderNumber string, lines []SupplierOrderIn
 }
 
 // canonicalSupplierStatuses maps common raw supplier statuses to canonical OpenOMS dropship
-// statuses. An unmapped raw status returns "" so the caller raises external_status_unmapped.
+// statuses. Every value MUST be a valid dropship_orders status (pending/sent/confirmed/
+// shipped/delivered/cancelled — see model.UpdateDropshipStatusRequest.Validate); the
+// reconcile poller writes these directly. An unmapped raw status returns "" so the caller
+// raises external_status_unmapped. "processing"/"in progress" map to the nearest valid
+// state, confirmed (the supplier has accepted and is working the order).
 var canonicalSupplierStatuses = map[string]string{
 	"ACCEPTED": "confirmed", "CONFIRMED": "confirmed",
-	"PROCESSING": "processing",
-	"SHIPPED":    "shipped", "SENT": "shipped", "DISPATCHED": "shipped",
+	"PROCESSING": "confirmed", "IN_PROGRESS": "confirmed",
+	"SHIPPED": "shipped", "SENT": "shipped", "DISPATCHED": "shipped",
 	"DELIVERED": "delivered",
 	"CANCELLED": "cancelled", "REJECTED": "cancelled",
 }
