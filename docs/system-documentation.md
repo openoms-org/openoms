@@ -1608,6 +1608,31 @@ Hooki:       pick_pack (pick/pack→step), dropship (jednostka per dostawca; man
              purchase_order (setter; receive = udokumentowany no-op do czasu linku PO↔order).
 ```
 
+### Silnik zamówień do dostawcy — prepare/preflight/submit/reconcile (OPE-418/Phase-7, tor B)
+
+Cykl życia złożenia zamówienia dropship u dostawcy przez orchestration outbox — addytywny, gated `SUPPLIER_ORDER_ENABLED` (domyślnie OFF → brama dropship zachowuje obecne zachowanie, zero auto-submitu).
+
+```
+Adapter:     integration.SupplierProvider (ProviderName/FetchProducts/FetchInventory/CreateOrder)
+             + opcjonalne sub-interfejsy: SupplierPreflighter (Preflight) i SupplierStatusReader
+             (GetOrderStatus) — wykrywane przez type-assert, brak = krok pomijany/no-op.
+Brama:       DropshipService.recordDropshipUnit — capability api + routable → enqueue eventu
+             supplier.order.submit (idempotency key supplier.order.submit:<order>:<supplier>);
+             portal/manual → krok preflight waiting_external + blocker supplier_manual_submission_
+             _required (operatorski, nie cichy auto-submit). Best-effort: enqueue nigdy nie cofa routingu.
+Handler:     SupplierOrderHandler (OrchestrationHandler dla supplier.order.submit) — prepare
+             (resolve EAN/SKU per linia; brak identyfikacji → supplier_order_missing_data) →
+             preflight (gdy adapter wspiera) → submit (CreateOrder). Idempotentny: UPDATE
+             istniejącego pending dropship_orders supplier_reference (fallback Create); pomija gdy
+             reference już ustawiony. PermanentError (odrzucenie biznesowe) → blocker, nie retry.
+Reconcile:   SupplierOrderStatusPoller — kanoniczny mapping statusu dostawcy na status dropship
+             (pending/sent/confirmed/shipped/delivered/cancelled); raw zachowany; nieznany →
+             external_status_unmapped. Legacy auto-submit UpdateStatus pending→sent pomijany gdy
+             supplier_reference już obecny (brak podwójnego submitu).
+Blockery:    supplier_order_missing_data, supplier_order_ambiguous_sku, supplier_order_rejected,
+             supplier_payment_awaiting, supplier_partial_fulfillment, supplier_manual_submission_required.
+```
+
 ### Operations + fulfillment READ API i dashboard (OPE-419, tor B)
 
 Strona READ — tenant-safe widok nad danymi 414–418 (procesy/jednostki/kroki/blockery/attempts) + sterownia operacyjna w dashboardzie.
@@ -2141,6 +2166,7 @@ Poza domyslnym zestawem 21, fulfillment orchestration (sekcja 8) dokłada worker
 |--------|-------|-----|
 | OrchestrationWorker | `ORCHESTRATION_WORKER_ENABLED` | Drenuje orchestration_outbox (FOR UPDATE SKIP LOCKED, cross-tenant privileged pool), dispatch per event_type, retry/backoff, permanent fail → fulfillment_blocker |
 | FulfillmentBackfillWorker | `FULFILLMENT_BACKFILL_ENABLED` (+ `FULFILLMENT_BACKFILL_DRY_RUN`) | Idempotentny backfill procesów dla niefinalnych zamówień bez procesu; per-tenant, dry-run domyślnie (OPE-423) |
+| SupplierOrderStatusPoller | `SUPPLIER_ORDER_ENABLED` | Reconcile statusu zamówień u dostawcy (adapter SupplierStatusReader) — per-tenant na privileged poolu, kanoniczny mapping statusu (raw zachowany), nieznany status → blocker external_status_unmapped (OPE-418/Phase-7) |
 
 ### Infrastruktura workerow
 
@@ -2292,6 +2318,7 @@ FULFILLMENT_PROCESS_ENABLED=false     # recording: proces + outbox event przy tw
 FULFILLMENT_BACKFILL_ENABLED=false    # worker backfillu procesow dla istniejacych zamowien (OPE-423)
 FULFILLMENT_BACKFILL_DRY_RUN=true     # backfill tylko liczy; zapis wymaga ENABLED=true I DRY_RUN=false
 ORCHESTRATION_WORKER_ENABLED=false    # OrchestrationWorker drenuje outbox + dispatch (OPE-415)
+SUPPLIER_ORDER_ENABLED=false          # silnik zamowien do dostawcy: submit handler + status poller (OPE-418/Phase-7)
 AUTOMATION_ORCHESTRATION_ENABLED=false # set_status automatyzacji przez outbox (OPE-421, na koncu)
 # Dashboard (build-time, cutover UI po osiagnieciu parity — OPE-423):
 NEXT_PUBLIC_OPENOMS_FULFILLMENT_DASHBOARD=heuristic  # heuristic[default]|process-backed
