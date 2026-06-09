@@ -53,3 +53,13 @@ func TestBlockerExternalWorkflowTimeout(t *testing.T) {
 	assert.Equal(t, "external_workflow_timeout", BlockerExternalWorkflowTimeout)
 	assert.Equal(t, "integration", blockerCategories[BlockerExternalWorkflowTimeout])
 }
+
+func TestSupplierOrderBlockerCodes(t *testing.T) {
+	for _, c := range []string{
+		BlockerSupplierOrderMissingData, BlockerSupplierOrderAmbiguousSKU, BlockerSupplierOrderRejected,
+		BlockerSupplierPaymentAwaiting, BlockerSupplierPartialFulfillment, BlockerSupplierManualSubmissionRequired,
+	} {
+		assert.Truef(t, IsValidBlockerCode(c), "%q should be valid", c)
+		assert.Equalf(t, "supplier", blockerCategories[c], "%q should be category supplier", c)
+	}
+}
