@@ -125,6 +125,7 @@ type RouterDeps struct { //nolint:revive
 	ProviderValidation         *handler.ProviderValidationHandler
 	Fulfillment                *handler.FulfillmentHandler
 	Operations                 *handler.OperationsHandler
+	ExternalWorkflowCallback   *handler.ExternalWorkflowCallbackHandler
 }
 
 // New constructs the chi router with all routes registered.
@@ -257,6 +258,15 @@ func New(deps RouterDeps) *chi.Mux {
 	if deps.StripeWebhook != nil {
 		r.With(middleware.RateLimitWith(deps.RateLimiter, 120, 1*time.Minute), middleware.MaxBodySize(1<<16)).
 			Post("/v1/webhooks/stripe", deps.StripeWebhook.HandleWebhook)
+	}
+
+	// External-workflow callback — no JWT, token + HMAC + single-use nonce authenticated,
+	// rate-limited. OPE-421/Phase-13: registered ONLY when EXTERNAL_WORKFLOW_ENABLED is on, so
+	// when the connector is off the route is absent and chi returns 404 (the default build is
+	// byte-for-byte unchanged).
+	if deps.Config != nil && deps.Config.ExternalWorkflowEnabled && deps.ExternalWorkflowCallback != nil {
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 60, 1*time.Minute), middleware.MaxBodySize(1<<20)).
+			Post("/v1/external-workflows/callback", deps.ExternalWorkflowCallback.Callback)
 	}
 
 	// Public return self-service routes — no JWT, rate-limited
