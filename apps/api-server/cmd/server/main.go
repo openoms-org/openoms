@@ -15,6 +15,7 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/redis/go-redis/v9"
 
 	// Register marketplace providers via init().
@@ -46,6 +47,8 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/handler"
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/obsmetrics"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	"github.com/openoms-org/openoms/apps/api-server/internal/router"
@@ -457,6 +460,37 @@ func run() error {
 	// of the dual-flag dependency — processing additionally needs the worker flag.
 	// When the flag is off this is a no-op and automation behaviour is unchanged.
 	automationExecutor.SetOrchestration(cfg.AutomationOrchestrationEnabled, orchestrationRepo, fulfillmentRepo)
+
+	// OPE-421/Phase-13 external-workflow connector (gated by EXTERNAL_WORKFLOW_ENABLED).
+	// When the flag is off the service's Enabled() is false, so the external_workflow action
+	// is a no-op, the callback route is unregistered, and the dispatcher handlers are not
+	// registered — the default build is byte-for-byte unchanged.
+	externalWorkflowTokenRepo := repository.NewExternalWorkflowTokenRepository()
+	externalWorkflowService := service.NewExternalWorkflowService(
+		cfg.ExternalWorkflowEnabled, pool, workerPool, fulfillmentService, orchestrationRepo,
+		externalWorkflowTokenRepo, auditRepo)
+	// loadExternalWorkflowConfig decrypts the integration's external-workflow credentials JSONB
+	// (outbound_url, signing_secret, timeout_seconds, criticality, outbound_field_allowlist).
+	loadExternalWorkflowConfig := func(ctx context.Context, tenantID, integrationID uuid.UUID) (service.ExternalWorkflowConfig, error) {
+		var cfgOut service.ExternalWorkflowConfig
+		credJSON, err := integrationService.GetDecryptedCredentialsByID(ctx, tenantID, integrationID)
+		if err != nil {
+			return cfgOut, err
+		}
+		if err := json.Unmarshal(credJSON, &cfgOut); err != nil {
+			return cfgOut, fmt.Errorf("parse external workflow config: %w", err)
+		}
+		return cfgOut, nil
+	}
+	externalWorkflowService.SetConfigLoader(loadExternalWorkflowConfig)
+	externalWorkflowService.SetOrderLoader(func(ctx context.Context, tx pgx.Tx, orderID uuid.UUID) (*model.Order, error) {
+		return orderRepo.FindByID(ctx, tx, orderID)
+	})
+	automationExecutor.SetExternalWorkflow(externalWorkflowService)
+	externalWorkflowCallbackHandler := handler.NewExternalWorkflowCallbackHandler(externalWorkflowService)
+	// SSRF-safe HTTP client for the outbound signed dispatch (same protection as webhook dispatch).
+	externalWorkflowHTTPClient := netutil.SafeHTTPClient(15 * time.Second)
+
 	automationEngine := automation.NewEngine(automationRuleRepo, automationRuleLogRepo, pool, automationExecutor, slog.Default())
 	automationEngine.SetDelayedActionRepo(delayedActionRepo)
 	automationService := service.NewAutomationService(automationRuleRepo, automationRuleLogRepo, pool, automationEngine, slog.Default())
@@ -997,6 +1031,7 @@ func run() error {
 		ProviderValidation:         providerValidationHandler,
 		Fulfillment:                fulfillmentHandler,
 		Operations:                 operationsHandler,
+		ExternalWorkflowCallback:   externalWorkflowCallbackHandler,
 	})
 
 	// Start background workers (use workerPool for cross-tenant queries).
@@ -1045,6 +1080,15 @@ func run() error {
 		// internally, matching the worker handler contract.
 		if cfg.AutomationOrchestrationEnabled {
 			orchestrationDispatcher.Register(automation.EventAutomationSetStatus, service.NewAutomationStatusTransitionHandler(orderService))
+		}
+		// OPE-421/Phase-13: register the external-workflow dispatch + follow-on-command
+		// handlers only when EXTERNAL_WORKFLOW_ENABLED is also on. Off => unregistered, so a
+		// stray external_workflow event would become a visible blocker rather than dispatch.
+		if cfg.ExternalWorkflowEnabled {
+			orchestrationDispatcher.Register(service.EventExternalWorkflow,
+				service.NewExternalWorkflowHandler(externalWorkflowHTTPClient, loadExternalWorkflowConfig))
+			orchestrationDispatcher.Register(service.EventExternalWorkflowCommand,
+				service.NewExternalWorkflowCommandHandler(orderService))
 		}
 		// OPE-422: best-effort outbox metrics (claimed/processed/failed + queue depth).
 		workerMgr.Register(worker.NewOrchestrationWorker(workerPool, orchestrationRepo, orchestrationDispatcher, fulfillmentRepo, 0, slog.Default()).
