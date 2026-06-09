@@ -28,10 +28,16 @@ const externalWorkflowTokenColumns = `id, tenant_id, integration_id, token_hash,
 
 // Issue stores a new token (the caller hashes the raw token first) and returns it.
 func (r *ExternalWorkflowTokenRepository) Issue(ctx context.Context, tx pgx.Tx, t model.ExternalWorkflowToken) (*model.ExternalWorkflowToken, error) {
+	// The scopes column is NOT NULL DEFAULT '{}': a nil slice would send SQL NULL and violate
+	// the constraint, so coalesce to an empty slice (resolve-only token).
+	scopes := t.Scopes
+	if scopes == nil {
+		scopes = []string{}
+	}
 	out, err := scanExternalWorkflowToken(tx.QueryRow(ctx,
 		`INSERT INTO external_workflow_tokens (tenant_id, integration_id, token_hash, scopes, expires_at)
 		 VALUES ($1,$2,$3,$4,$5) RETURNING `+externalWorkflowTokenColumns,
-		t.TenantID, t.IntegrationID, t.TokenHash, t.Scopes, t.ExpiresAt))
+		t.TenantID, t.IntegrationID, t.TokenHash, scopes, t.ExpiresAt))
 	if err != nil {
 		return nil, fmt.Errorf("issue external workflow token: %w", err)
 	}
