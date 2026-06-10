@@ -23,6 +23,17 @@ import (
 // orchestrationBatchLimit caps how many due outbox rows are processed per run.
 const orchestrationBatchLimit = 50
 
+// staleClaimTimeout is the visibility timeout for claimed outbox rows (OPE-534).
+// A claim is transient — processEvent runs synchronously and parked events are
+// re-queued to 'pending' in the same flow — so a claim older than this is evidence
+// of a worker that crashed between ClaimDue and Mark*. Far above any legitimate
+// dispatch duration (outbound HTTP is client-timeout-bounded), far below
+// operator-noticeable starvation.
+const staleClaimTimeout = 10 * time.Minute
+
+// reapBatchLimit caps how many stale claims are reaped per tick.
+const reapBatchLimit = 50
+
 // orchestrationDispatcher routes an outbox event to its handler.
 // Implemented by *service.OrchestrationDispatcher.
 type orchestrationDispatcher interface {
@@ -56,7 +67,7 @@ func (w *OrchestrationWorker) WithMetrics(m *obsmetrics.FulfillmentMetrics) *Orc
 }
 
 // recordOutcome counts one processed outbox event by bounded result
-// (processed | failed | claimed). Best-effort, nil-safe.
+// (processed | failed | claimed | reaped). Best-effort, nil-safe.
 func (w *OrchestrationWorker) recordOutcome(result string) {
 	w.metrics.RecordOutboxEvent(result)
 }
@@ -103,8 +114,10 @@ func (w *OrchestrationWorker) Name() string { return "orchestration" }
 // Interval returns how frequently the worker drains the outbox.
 func (w *OrchestrationWorker) Interval() time.Duration { return w.interval }
 
-// Run claims and processes one batch of due outbox events.
+// Run claims and processes one batch of due outbox events. A reap pass first
+// requeues claims stranded by a crashed worker (OPE-534).
 func (w *OrchestrationWorker) Run(ctx context.Context) error {
+	w.reapStaleClaims(ctx)
 	events, err := w.repo.ClaimDue(ctx, w.pool, w.batchLimit)
 	if err != nil {
 		return fmt.Errorf("claim due outbox events: %w", err)
@@ -121,6 +134,48 @@ func (w *OrchestrationWorker) Run(ctx context.Context) error {
 		w.setQueueDepth(depth)
 	}
 	return nil
+}
+
+// reapStaleClaims requeues outbox rows stranded in 'claimed' by a worker crash
+// (OPE-534): the interrupted attempt counts toward max_attempts (MarkFailedRetry
+// increments the counter), dangling 'running' attempt rows are closed, and an
+// exhausted event fails permanently with the standard blocker. Best-effort: any
+// error is logged and never blocks the normal claim/dispatch cycle.
+func (w *OrchestrationWorker) reapStaleClaims(ctx context.Context) {
+	stale, err := w.repo.ListStaleClaimed(ctx, w.pool, staleClaimTimeout, reapBatchLimit)
+	if err != nil {
+		w.logger.Warn("orchestration stale-claim reap skipped (best-effort)", "error", err)
+		return
+	}
+	for i := range stale {
+		e := stale[i]
+		log := w.logger.With(
+			"correlation_id", e.IdempotencyKey,
+			"event_id", e.ID,
+			"event_type", e.EventType,
+			"process_id", e.ProcessID,
+			"claimed_at", e.ClaimedAt,
+		)
+		if _, aerr := w.repo.FailRunningAttempts(ctx, w.pool, e.ID, "reaped: worker crashed mid-attempt"); aerr != nil {
+			log.Warn("orchestration reap: close dangling attempts failed (best-effort)", "error", aerr)
+		}
+		reapErrMsg := "reaped: claim exceeded visibility timeout (worker crash)"
+		if e.Attempts+1 >= e.MaxAttempts {
+			if merr := w.repo.MarkFailedPermanent(ctx, w.pool, e.ID, reapErrMsg); merr != nil {
+				log.Error("orchestration reap: mark permanent failed", "error", merr)
+				continue
+			}
+			w.openBlocker(ctx, e, errors.New(reapErrMsg))
+			log.Warn("orchestration reap: event exhausted attempts, failed permanently")
+		} else {
+			if merr := w.repo.MarkFailedRetry(ctx, w.pool, e.ID, reapErrMsg, nextRetryAt(time.Now().UTC(), e.Attempts)); merr != nil {
+				log.Error("orchestration reap: requeue failed", "error", merr)
+				continue
+			}
+			log.Warn("orchestration reap: stale claim requeued")
+		}
+		w.recordOutcome("reaped")
+	}
 }
 
 // processEvent executes one claimed event. A panic or error in one event must
