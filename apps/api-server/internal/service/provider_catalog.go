@@ -119,5 +119,21 @@ func ProviderRegistryCatalog() []ProviderCatalogEntry {
 				unknownCap("shop.order.pull"), unknownCap("shop.product.push"),
 			},
 		},
+		{
+			ProviderKey: "apaczka", DisplayName: "Apaczka (broker)", ProviderType: model.ProviderTypeCarrier, Version: "1.0.0",
+			Notes:   "Broker meta-carrier capability-class representative (HMAC-signed REST). Fronts many couriers (InPost/DPD/DHL/UPS/GLS/Poczta/Orlen) via one integration.",
+			Regions: []string{"PL"}, BusinessDomains: []string{"carrier"},
+			Schema: []model.ProviderFieldGroup{
+				{Key: model.FieldGroupSecretCredentials, Label: "Credentials", Fields: []model.ProviderField{
+					secretField("app_id", "App ID"),
+					secretField("app_secret", "App Secret"),
+				}},
+			},
+			Capabilities: []model.ProviderCapability{
+				unknownCap("carrier.shipment.create"), unknownCap("carrier.label.read"),
+				unknownCap("carrier.tracking.read"), unknownCap("carrier.rates.read"),
+				unknownCap("carrier.pickup_points.read"),
+			},
+		},
 	}
 }
