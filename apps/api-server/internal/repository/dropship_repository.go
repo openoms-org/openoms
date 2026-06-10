@@ -52,7 +52,7 @@ func (r *DropshipOrderRepository) List(ctx context.Context, tx pgx.Tx, filter mo
 	query := fmt.Sprintf(
 		`SELECT id, tenant_id, order_id, supplier_id, supplier_name, status,
 		        supplier_reference, tracking_number, carrier, notes,
-		        total_cost, currency, sent_at, confirmed_at, shipped_at, delivered_at,
+		        total_cost, currency, sent_at, confirmed_at, shipped_at, delivered_at, submit_attempted_at,
 		        created_at, updated_at
 		 FROM dropship_orders %s %s LIMIT $%d OFFSET $%d`,
 		where, orderByClause, argIdx, argIdx+1,
@@ -70,7 +70,7 @@ func (r *DropshipOrderRepository) List(ctx context.Context, tx pgx.Tx, filter mo
 		if err := rows.Scan(
 			&d.ID, &d.TenantID, &d.OrderID, &d.SupplierID, &d.SupplierName, &d.Status,
 			&d.SupplierReference, &d.TrackingNumber, &d.Carrier, &d.Notes,
-			&d.TotalCost, &d.Currency, &d.SentAt, &d.ConfirmedAt, &d.ShippedAt, &d.DeliveredAt,
+			&d.TotalCost, &d.Currency, &d.SentAt, &d.ConfirmedAt, &d.ShippedAt, &d.DeliveredAt, &d.SubmitAttemptedAt,
 			&d.CreatedAt, &d.UpdatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan dropship order: %w", err)
@@ -86,13 +86,13 @@ func (r *DropshipOrderRepository) FindByID(ctx context.Context, tx pgx.Tx, id uu
 	err := tx.QueryRow(ctx,
 		`SELECT id, tenant_id, order_id, supplier_id, supplier_name, status,
 		        supplier_reference, tracking_number, carrier, notes,
-		        total_cost, currency, sent_at, confirmed_at, shipped_at, delivered_at,
+		        total_cost, currency, sent_at, confirmed_at, shipped_at, delivered_at, submit_attempted_at,
 		        created_at, updated_at
 		 FROM dropship_orders WHERE id = $1`, id,
 	).Scan(
 		&d.ID, &d.TenantID, &d.OrderID, &d.SupplierID, &d.SupplierName, &d.Status,
 		&d.SupplierReference, &d.TrackingNumber, &d.Carrier, &d.Notes,
-		&d.TotalCost, &d.Currency, &d.SentAt, &d.ConfirmedAt, &d.ShippedAt, &d.DeliveredAt,
+		&d.TotalCost, &d.Currency, &d.SentAt, &d.ConfirmedAt, &d.ShippedAt, &d.DeliveredAt, &d.SubmitAttemptedAt,
 		&d.CreatedAt, &d.UpdatedAt,
 	)
 	if err != nil {
@@ -104,12 +104,40 @@ func (r *DropshipOrderRepository) FindByID(ctx context.Context, tx pgx.Tx, id uu
 	return &d, nil
 }
 
+// FindByIDForUpdate returns a dropship order by its ID, locking the row (SELECT ... FOR
+// UPDATE) for the duration of the transaction. Both supplier-submit paths (the orchestration
+// handler and the manual status transition) must lock the row BEFORE checking
+// supplier_reference so concurrent submitters serialize and the second one observes the
+// first one's outcome (OPE-518).
+func (r *DropshipOrderRepository) FindByIDForUpdate(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.DropshipOrder, error) {
+	var d model.DropshipOrder
+	err := tx.QueryRow(ctx,
+		`SELECT id, tenant_id, order_id, supplier_id, supplier_name, status,
+		        supplier_reference, tracking_number, carrier, notes,
+		        total_cost, currency, sent_at, confirmed_at, shipped_at, delivered_at, submit_attempted_at,
+		        created_at, updated_at
+		 FROM dropship_orders WHERE id = $1 FOR UPDATE`, id,
+	).Scan(
+		&d.ID, &d.TenantID, &d.OrderID, &d.SupplierID, &d.SupplierName, &d.Status,
+		&d.SupplierReference, &d.TrackingNumber, &d.Carrier, &d.Notes,
+		&d.TotalCost, &d.Currency, &d.SentAt, &d.ConfirmedAt, &d.ShippedAt, &d.DeliveredAt, &d.SubmitAttemptedAt,
+		&d.CreatedAt, &d.UpdatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("find dropship order by id for update: %w", err)
+	}
+	return &d, nil
+}
+
 // FindByOrderID returns all dropship orders for the given order.
 func (r *DropshipOrderRepository) FindByOrderID(ctx context.Context, tx pgx.Tx, orderID uuid.UUID) ([]model.DropshipOrder, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT id, tenant_id, order_id, supplier_id, supplier_name, status,
 		        supplier_reference, tracking_number, carrier, notes,
-		        total_cost, currency, sent_at, confirmed_at, shipped_at, delivered_at,
+		        total_cost, currency, sent_at, confirmed_at, shipped_at, delivered_at, submit_attempted_at,
 		        created_at, updated_at
 		 FROM dropship_orders WHERE order_id = $1 ORDER BY created_at ASC`, orderID,
 	)
@@ -124,7 +152,7 @@ func (r *DropshipOrderRepository) FindByOrderID(ctx context.Context, tx pgx.Tx, 
 		if err := rows.Scan(
 			&d.ID, &d.TenantID, &d.OrderID, &d.SupplierID, &d.SupplierName, &d.Status,
 			&d.SupplierReference, &d.TrackingNumber, &d.Carrier, &d.Notes,
-			&d.TotalCost, &d.Currency, &d.SentAt, &d.ConfirmedAt, &d.ShippedAt, &d.DeliveredAt,
+			&d.TotalCost, &d.Currency, &d.SentAt, &d.ConfirmedAt, &d.ShippedAt, &d.DeliveredAt, &d.SubmitAttemptedAt,
 			&d.CreatedAt, &d.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan dropship order: %w", err)
@@ -214,6 +242,22 @@ func (r *DropshipOrderRepository) UpdateFields(ctx context.Context, tx pgx.Tx, i
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("update dropship order fields: %w", err)
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("dropship order not found")
+	}
+	return nil
+}
+
+// MarkSubmitAttempted sets the two-phase submit-intent marker (OPE-517). The caller must
+// hold the row lock (FindByIDForUpdate) in the same transaction and commit BEFORE calling
+// the supplier's CreateOrder. The marker is never cleared — it is historical evidence that
+// a submission was attempted.
+func (r *DropshipOrderRepository) MarkSubmitAttempted(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
+	ct, err := tx.Exec(ctx,
+		`UPDATE dropship_orders SET submit_attempted_at = NOW(), updated_at = NOW() WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("mark dropship order submit attempted: %w", err)
 	}
 	if ct.RowsAffected() == 0 {
 		return fmt.Errorf("dropship order not found")
