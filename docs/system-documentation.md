@@ -1287,6 +1287,7 @@ Standalone maszyna stanow zamowien i przesylek:
 | poczta-polska-go-sdk | Poczta Polska | REST | Paczki pocztowe |
 | orlen-paczka-go-sdk | Orlen Paczka | REST | Paczkomaty Orlen |
 | fedex-go-sdk | FedEx | REST | Miedzynarodowe |
+| apaczka-go-sdk | Apaczka (broker) | REST v2 + HMAC-SHA256 | Tworzenie przesylek, etykiety (waybill PDF), tracking, wycena (rate-shopping), punkty odbioru; broker fronting InPost/DPD/DHL/UPS/GLS/Poczta Polska/Orlen Paczka |
 
 ### Inne SDK-i
 
@@ -2100,6 +2101,7 @@ EbayImportService.ImportOffers()
 | | Poczta Polska | Paczki |
 | | Orlen Paczka | Paczkomaty |
 | | FedEx | Miedzynarodowe |
+| | Apaczka (broker) | Broker meta-carrier: jedna integracja REST API v2 (HMAC-SHA256) fronting wielu przewoznikow (InPost, DPD, DHL, UPS, GLS, Poczta Polska, Orlen Paczka); tworzenie przesylek, etykiety (waybill PDF), tracking, rate-shopping (service_structure + order_valuation), punkty odbioru |
 | **Fakturowanie** | Fakturownia | Faktury VAT |
 | **e-Fakturowanie** | KSeF | Krajowy System e-Faktur (wysylka, UPO, status) |
 | **Marketing** | Mailchimp | Sync klientow, kampanie |
@@ -2109,7 +2111,7 @@ EbayImportService.ImportOffers()
 | **AI** | OpenAI | Kategoryzacja, opisy, ulepszanie, tlumaczenie |
 | **Kursy walut** | NBP | Narodowy Bank Polski |
 
-Rate shopping dla DPD, GLS, UPS, Poczta Polska, Orlen Paczka, FedEx i DHL jest wylaczony do czasu realnej wyceny kontraktowej/rating API. Providerzy pozostaja dostepni dla obslugiwanych przeplywow, np. etykiet, trackingu lub punktow odbioru, ale nie zwracaja sztucznych stawek.
+Rate shopping dla DPD, GLS, UPS, Poczta Polska, Orlen Paczka, FedEx i DHL jest wylaczony do czasu realnej wyceny kontraktowej/rating API. Providerzy pozostaja dostepni dla obslugiwanych przeplywow, np. etykiet, trackingu lub punktow odbioru, ale nie zwracaja sztucznych stawek. Apaczka jako broker meta-carrier zwraca rzeczywiste stawki dla wszystkich aktywnych uslug (service_structure + order_valuation) i jest w pelni uwzgledniany w endpoint rate-shopping `/v1/shipping/rates`.
 
 DPD uzywa dwoch powierzchni API: DPD Services REST do tworzenia przesylek i etykiet oraz DPD InfoServices SOAP do sledzenia przesylek. Opcjonalne dane `info_login`, `info_password` i `info_channel` pozwalaja zapisac osobne dane InfoServices; gdy sa puste, OpenOMS uzywa glownego loginu/hasla DPD oraz `master_fid` jako kanalu InfoServices.
 
