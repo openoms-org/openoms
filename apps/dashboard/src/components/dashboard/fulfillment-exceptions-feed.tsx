@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   BucketBadge,
-  blockerReasonKey,
+  blockerReasonLabel,
 } from "@/components/fulfillment/fulfillment-status-badge";
 import type { FulfillmentExceptionItem } from "@/types/fulfillment";
 
@@ -27,6 +27,13 @@ export interface FulfillmentExceptionsFeedProps {
   onSelect: (item: FulfillmentExceptionItem) => void;
   /** Cap rendered items (e.g. a home-page preview). */
   maxItems?: number;
+  /**
+   * True size of the exception population (derived from the operations
+   * summary). When the list is capped, the badge reads "shown of total"
+   * instead of presenting the capped preview count as the total; when
+   * undefined (summary unavailable) the badge is qualified as a preview.
+   */
+  totalCount?: number;
   titleKey?: string;
 }
 
@@ -37,14 +44,38 @@ export function FulfillmentExceptionsFeed({
   onRetry,
   onSelect,
   maxItems,
+  totalCount,
   titleKey = "fulfillment.exceptions.title",
 }: FulfillmentExceptionsFeedProps) {
   const t = useTranslations("dashboard");
   const locale = useLocale();
   const dateLocale = locale === "pl" ? pl : enUS;
 
-  const visible =
-    typeof maxItems === "number" ? (items ?? []).slice(0, maxItems) : items ?? [];
+  const isCapped = typeof maxItems === "number";
+  const visible = isCapped ? (items ?? []).slice(0, maxItems) : items ?? [];
+  const shownCount = visible.length;
+
+  // Capped previews must not present the preview size as the total (OPE-529):
+  // qualify it against the true population, or mark it as a preview when the
+  // population is unknown.
+  let badgeText: string;
+  if (!isCapped) {
+    badgeText = String(items?.length ?? 0);
+  } else if (typeof totalCount === "number") {
+    badgeText =
+      totalCount > shownCount
+        ? t("fulfillment.exceptions.shownOfTotal", {
+            shown: shownCount,
+            total: totalCount,
+          })
+        : String(shownCount);
+  } else {
+    badgeText =
+      shownCount > 0
+        ? t("fulfillment.exceptions.topPreview", { count: shownCount })
+        : "0";
+  }
+  const hasExceptions = shownCount > 0 || (totalCount ?? 0) > 0;
 
   return (
     <Card className="h-full overflow-hidden rounded-lg border-border/80 bg-card py-0 shadow-sm">
@@ -52,8 +83,8 @@ export function FulfillmentExceptionsFeed({
         <div className="flex items-start justify-between gap-4">
           <CardTitle className="text-base">{t(titleKey)}</CardTitle>
           {!isLoading && !isError && (
-            <Badge variant={visible.length > 0 ? "warning" : "success"}>
-              {items?.length ?? 0}
+            <Badge variant={hasExceptions ? "warning" : "success"}>
+              {badgeText}
             </Badge>
           )}
         </div>
@@ -97,7 +128,7 @@ export function FulfillmentExceptionsFeed({
             {visible.map((item) => {
               const blocker = item.top_blocker;
               const reason = blocker
-                ? t(blockerReasonKey(blocker.code))
+                ? blockerReasonLabel(t, blocker.code)
                 : t("fulfillment.exceptions.noBlocker");
 
               return (

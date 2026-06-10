@@ -1,12 +1,14 @@
 package obsmetrics_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/obsmetrics"
 )
 
@@ -129,6 +131,49 @@ func TestFulfillmentMetrics_UnitAndStepTransitions(t *testing.T) {
 	assert.Contains(t, out, `openoms_fulfillment_step_transitions_total{status="succeeded"} 1`)
 }
 
+// TestFulfillmentMetrics_AllowListsCoverModelEnums is the allow-list drift guard
+// (OPE-527): every model.ProviderOp* operation and every blocker category produced
+// by model.BlockerCategory must be accepted as-is by the metric allow-lists, never
+// coerced to the bounded "other" bucket. If a domain enum gains a value without the
+// matching allow-list entry, this test fails.
+func TestFulfillmentMetrics_AllowListsCoverModelEnums(t *testing.T) {
+	operations := []string{
+		model.ProviderOpCreateShipment,
+		model.ProviderOpGenerateLabel,
+		model.ProviderOpDownloadLabel,
+		model.ProviderOpSyncTracking,
+		model.ProviderOpSyncTrackingToMarketplace,
+		model.ProviderOpSyncFulfillmentStatus,
+	}
+	for _, op := range operations {
+		m := obsmetrics.NewFulfillmentMetrics()
+		m.RecordProviderAttempt(op, "succeeded")
+		out := render(m)
+		assert.Containsf(t, out, fmt.Sprintf("operation=%q", op), "operation %q must be allow-listed", op)
+		assert.NotContainsf(t, out, `operation="other"`, "operation %q must not be coerced to other", op)
+	}
+
+	// One representative blocker code per category, resolved through the same
+	// model.BlockerCategory pathway callers use (e.g. the orchestration worker).
+	representativeBlockerCodes := []string{
+		model.BlockerStockSyncFailed,           // integration
+		model.BlockerSupplierAvailabilityStale, // supplier
+		model.BlockerManualStockReviewRequired, // operator
+		model.BlockerStockWriteUnsupported,     // capability
+		model.BlockerExternalStatusUnmapped,    // mapping
+		model.BlockerAutomationActionFailed,    // automation (OPE-527)
+	}
+	for _, code := range representativeBlockerCodes {
+		category := model.BlockerCategory(code)
+		require.NotEmptyf(t, category, "blocker code %q has no category", code)
+		m := obsmetrics.NewFulfillmentMetrics()
+		m.RecordBlocker(category)
+		out := render(m)
+		assert.Containsf(t, out, fmt.Sprintf("category=%q", category), "category %q must be allow-listed", category)
+		assert.NotContainsf(t, out, `category="other"`, "category %q must not be coerced to other", category)
+	}
+}
+
 // TestFulfillmentMetrics_NoIDLikeLabels is the cardinality-discipline guard: the
 // rendered exposition MUST NOT contain any unbounded id-like label key. If a future
 // change introduces tenant_id/order_id/etc. as a metric label, this test fails.
@@ -136,7 +181,10 @@ func TestFulfillmentMetrics_NoIDLikeLabels(t *testing.T) {
 	m := obsmetrics.NewFulfillmentMetrics()
 	// Exercise every metric so all label keys appear in the output.
 	m.RecordProviderAttempt("create_shipment", "succeeded")
+	m.RecordProviderAttempt("sync_tracking_to_marketplace", "succeeded")
+	m.RecordProviderAttempt("sync_fulfillment_status", "failed")
 	m.RecordBlocker("capability")
+	m.RecordBlocker("automation")
 	m.RecordOutboxEvent("processed")
 	m.SetOutboxQueueDepth(1)
 	m.SetStuckProcesses(1)

@@ -174,6 +174,97 @@ describe("FulfillmentExceptionsFeed", () => {
       screen.getByText("fulfillment.exceptions.emptyTitle"),
     ).toBeInTheDocument();
   });
+
+  it("qualifies a capped preview badge against the true population (shown of total)", () => {
+    const items = ["proc-1", "proc-2", "proc-3"].map((id) =>
+      exceptionItem({ process: { ...exceptionItem().process, id } }),
+    );
+
+    render(
+      <FulfillmentExceptionsFeed
+        items={items}
+        isLoading={false}
+        onSelect={vi.fn()}
+        maxItems={3}
+        totalCount={12}
+      />,
+    );
+
+    // The badge must NOT present the capped preview size as the total.
+    expect(
+      screen.getByText("fulfillment.exceptions.shownOfTotal"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("3")).not.toBeInTheDocument();
+  });
+
+  it("shows the bare count when the capped preview covers the whole population", () => {
+    const item = exceptionItem();
+
+    render(
+      <FulfillmentExceptionsFeed
+        items={[item]}
+        isLoading={false}
+        onSelect={vi.fn()}
+        maxItems={3}
+        totalCount={1}
+      />,
+    );
+
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(
+      screen.queryByText("fulfillment.exceptions.shownOfTotal"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("marks a capped badge as a preview when the population is unknown", () => {
+    render(
+      <FulfillmentExceptionsFeed
+        items={[exceptionItem()]}
+        isLoading={false}
+        onSelect={vi.fn()}
+        maxItems={3}
+      />,
+    );
+
+    expect(
+      screen.getByText("fulfillment.exceptions.topPreview"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("1")).not.toBeInTheDocument();
+  });
+
+  it("keeps the bare count when the list is not capped", () => {
+    render(
+      <FulfillmentExceptionsFeed
+        items={[exceptionItem()]}
+        isLoading={false}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("1")).toBeInTheDocument();
+  });
+
+  it("humanizes a blocker code missing from the catalogs instead of leaking the raw key", () => {
+    const item = exceptionItem({
+      top_blocker: {
+        ...exceptionItem().top_blocker!,
+        code: "brand_new_backend_code",
+      },
+    });
+
+    render(
+      <FulfillmentExceptionsFeed
+        items={[item]}
+        isLoading={false}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Brand new backend code")).toBeInTheDocument();
+    expect(
+      screen.queryByText("fulfillment.blockerCode.brand_new_backend_code"),
+    ).not.toBeInTheDocument();
+  });
 });
 
 describe("FulfillmentDetailPanel actions", () => {
@@ -278,6 +369,64 @@ describe("FulfillmentDetailPanel actions", () => {
     await user.click(confirmButtons[confirmButtons.length - 1]);
 
     await waitFor(() => expect(retryHit).toBe("step-1"));
+  });
+
+  it("labels known provider operations via i18n and humanizes unknown blocker codes / operations", async () => {
+    const withAttempts: FulfillmentProcessDetail = {
+      ...detail,
+      blockers: [
+        {
+          ...detail.blockers[0],
+          id: "blk-unknown",
+          code: "vendor_specific_surprise",
+        },
+      ],
+      provider_attempts: [
+        {
+          id: "att-1",
+          tenant_id: "tenant-1",
+          process_id: "proc-1",
+          provider: "allegro",
+          operation: "sync_tracking_to_marketplace",
+          status: "succeeded",
+          created_at: "2026-06-01T12:00:00Z",
+        },
+        {
+          id: "att-2",
+          tenant_id: "tenant-1",
+          process_id: "proc-1",
+          provider: "inpost",
+          operation: "emit_carrier_manifest",
+          status: "failed",
+          created_at: "2026-06-01T12:05:00Z",
+        },
+      ],
+    };
+    server.use(
+      http.get("*/v1/fulfillment/processes/proc-1", () =>
+        HttpResponse.json(withAttempts),
+      ),
+    );
+
+    renderWithProviders(
+      <FulfillmentDetailPanel processId="proc-1" open onOpenChange={vi.fn()} />,
+    );
+
+    // Known operation -> translated (the mock echoes the existing key).
+    expect(
+      await screen.findByText(
+        "fulfillment.providerOp.sync_tracking_to_marketplace",
+      ),
+    ).toBeInTheDocument();
+    // Unknown operation/blocker code -> humanized text, never the raw key.
+    expect(screen.getByText("Emit carrier manifest")).toBeInTheDocument();
+    expect(screen.getByText("Vendor specific surprise")).toBeInTheDocument();
+    expect(
+      screen.queryByText("fulfillment.providerOp.emit_carrier_manifest"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("fulfillment.blockerCode.vendor_specific_surprise"),
+    ).not.toBeInTheDocument();
   });
 });
 
