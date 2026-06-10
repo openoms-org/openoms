@@ -428,6 +428,25 @@ func (r *SupplierProductRepository) FindBySupplierAndExternalID(ctx context.Cont
 	return sp, nil
 }
 
+// FindBySupplierAndProductID returns the supplier's catalogue entry linked to the given
+// internal product (the supplier_products mapping). When more than one mapping exists the
+// most recently updated one wins (deterministic). Returns nil when the product has no
+// mapping at this supplier — the caller must then fall back to EAN-only identity, NEVER the
+// tenant's internal SKU (OPE-516).
+func (r *SupplierProductRepository) FindBySupplierAndProductID(ctx context.Context, tx pgx.Tx, supplierID, productID uuid.UUID) (*model.SupplierProduct, error) {
+	sp, err := scanSupplierProduct(tx.QueryRow(ctx,
+		fmt.Sprintf("SELECT %s FROM supplier_products WHERE supplier_id = $1 AND product_id = $2 ORDER BY updated_at DESC LIMIT 1", supplierProductColumns),
+		supplierID, productID,
+	))
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("find supplier product by supplier and product id: %w", err)
+	}
+	return sp, nil
+}
+
 // UpsertByExternalID inserts or updates a supplier product matched by external ID.
 func (r *SupplierProductRepository) UpsertByExternalID(ctx context.Context, tx pgx.Tx, sp *model.SupplierProduct) error {
 	return tx.QueryRow(ctx,
