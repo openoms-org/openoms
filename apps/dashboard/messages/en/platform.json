@@ -75,6 +75,7 @@
       "editorTitle": "Field properties",
       "selectField": "Select a field to edit its properties.",
       "addField": "Add field",
+      "removeField": "Remove field",
       "noFields": "No fields in this group.",
       "unnamedKey": "(no key)",
       "hasError": "Error",

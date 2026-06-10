@@ -1,3 +1,7 @@
+// NOTE: There is intentionally no gap-creation mutation here. Integration gaps
+// are opened by the backend (capability/status-mapping edits and validation
+// runs detect them server-side); the dashboard only lists gaps and updates
+// their status (useProviderGaps / useUpdateProviderGap).
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { useAuthStore } from "@/lib/auth";
@@ -5,7 +9,6 @@ import type {
   ProviderCapabilitiesResponse,
   ProviderCapabilitiesUpdateRequest,
   ProviderCapability,
-  ProviderCreateGapRequest,
   ProviderFieldSchema,
   ProviderGapsResponse,
   ProviderIntegrationGap,
@@ -165,20 +168,6 @@ export function useProviderGaps(
     },
     enabled: !!token && !!providerId && !!versionId && (options?.enabled ?? true),
     staleTime: 30 * 1000,
-  });
-}
-
-export function useCreateProviderGap(providerId: string, versionId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: ProviderCreateGapRequest) =>
-      apiClient<ProviderIntegrationGap>(`${versionBase(providerId, versionId)}/gaps`, {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: keys.gaps(providerId, versionId) });
-    },
   });
 }
 
