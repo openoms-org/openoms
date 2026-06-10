@@ -108,16 +108,25 @@
         "waiting_external": "Czeka na zewnętrzne"
       },
       "blockerCode": {
+        "automation_action_failed": "Automatyczna akcja realizacji zakończyła się niepowodzeniem",
         "channel_stock_stale": "Dane stanu w kanale są nieaktualne",
         "external_status_unmapped": "Status zewnętrzny nie ma mapowania",
+        "external_workflow_timeout": "Zewnętrzny workflow przekroczył limit czasu",
         "integration_capability_degraded": "Funkcja integracji działa z ograniczeniami",
         "integration_capability_missing": "Brak wymaganej funkcji integracji",
         "manual_stock_review_required": "Wymagana ręczna weryfikacja stanu",
         "stock_ack_missing": "Brak potwierdzenia stanu z kanału",
         "stock_sync_failed": "Synchronizacja stanu do kanału nie powiodła się",
         "stock_write_unsupported": "Zapis stanu nie jest wspierany przez tę integrację",
+        "supplier_availability_insufficient": "Niewystarczająca dostępność u dostawcy",
         "supplier_availability_stale": "Dane dostępności u dostawcy są nieaktualne",
         "supplier_availability_unknown": "Dostępność u dostawcy jest nieznana",
+        "supplier_manual_submission_required": "Zamówienie u dostawcy wymaga ręcznego złożenia",
+        "supplier_order_ambiguous_sku": "Niejednoznaczne dopasowanie SKU w zamówieniu u dostawcy",
+        "supplier_order_missing_data": "W zamówieniu u dostawcy brakuje wymaganych danych",
+        "supplier_order_rejected": "Dostawca odrzucił zamówienie",
+        "supplier_partial_fulfillment": "Dostawca zrealizował zamówienie tylko częściowo",
+        "supplier_payment_awaiting": "Zamówienie u dostawcy oczekuje na płatność",
         "supplier_preflight_required": "Zamówienie u dostawcy wymaga wstępnej weryfikacji"
       },
       "buckets": {
