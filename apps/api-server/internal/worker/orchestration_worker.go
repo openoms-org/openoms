@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/getsentry/sentry-go"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -165,14 +166,15 @@ func (w *OrchestrationWorker) processEvent(ctx context.Context, e model.Orchestr
 
 	// OPE-421: a DeferUntil sentinel means the dispatch SUCCEEDED but the event must stay
 	// pending-callback until a deadline (next_attempt_at). The outbound POST happened, so the
-	// attempt is recorded succeeded; the outbox row is re-queued (pending) at the deadline and
-	// attempts is incremented so a re-dispatch past the deadline (Attempts>0) is treated as a
-	// timeout by the handler. This is NOT a failure outcome.
+	// attempt is recorded succeeded and the outbox row is re-queued (pending) at the deadline.
+	// OPE-514: the succeeded attempt row is the handler's EXPLICIT dispatch evidence — a
+	// re-dispatch past the deadline is classified as a callback timeout only when it exists —
+	// so it is written in the same transaction as the park (never one without the other).
+	// This is NOT a failure outcome.
 	var deferErr *service.DeferUntil
 	if errors.As(dispErr, &deferErr) {
-		_ = w.repo.FinishAttempt(ctx, w.pool, att.ID, model.AttemptStatusSucceeded, "")
-		if err := w.repo.MarkFailedRetry(ctx, w.pool, e.ID, "awaiting external workflow callback", deferErr.At); err != nil {
-			log.Error("orchestration mark pending-callback failed", "error", err)
+		if err := w.parkAwaitingCallback(ctx, att.ID, e.ID, deferErr.At); err != nil {
+			log.Error("orchestration park pending-callback failed", "error", err)
 		}
 		w.recordOutcome("claimed")
 		return
@@ -203,6 +205,25 @@ func (w *OrchestrationWorker) processEvent(ctx context.Context, e model.Orchestr
 		log.Error("orchestration mark retry failed", "error", err)
 	}
 	w.recordOutcome("failed")
+}
+
+// parkAwaitingCallback finishes the dispatch attempt as succeeded AND re-queues the event at
+// the callback deadline in ONE transaction. The succeeded attempt row is the explicit
+// dispatch evidence (OPE-514) consulted by the external-workflow handler on re-dispatch, so
+// it must never be observable without the park (or vice versa).
+func (w *OrchestrationWorker) parkAwaitingCallback(ctx context.Context, attemptID, eventID uuid.UUID, deadline time.Time) error {
+	tx, err := w.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin park transaction: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+	if err := w.repo.FinishAttempt(ctx, tx, attemptID, model.AttemptStatusSucceeded, ""); err != nil {
+		return err
+	}
+	if err := w.repo.MarkFailedRetry(ctx, tx, eventID, "awaiting external workflow callback", deadline); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 // blockerCodeForEvent maps an outbox event type to the fulfillment blocker code

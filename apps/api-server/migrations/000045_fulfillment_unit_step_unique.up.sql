@@ -1,0 +1,26 @@
+-- OPE-523 (CQ-FULF-03): DB uniqueness backstop for fulfillment unit/step dedupe.
+-- EnsureUnit and RecordStep dedupe application-side only (read-then-create inside
+-- their own best-effort transactions); under READ COMMITTED two concurrent callers
+-- (e.g. the supplier-order status poller + an operator dropship action) can both
+-- miss the existing row and both insert, yielding duplicate units/steps. These
+-- unique indexes mirror the app-level dedupe keys, make such duplicates
+-- structurally impossible, and let CreateUnit/CreateStep use
+-- INSERT ... ON CONFLICT DO NOTHING (the established CreateProcess pattern from
+-- migration 000040).
+--
+-- Units are deduped on (process, unit_type, key) where EnsureUnit stores the key in
+-- metadata under 'key' (only when non-empty), so the index uses that expression.
+-- NULLS NOT DISTINCT additionally collapses keyless units (the warehouse/backorder
+-- paths pass an empty dedupe key, leaving metadata->>'key' NULL): app-level, an
+-- empty key matches ANY existing unit of the type, so a second keyless unit of one
+-- type on one process is never a legitimate row — only a race artifact.
+--
+-- Steps are deduped on (unit, step_key). Re-recording a step UPDATEs the existing
+-- row (status + attempts increment), which the index does not constrain — it only
+-- blocks the duplicate-INSERT race.
+--
+-- ADDITIVE-ONLY: both tables are gated-off / prod-empty (OPE-414, same stance as
+-- migration 000040), so the index builds are instant and there is no
+-- pre-existing-duplicate concern; index-lock-ok documents that.
+CREATE UNIQUE INDEX uq_fulfillment_units_dedupe ON public.fulfillment_units (tenant_id, process_id, unit_type, (metadata->>'key')) NULLS NOT DISTINCT; -- migrate:index-lock-ok
+CREATE UNIQUE INDEX uq_fulfillment_steps_unit_step ON public.fulfillment_steps (tenant_id, unit_id, step_key); -- migrate:index-lock-ok

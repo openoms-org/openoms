@@ -189,6 +189,25 @@ func (r *OrchestrationRepository) FindPendingByEventAndNonce(ctx context.Context
 	return scanOutbox(row)
 }
 
+// HasDispatchedAttempt reports whether the outbox event carries explicit dispatch evidence:
+// an attempt that finished succeeded. The orchestration worker records the succeeded attempt
+// in the SAME transaction as the pending-callback park (DeferUntil), and a plainly succeeded
+// event never re-enters dispatch — so for a still-pending event this is exactly "the outbound
+// POST succeeded earlier and the event is awaiting its callback" (OPE-514). Filters by
+// tenant_id like its siblings, so it is correct on both RLS-scoped transactions and the
+// privileged pool.
+func (r *OrchestrationRepository) HasDispatchedAttempt(ctx context.Context, q Querier, tenantID, outboxID uuid.UUID) (bool, error) {
+	var dispatched bool
+	if err := q.QueryRow(ctx,
+		`SELECT EXISTS (
+		    SELECT 1 FROM orchestration_attempts
+		     WHERE tenant_id = $1 AND outbox_id = $2 AND status = 'succeeded'
+		 )`, tenantID, outboxID).Scan(&dispatched); err != nil {
+		return false, fmt.Errorf("check dispatched attempt: %w", err)
+	}
+	return dispatched, nil
+}
+
 // SetLatestAttemptExternalExecID records the external engine's execution id on the most
 // recent attempt of an outbox event (best-effort).
 func (r *OrchestrationRepository) SetLatestAttemptExternalExecID(ctx context.Context, q Querier, outboxID uuid.UUID, execID string) error {
