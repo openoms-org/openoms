@@ -1109,6 +1109,14 @@ func run() error {
 	if cfg.OrchestrationWorkerEnabled {
 		orchestrationDispatcher := service.NewOrchestrationDispatcher()
 		orchestrationDispatcher.Register(service.EventOrderCreated, service.NewOrderCreatedHandler(pool, fulfillmentRepo))
+		// OPE-513: ack fulfillment.step events. EmitFulfillmentStep enqueues them on
+		// the SUCCESS paths of shipment/label/tracking operations whenever
+		// FULFILLMENT_PROCESS_ENABLED recording is on, so this handler is registered
+		// UNCONDITIONALLY within the worker block — without it the dispatcher would
+		// fail every fulfillment.step permanently and open spurious blockers on
+		// healthy operations. The events are observability-only (the step was already
+		// recorded by the emitter's caller), so the handler is a no-op ack.
+		orchestrationDispatcher.Register(service.EventFulfillmentStep, service.NewFulfillmentStepHandler())
 		// OPE-421: register the automation.set_status handler only when BOTH the
 		// orchestration worker AND automation orchestration routing are enabled. This
 		// is the PROCESSING half of the dual-flag dependency: the executor enqueues
@@ -1126,7 +1134,7 @@ func run() error {
 		// stray external_workflow event would become a visible blocker rather than dispatch.
 		if cfg.ExternalWorkflowEnabled {
 			orchestrationDispatcher.Register(service.EventExternalWorkflow,
-				service.NewExternalWorkflowHandler(externalWorkflowHTTPClient, loadExternalWorkflowConfig))
+				service.NewExternalWorkflowHandler(externalWorkflowHTTPClient, loadExternalWorkflowConfig, workerPool, orchestrationRepo))
 			orchestrationDispatcher.Register(service.EventExternalWorkflowCommand,
 				service.NewExternalWorkflowCommandHandler(orderService))
 		}
