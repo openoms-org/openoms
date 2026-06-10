@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -96,6 +97,53 @@ func TestSupplierAvailability_RLSIsolation(t *testing.T) {
 		assert.Equal(t, 1, n, "tenant A sees only its own snapshot")
 		return nil
 	}))
+}
+
+// TestSupplierAvailability_PolicyScopeDiscriminatorCheck proves chk_sap_scope_discriminator
+// (migration 000044) rejects rows whose discriminator columns do not match their scope.
+// Without it such rows escape the partial unique indexes from 000041 entirely (NULL index
+// keys never conflict), so duplicates and unreachable policies could accumulate.
+func TestSupplierAvailability_PolicyScopeDiscriminatorCheck(t *testing.T) {
+	ctx := context.Background()
+	tenantID := seedTenant(t, ctx)
+	supplierID, _ := seedSupplierAndProduct(t, ctx, tenantID)
+
+	var productID uuid.UUID
+	require.NoError(t, database.WithTenant(ctx, appPool, tenantID, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `INSERT INTO products (tenant_id, name, price) VALUES ($1,'P',10) RETURNING id`, tenantID).Scan(&productID)
+	}))
+
+	cases := []struct {
+		name string
+		sql  string
+		args []any
+	}{
+		{"supplier scope without supplier_id",
+			`INSERT INTO supplier_availability_policy (tenant_id, scope) VALUES ($1,'supplier')`,
+			[]any{tenantID}},
+		{"product scope without supplier_id",
+			`INSERT INTO supplier_availability_policy (tenant_id, scope, product_id) VALUES ($1,'product',$2)`,
+			[]any{tenantID, productID}},
+		{"channel scope without channel",
+			`INSERT INTO supplier_availability_policy (tenant_id, scope) VALUES ($1,'channel')`,
+			[]any{tenantID}},
+		{"listing scope with extra supplier_id",
+			`INSERT INTO supplier_availability_policy (tenant_id, scope, listing_id, supplier_id) VALUES ($1,'listing',$2,$3)`,
+			[]any{tenantID, uuid.New(), supplierID}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := database.WithTenant(ctx, appPool, tenantID, func(tx pgx.Tx) error {
+				_, e := tx.Exec(ctx, tc.sql, tc.args...)
+				return e
+			})
+			require.Error(t, err, "scope/discriminator mismatch must be rejected")
+			var pgErr *pgconn.PgError
+			require.ErrorAs(t, err, &pgErr)
+			assert.Equal(t, "23514", pgErr.Code, "check_violation")
+			assert.Equal(t, "chk_sap_scope_discriminator", pgErr.ConstraintName)
+		})
+	}
 }
 
 // TestSupplierAvailability_PolicyChainResolves proves the 4-scope policy load returns the
