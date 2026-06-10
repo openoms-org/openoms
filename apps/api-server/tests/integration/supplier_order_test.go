@@ -497,6 +497,49 @@ func TestSupplierOrder_SubmittedOnceBackstop(t *testing.T) {
 	assert.Contains(t, err.Error(), "uq_dropship_orders_submitted_once")
 }
 
+// TestSupplierOrder_ManualMarkerSkip: an operator pending→sent transition on a row whose
+// submit-intent marker is set must NOT auto-submit to the supplier API even when the
+// supplier is API-capable — it proceeds as a pure status update (the operator resolution
+// path for the supplier_manual_submission_required blocker, OPE-517/OPE-518). Proven by
+// wiring the DropshipService with a nil IntegrationService and an API-capable supplier
+// (xml feed + linked integration -> btp provider): if the marker check failed, the prepare
+// step would hit the nil service and the update would not succeed cleanly.
+func TestSupplierOrder_ManualMarkerSkip(t *testing.T) {
+	ctx := context.Background()
+	tenantA := seedTenant(t, ctx)
+	actorID := seedUser(t, ctx, tenantA)
+	orderID, _ := seedFulfillmentOrder(t, ctx, tenantA, "Manual Marker Customer")
+
+	integrationID := uuid.New()
+	_, err := superPool.Exec(ctx,
+		`INSERT INTO integrations (id, tenant_id, provider) VALUES ($1,$2,'btp')`, integrationID, tenantA)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_, _ = superPool.Exec(context.Background(), "DELETE FROM integrations WHERE id = $1", integrationID)
+	})
+	supplierID := uuid.New()
+	_, err = superPool.Exec(ctx,
+		`INSERT INTO suppliers (id, tenant_id, name, feed_format, integration_id) VALUES ($1,$2,'API Supplier','xml',$3)`,
+		supplierID, tenantA, integrationID)
+	require.NoError(t, err)
+	t.Cleanup(func() { _, _ = superPool.Exec(context.Background(), "DELETE FROM suppliers WHERE id = $1", supplierID) })
+
+	dsID := seedPendingDropshipOrder(t, ctx, tenantA, orderID, supplierID,
+		[]model.DropshipOrderItem{{SKU: "SKU-MSKIP", ProductName: "Manual Skip", Quantity: 1}})
+	_, err = superPool.Exec(ctx, `UPDATE dropship_orders SET submit_attempted_at = NOW() WHERE id = $1`, dsID)
+	require.NoError(t, err)
+
+	fSvc := newUnitService()
+	ds := dropshipServiceFor(service.NewSupplierOrderService(false, appPool, fSvc, repository.NewOrchestrationRepository()), fSvc)
+
+	updated, uerr := ds.UpdateStatus(ctx, tenantA, dsID, model.UpdateDropshipStatusRequest{Status: "sent"}, actorID, "127.0.0.1")
+	require.NoError(t, uerr, "marker present -> the manual transition is a pure status update (no API submit)")
+	require.NotNil(t, updated)
+	assert.Equal(t, "sent", updated.Status)
+	assert.Nil(t, updated.SupplierReference, "no auto-submit happened, so no reference was recorded")
+	require.NotNil(t, updated.SubmitAttemptedAt, "marker is kept as historical evidence")
+}
+
 // TestSupplierOrder_Reconcile: the poller maps a "SHIPPED" raw status to "shipped" and
 // records the confirm step; an unmapped raw status raises external_status_unmapped.
 func TestSupplierOrder_Reconcile(t *testing.T) {
