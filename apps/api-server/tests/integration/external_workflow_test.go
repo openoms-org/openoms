@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -19,7 +20,6 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
-	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 	"github.com/openoms-org/openoms/apps/api-server/internal/worker"
@@ -300,9 +300,10 @@ func TestExternalWorkflow_CrossTenantRLS(t *testing.T) {
 }
 
 // TestExternalWorkflow_TimeoutOpensBlocker drives the dispatch handler + worker: the first
-// dispatch POSTs (200) and parks the event pending-callback; after the deadline passes with no
-// callback, the worker re-dispatches and the handler (Attempts>0) fails it permanently, opening
-// an external_workflow_timeout blocker.
+// dispatch POSTs (200) and parks the event pending-callback, recording a succeeded attempt as
+// explicit dispatch evidence (OPE-514); after the deadline passes with no callback, the worker
+// re-dispatches and the handler — seeing the evidence — fails it permanently, opening an
+// external_workflow_timeout blocker.
 func TestExternalWorkflow_TimeoutOpensBlocker(t *testing.T) {
 	ctx := context.Background()
 	tenant := seedTenant(t, ctx)
@@ -311,8 +312,12 @@ func TestExternalWorkflow_TimeoutOpensBlocker(t *testing.T) {
 	nonce := uuid.NewString()
 	procID := enqueueEWFEvent(t, ctx, tenant, orderID, integrationID, nonce)
 
-	// A stub external engine returning 200 OK so the first dispatch succeeds.
+	// A stub external engine returning 200 OK so the first dispatch succeeds. It must be
+	// genuinely reachable: the timeout classification requires real dispatch evidence, so the
+	// handler uses a plain client here (the production SSRF-safe client refuses loopback).
+	var posts atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		posts.Add(1)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer srv.Close()
@@ -323,7 +328,8 @@ func TestExternalWorkflow_TimeoutOpensBlocker(t *testing.T) {
 			OutboundURL: srv.URL, SigningSecret: ewfSigningSecret, TimeoutSecs: 1, Criticality: "blocker",
 		}, nil
 	}
-	handler := service.NewExternalWorkflowHandler(netutil.SafeHTTPClient(5*time.Second), loadCfg)
+	handler := service.NewExternalWorkflowHandler(&http.Client{Timeout: 5 * time.Second}, loadCfg,
+		superPool, repository.NewOrchestrationRepository())
 	disp := service.NewOrchestrationDispatcher()
 	disp.Register(service.EventExternalWorkflow, handler)
 
@@ -332,8 +338,9 @@ func TestExternalWorkflow_TimeoutOpensBlocker(t *testing.T) {
 	w := worker.NewOrchestrationWorker(superPool, orchRepo, disp, fRepo, time.Second, slog.Default())
 
 	// First run: dispatch succeeds -> event parked pending-callback with next_attempt_at in the
-	// future, attempts incremented.
+	// future, attempts incremented, succeeded attempt recorded as dispatch evidence.
 	require.NoError(t, w.Run(ctx))
+	require.Equal(t, int32(1), posts.Load(), "first run POSTs the stub engine")
 	require.NoError(t, database.WithTenant(ctx, appPool, tenant, func(tx pgx.Tx) error {
 		events, e := orchRepo.ListByProcess(ctx, tx, procID)
 		if e != nil {
@@ -344,15 +351,22 @@ func TestExternalWorkflow_TimeoutOpensBlocker(t *testing.T) {
 		assert.GreaterOrEqual(t, events[0].Attempts, 1, "attempts incremented on park")
 		return nil
 	}))
+	dispatchID := firstOutboxIDForType(t, ctx, procID, service.EventExternalWorkflow)
+	var evidence int
+	require.NoError(t, superPool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM orchestration_attempts WHERE outbox_id = $1 AND status = 'succeeded'`, dispatchID).
+		Scan(&evidence))
+	require.Equal(t, 1, evidence, "park records the succeeded attempt as dispatch evidence")
 
 	// Force the deadline into the past (simulate timeout with no callback).
-	dispatchID := firstOutboxIDForType(t, ctx, procID, service.EventExternalWorkflow)
 	_, err := superPool.Exec(ctx,
 		`UPDATE orchestration_outbox SET next_attempt_at = now() - interval '1 minute' WHERE id = $1`, dispatchID)
 	require.NoError(t, err)
 
-	// Second run: re-dispatch past the deadline -> Attempts>0 -> permanent -> timeout blocker.
+	// Second run: re-dispatch past the deadline -> dispatch evidence + deadline passed ->
+	// permanent -> timeout blocker (and no second POST to the engine).
 	require.NoError(t, w.Run(ctx))
+	assert.Equal(t, int32(1), posts.Load(), "timed-out event is not re-POSTed")
 	require.NoError(t, database.WithTenant(ctx, appPool, tenant, func(tx pgx.Tx) error {
 		events, e := orchRepo.ListByProcess(ctx, tx, procID)
 		if e != nil {
@@ -368,6 +382,123 @@ func TestExternalWorkflow_TimeoutOpensBlocker(t *testing.T) {
 		require.Len(t, blockers, 1, "exactly one timeout blocker opened")
 		assert.Equal(t, model.BlockerExternalWorkflowTimeout, blockers[0].Code)
 		assert.Equal(t, "integration", blockers[0].Category)
+		return nil
+	}))
+}
+
+// TestExternalWorkflow_TransientFailureRetriesWithoutBlocker (OPE-514): a transient failure
+// (5xx) on the FIRST outbound POST must stay a normal retryable failure — Attempts>0 alone is
+// NOT dispatch evidence, so no premature external_workflow_timeout blocker may open. The retry
+// then dispatches successfully and parks pending-callback; only after the parked deadline
+// passes with no callback does the timeout blocker fire.
+func TestExternalWorkflow_TransientFailureRetriesWithoutBlocker(t *testing.T) {
+	ctx := context.Background()
+	tenant := seedTenant(t, ctx)
+	integrationID := seedEWFIntegration(t, ctx, tenant)
+	orderID := seedEWFOrder(t, ctx, tenant)
+	nonce := uuid.NewString()
+	procID := enqueueEWFEvent(t, ctx, tenant, orderID, integrationID, nonce)
+
+	// Stub engine: returns 500 (transient) until flipped healthy.
+	var healthy atomic.Bool
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if healthy.Load() {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	loadCfg := func(_ context.Context, _, _ uuid.UUID) (service.ExternalWorkflowConfig, error) {
+		return service.ExternalWorkflowConfig{
+			OutboundURL: srv.URL, SigningSecret: ewfSigningSecret, TimeoutSecs: 60, Criticality: "blocker",
+		}, nil
+	}
+	// Plain client: the production SSRF-safe client refuses loopback, and this test needs the
+	// POST to genuinely reach the stub engine.
+	handler := service.NewExternalWorkflowHandler(&http.Client{Timeout: 5 * time.Second}, loadCfg,
+		superPool, repository.NewOrchestrationRepository())
+	disp := service.NewOrchestrationDispatcher()
+	disp.Register(service.EventExternalWorkflow, handler)
+
+	orchRepo := repository.NewOrchestrationRepository()
+	fRepo := repository.NewFulfillmentRepository()
+	w := worker.NewOrchestrationWorker(superPool, orchRepo, disp, fRepo, time.Second, slog.Default())
+
+	// Run 1: the first POST fails transiently (500) -> retryable: event stays pending with
+	// attempts incremented, and NO blocker opens.
+	require.NoError(t, w.Run(ctx))
+	require.NoError(t, database.WithTenant(ctx, appPool, tenant, func(tx pgx.Tx) error {
+		events, e := orchRepo.ListByProcess(ctx, tx, procID)
+		if e != nil {
+			return e
+		}
+		require.Len(t, events, 1)
+		assert.Equal(t, model.OutboxStatusPending, events[0].Status, "transient failure stays retryable")
+		assert.GreaterOrEqual(t, events[0].Attempts, 1, "attempts incremented on retryable failure")
+
+		blockers, e := fRepo.ListBlockers(ctx, tx, procID)
+		if e != nil {
+			return e
+		}
+		assert.Empty(t, blockers, "no premature timeout blocker after a transient first-dispatch failure")
+		return nil
+	}))
+
+	// Make the retry due now and let the engine recover.
+	dispatchID := firstOutboxIDForType(t, ctx, procID, service.EventExternalWorkflow)
+	_, err := superPool.Exec(ctx,
+		`UPDATE orchestration_outbox SET next_attempt_at = now() - interval '1 minute' WHERE id = $1`, dispatchID)
+	require.NoError(t, err)
+	healthy.Store(true)
+
+	// Run 2: the retry POSTs successfully and PARKS pending-callback (deadline in the future).
+	// Before OPE-514 this run misread Attempts>0 as a callback timeout and opened a blocker.
+	require.NoError(t, w.Run(ctx))
+	require.NoError(t, database.WithTenant(ctx, appPool, tenant, func(tx pgx.Tx) error {
+		events, e := orchRepo.ListByProcess(ctx, tx, procID)
+		if e != nil {
+			return e
+		}
+		require.Len(t, events, 1)
+		assert.Equal(t, model.OutboxStatusPending, events[0].Status, "successful retry parks pending-callback")
+		assert.True(t, events[0].NextAttemptAt.After(time.Now()), "parked with the callback deadline in the future")
+
+		blockers, e := fRepo.ListBlockers(ctx, tx, procID)
+		if e != nil {
+			return e
+		}
+		assert.Empty(t, blockers, "no blocker after the retry dispatched successfully")
+		return nil
+	}))
+
+	// The park recorded explicit dispatch evidence: a succeeded attempt row.
+	var evidence int
+	require.NoError(t, superPool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM orchestration_attempts WHERE outbox_id = $1 AND status = 'succeeded'`, dispatchID).
+		Scan(&evidence))
+	assert.Equal(t, 1, evidence, "park records the succeeded attempt as dispatch evidence")
+
+	// Run 3 (regression): the parked deadline passes with no callback -> timeout blocker fires.
+	_, err = superPool.Exec(ctx,
+		`UPDATE orchestration_outbox SET next_attempt_at = now() - interval '1 minute' WHERE id = $1`, dispatchID)
+	require.NoError(t, err)
+	require.NoError(t, w.Run(ctx))
+	require.NoError(t, database.WithTenant(ctx, appPool, tenant, func(tx pgx.Tx) error {
+		events, e := orchRepo.ListByProcess(ctx, tx, procID)
+		if e != nil {
+			return e
+		}
+		require.Len(t, events, 1)
+		assert.Equal(t, model.OutboxStatusFailed, events[0].Status, "timed-out event failed permanently")
+
+		blockers, e := fRepo.ListBlockers(ctx, tx, procID)
+		if e != nil {
+			return e
+		}
+		require.Len(t, blockers, 1, "exactly one timeout blocker after the real deadline passed")
+		assert.Equal(t, model.BlockerExternalWorkflowTimeout, blockers[0].Code)
 		return nil
 	}))
 }

@@ -1171,7 +1171,7 @@ func run() error {
 		// stray external_workflow event would become a visible blocker rather than dispatch.
 		if cfg.ExternalWorkflowEnabled {
 			orchestrationDispatcher.Register(service.EventExternalWorkflow,
-				service.NewExternalWorkflowHandler(externalWorkflowHTTPClient, loadExternalWorkflowConfig))
+				service.NewExternalWorkflowHandler(externalWorkflowHTTPClient, loadExternalWorkflowConfig, workerPool, orchestrationRepo))
 			orchestrationDispatcher.Register(service.EventExternalWorkflowCommand,
 				service.NewExternalWorkflowCommandHandler(orderService))
 		}
