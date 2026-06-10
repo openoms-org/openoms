@@ -109,16 +109,47 @@ func (r *SupplierAvailabilityRepository) ListPoliciesForContext(ctx context.Cont
 	return out, rows.Err()
 }
 
-// UpsertPolicy inserts or updates a single scope policy (keyed by the partial unique index
-// for its scope). Idempotent per scope target.
+// policyUpsertInsert / policyUpsertUpdate are the scope-independent halves of the policy
+// upsert; the ON CONFLICT target between them must match the partial unique index of the
+// row's scope (migration 000041), so UpsertPolicy splices it in per scope.
+const policyUpsertInsert = `INSERT INTO supplier_availability_policy
+	   (tenant_id, scope, supplier_id, product_id, listing_id, channel, mode, safety_buffer,
+	    freshness_window_seconds, max_lead_time_days, override_quantity, allow_channel_increase,
+	    require_reservation, require_preflight)
+	 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+	 ON CONFLICT `
+
+const policyUpsertUpdate = ` DO UPDATE SET
+	    mode = EXCLUDED.mode,
+	    safety_buffer = EXCLUDED.safety_buffer,
+	    freshness_window_seconds = EXCLUDED.freshness_window_seconds,
+	    max_lead_time_days = EXCLUDED.max_lead_time_days,
+	    override_quantity = EXCLUDED.override_quantity,
+	    allow_channel_increase = EXCLUDED.allow_channel_increase,
+	    require_reservation = EXCLUDED.require_reservation,
+	    require_preflight = EXCLUDED.require_preflight,
+	    updated_at = now()
+	 RETURNING `
+
+// UpsertPolicy inserts or updates a single scope policy. The unique indexes are PARTIAL
+// (one per scope), so a single ON CONFLICT cannot cover all four targets — the statement
+// is selected per scope with the conflict target mirroring that scope's index. Idempotent
+// per scope target: a second upsert updates the rule columns of the existing row.
 func (r *SupplierAvailabilityRepository) UpsertPolicy(ctx context.Context, tx pgx.Tx, p model.SupplierAvailabilityPolicy) (*model.SupplierAvailabilityPolicy, error) {
-	out, err := scanSupplierPolicy(tx.QueryRow(ctx,
-		`INSERT INTO supplier_availability_policy
-		   (tenant_id, scope, supplier_id, product_id, listing_id, channel, mode, safety_buffer,
-		    freshness_window_seconds, max_lead_time_days, override_quantity, allow_channel_increase,
-		    require_reservation, require_preflight)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-		 RETURNING `+supplierPolicyColumns,
+	var query string
+	switch p.Scope {
+	case model.PolicyScopeSupplier:
+		query = policyUpsertInsert + `(tenant_id, supplier_id) WHERE scope = 'supplier'` + policyUpsertUpdate + supplierPolicyColumns
+	case model.PolicyScopeProduct:
+		query = policyUpsertInsert + `(tenant_id, supplier_id, product_id) WHERE scope = 'product'` + policyUpsertUpdate + supplierPolicyColumns
+	case model.PolicyScopeListing:
+		query = policyUpsertInsert + `(tenant_id, listing_id) WHERE scope = 'listing'` + policyUpsertUpdate + supplierPolicyColumns
+	case model.PolicyScopeChannel:
+		query = policyUpsertInsert + `(tenant_id, channel) WHERE scope = 'channel'` + policyUpsertUpdate + supplierPolicyColumns
+	default:
+		return nil, fmt.Errorf("upsert supplier availability policy: unknown scope %q", p.Scope)
+	}
+	out, err := scanSupplierPolicy(tx.QueryRow(ctx, query,
 		p.TenantID, p.Scope, p.SupplierID, p.ProductID, p.ListingID, p.Channel, p.Mode, p.SafetyBuffer,
 		p.FreshnessWindowSecs, p.MaxLeadTimeDays, p.OverrideQuantity, p.AllowChannelIncrease,
 		p.RequireReservation, p.RequirePreflight))
