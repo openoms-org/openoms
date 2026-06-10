@@ -12,6 +12,7 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
 // OPE-418: fulfillment UNITS + STEPS + typed supplier blockers.
@@ -187,19 +188,29 @@ func (s *FulfillmentService) RecordStep(ctx context.Context, tenantID, unitID uu
 
 	var step *model.FulfillmentStep
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		steps, lerr := s.fulfillment.ListSteps(ctx, tx, unitID)
-		if lerr != nil {
-			return fmt.Errorf("list steps: %w", lerr)
-		}
-		for i := range steps {
-			if steps[i].StepKey == stepKey {
-				out, uerr := s.fulfillment.UpdateStepStatus(ctx, tx, steps[i].ID, status, steps[i].Attempts+1)
-				if uerr != nil {
-					return fmt.Errorf("update step: %w", uerr)
-				}
-				step = out
-				return nil
+		// updateExisting applies the upsert's update branch: find the (unit,
+		// step_key) row and bump its status + attempts. Returns false when the
+		// step does not exist yet (so the caller should insert).
+		updateExisting := func() (bool, error) {
+			steps, lerr := s.fulfillment.ListSteps(ctx, tx, unitID)
+			if lerr != nil {
+				return false, fmt.Errorf("list steps: %w", lerr)
 			}
+			for i := range steps {
+				if steps[i].StepKey == stepKey {
+					out, uerr := s.fulfillment.UpdateStepStatus(ctx, tx, steps[i].ID, status, steps[i].Attempts+1)
+					if uerr != nil {
+						return false, fmt.Errorf("update step: %w", uerr)
+					}
+					step = out
+					return true, nil
+				}
+			}
+			return false, nil
+		}
+
+		if updated, uerr := updateExisting(); uerr != nil || updated {
+			return uerr
 		}
 		out, cerr := s.fulfillment.CreateStep(ctx, tx, model.FulfillmentStep{
 			TenantID: tenantID,
@@ -209,6 +220,20 @@ func (s *FulfillmentService) RecordStep(ctx context.Context, tenantID, unitID uu
 			Attempts: 1,
 			Metadata: cloneMeta(metadata),
 		})
+		if errors.Is(cerr, repository.ErrFulfillmentStepConflict) {
+			// Lost the insert race (OPE-523): a concurrent recorder created the
+			// step between our read and our insert. The winning row is committed
+			// and visible now (READ COMMITTED), so re-read it and apply the update
+			// branch — this call still counts as an attempt on the winner.
+			updated, uerr := updateExisting()
+			if uerr != nil {
+				return uerr
+			}
+			if !updated {
+				return fmt.Errorf("create step: lost dedupe race but winning row not visible")
+			}
+			return nil
+		}
 		if cerr != nil {
 			return fmt.Errorf("create step: %w", cerr)
 		}

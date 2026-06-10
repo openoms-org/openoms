@@ -22,7 +22,8 @@ import {
   AggregateStatusBadge,
   HealthStatusBadge,
   StepStatusBadge,
-  blockerReasonKey,
+  blockerReasonLabel,
+  providerOpLabel,
 } from "@/components/fulfillment/fulfillment-status-badge";
 import {
   useFulfillmentProcess,
@@ -229,7 +230,7 @@ function DetailBody({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-medium">
-                      {t(blockerReasonKey(blocker.code))}
+                      {blockerReasonLabel(t, blocker.code)}
                     </p>
                     {blocker.description && (
                       <p className="mt-1 text-sm text-muted-foreground">
@@ -344,7 +345,7 @@ function DetailBody({
               >
                 <span className="min-w-0">
                   <span className="block text-sm font-medium">
-                    {t(`fulfillment.providerOp.${attempt.operation}`)}
+                    {providerOpLabel(t, attempt.operation)}
                   </span>
                   <span className="block text-xs text-muted-foreground">
                     {attempt.provider}

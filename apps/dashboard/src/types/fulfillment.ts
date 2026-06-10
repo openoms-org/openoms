@@ -62,7 +62,9 @@ export type ProviderAttemptOperation =
   | "create_shipment"
   | "generate_label"
   | "download_label"
-  | "sync_tracking";
+  | "sync_tracking"
+  | "sync_tracking_to_marketplace"
+  | "sync_fulfillment_status";
 export type ProviderAttemptStatus = "pending" | "succeeded" | "failed";
 
 // Operator control-tower buckets. A process lands in exactly one bucket.

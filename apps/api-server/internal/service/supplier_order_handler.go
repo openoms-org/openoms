@@ -21,8 +21,10 @@ const EventSupplierOrderSubmit = "supplier.order.submit"
 // dropshipOrderWriter is the narrow dropship-order repo surface the handler needs.
 type dropshipOrderWriter interface {
 	FindByOrderID(ctx context.Context, tx pgx.Tx, orderID uuid.UUID) ([]model.DropshipOrder, error)
+	FindByIDForUpdate(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.DropshipOrder, error)
 	Create(ctx context.Context, tx pgx.Tx, d *model.DropshipOrder) error
 	UpdateFields(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateDropshipStatusRequest) error
+	MarkSubmitAttempted(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 }
 
 // orderReader is the narrow order repo surface the handler needs.
@@ -31,8 +33,8 @@ type orderReader interface {
 }
 
 // supplierOrderItemsLoader resolves the dropship lines for an (order, supplier) into the
-// pure builder's input shape (each line's product EAN + supplier SKU + quantity). It runs
-// inside the handler's tenant tx.
+// pure builder's input shape (each line's product EAN + supplier catalogue id + quantity).
+// It runs inside the handler's tenant tx.
 type supplierOrderItemsLoader func(ctx context.Context, tx pgx.Tx, orderID, supplierID uuid.UUID) ([]SupplierOrderInputLine, []string, error)
 
 // supplierProviderFactory builds a SupplierProvider for a supplier inside the handler's
@@ -48,6 +50,13 @@ type supplierProviderFactory func(ctx context.Context, tx pgx.Tx, tenantID, supp
 // (order, supplier) -> skip submit. A phase that cannot proceed creates a typed blocker via
 // the fulfillment service and returns nil (the unit waits); a transport error returns a
 // plain error (retryable by the orchestration worker's backoff).
+//
+// OPE-517/OPE-518 two-phase submit: all supplier I/O (preflight + CreateOrder) happens
+// OUTSIDE any open database transaction. The dropship row is locked FOR UPDATE before the
+// idempotency check, and a submit-intent marker (submit_attempted_at) is committed before
+// CreateOrder. If recording the supplier reference fails after a successful CreateOrder,
+// the retry observes the marker and opens an operator blocker instead of placing a
+// duplicate purchase order at the wholesaler.
 type SupplierOrderHandler struct {
 	pool         *pgxpool.Pool
 	fulfillment  *FulfillmentService
@@ -76,6 +85,15 @@ func NewSupplierOrderHandler(
 	}
 }
 
+// supplierSubmitPrep carries the result of the prepare phase (TX1) into the supplier I/O
+// phases that run outside any open transaction.
+type supplierSubmitPrep struct {
+	existingID uuid.UUID // pending dropship_orders row to update; uuid.Nil -> defensive create
+	req        integration.SupplierOrderRequest
+	provider   integration.SupplierProvider
+	currency   string
+}
+
 // Handle runs the three synchronous phases. The payload is {order_id, supplier_id, unit_id}.
 func (h *SupplierOrderHandler) Handle(ctx context.Context, event model.OrchestrationOutboxEvent) error {
 	p, ok := event.Payload.(map[string]any)
@@ -96,7 +114,101 @@ func (h *SupplierOrderHandler) Handle(ctx context.Context, event model.Orchestra
 	}
 	tenantID := event.TenantID
 
-	return database.WithTenant(ctx, h.pool, tenantID, func(tx pgx.Tx) error {
+	// PREPARE (TX1): lock + idempotency/marker gate + request assembly. No supplier I/O.
+	prep, err := h.prepare(ctx, tenantID, orderID, supplierID, unitID)
+	if err != nil {
+		return err // retryable
+	}
+	if prep == nil {
+		return nil // handled in TX1: idempotent no-op, or a typed blocker was opened
+	}
+
+	// PREFLIGHT (optional capability) — supplier I/O, outside any open transaction.
+	h.fulfillment.RecordStep(ctx, tenantID, unitID, model.StepPreflightSupplierOrder, model.FulfillmentStatusRunning, nil)
+	if pf, isPreflighter := prep.provider.(integration.SupplierPreflighter); isPreflighter {
+		res, pferr := pf.Preflight(ctx, prep.req)
+		if pferr != nil {
+			return fmt.Errorf("supplier preflight: %w", pferr) // retryable transport
+		}
+		if !res.Accepted {
+			code := model.BlockerSupplierOrderRejected
+			desc := "supplier preflight rejected"
+			if len(res.MissingFields) > 0 {
+				code = model.BlockerSupplierOrderMissingData
+				desc = fmt.Sprintf("supplier preflight: missing fields %v", res.MissingFields)
+			}
+			h.blocker(ctx, tenantID, orderID, unitID, code, desc)
+			return nil
+		}
+		if res.PaymentDue {
+			h.blocker(ctx, tenantID, orderID, unitID, model.BlockerSupplierPaymentAwaiting, "supplier order awaiting payment")
+			return nil
+		}
+		if len(res.SplitLines) > 0 {
+			h.blocker(ctx, tenantID, orderID, unitID, model.BlockerSupplierPartialFulfillment, "supplier split requires operator review")
+			return nil
+		}
+	}
+	h.fulfillment.RecordStep(ctx, tenantID, unitID, model.StepPreflightSupplierOrder, model.FulfillmentStatusSucceeded, nil)
+
+	// SUBMIT — two-phase. First commit the submit-intent marker, then call the supplier.
+	h.fulfillment.RecordStep(ctx, tenantID, unitID, model.StepCreateDropshipOrder, model.FulfillmentStatusRunning, nil)
+	dsID, proceed, err := h.markSubmitIntent(ctx, tenantID, orderID, supplierID, unitID, prep)
+	if err != nil {
+		return err // retryable; no marker was committed
+	}
+	if !proceed {
+		return nil // concurrent outcome observed: no-op, or a blocker was opened
+	}
+
+	// The supplier call runs with NO open transaction. ClientOrderNumber (the customer
+	// order id) keeps flowing to the adapter — it is the supplier-side idempotency token.
+	result, serr := prep.provider.CreateOrder(ctx, prep.req)
+	if serr != nil {
+		// A business rejection is permanent; transport is retryable. The adapter should
+		// wrap business errors as model.Permanent; otherwise treat as retryable. Note the
+		// marker stays set: a retry after an AMBIGUOUS transport failure (the order may
+		// have been placed) opens an operator blocker instead of resubmitting blindly.
+		if model.IsPermanent(serr) {
+			h.blocker(ctx, tenantID, orderID, unitID, model.BlockerSupplierOrderRejected, serr.Error())
+			return nil
+		}
+		return fmt.Errorf("supplier create order: %w", serr) // retryable -> marker branch next time
+	}
+
+	// RECORD (TX2): persist the supplier order id onto the marked row. The UPDATE takes the
+	// row lock; the marker is KEPT as historical evidence. If this fails after a successful
+	// CreateOrder, the retry hits the marker branch -> operator blocker, never a duplicate.
+	ref := result.ExternalOrderID
+	if result.OrderNumber != "" {
+		ref = result.OrderNumber
+	}
+	if rerr := database.WithTenant(ctx, h.pool, tenantID, func(tx pgx.Tx) error {
+		if uerr := h.dropshipRepo.UpdateFields(ctx, tx, dsID, model.UpdateDropshipStatusRequest{
+			Status:            "sent",
+			SupplierReference: &ref,
+		}); uerr != nil {
+			return fmt.Errorf("update dropship order with supplier reference: %w", uerr)
+		}
+		return nil
+	}); rerr != nil {
+		return fmt.Errorf("record supplier order submission: %w", rerr) // retryable -> marker branch
+	}
+	h.fulfillment.RecordStep(ctx, tenantID, unitID, model.StepCreateDropshipOrder, model.FulfillmentStatusSucceeded,
+		map[string]any{"supplier_reference": ref})
+	h.fulfillment.RecordUnitTransition(ctx, tenantID, unitID, model.FulfillmentStatusWaitingExternal)
+	h.fulfillment.AggregateMixedOrder(ctx, tenantID, orderID)
+	return nil
+}
+
+// prepare runs TX1: it locks the (order, supplier) pending dropship row FOR UPDATE, applies
+// the idempotency guard (supplier_reference set -> no-op) and the submit-intent marker gate
+// (marker set + reference NULL -> operator blocker, never an automatic resubmit), then
+// assembles the supplier order request and provider. It returns nil prep with nil error when
+// the event was fully handled in TX1 (no-op or blocker).
+func (h *SupplierOrderHandler) prepare(ctx context.Context, tenantID, orderID, supplierID, unitID uuid.UUID) (*supplierSubmitPrep, error) {
+	var prep *supplierSubmitPrep
+	err := database.WithTenant(ctx, h.pool, tenantID, func(tx pgx.Tx) error {
 		// Idempotency: already submitted? (a dropship_orders row with a supplier_reference).
 		// Also capture the existing pending row for this (order, supplier) — the dropship gate
 		// creates it before enqueuing the submit, so success UPDATES it rather than inserting a
@@ -114,6 +226,27 @@ func (h *SupplierOrderHandler) Handle(ctx context.Context, event model.Orchestra
 				return nil // already placed — idempotent no-op
 			}
 			existingID = existing[i].ID // pending row to update on success
+		}
+		// OPE-518: lock the pending row FOR UPDATE before trusting supplier_reference, so a
+		// concurrent submitter (manual pending→sent transition) serializes against this tx
+		// and the re-read below observes its committed outcome.
+		if existingID != uuid.Nil {
+			locked, lkerr := h.dropshipRepo.FindByIDForUpdate(ctx, tx, existingID)
+			if lkerr != nil {
+				return fmt.Errorf("lock dropship order: %w", lkerr) // retryable
+			}
+			switch {
+			case locked == nil:
+				existingID = uuid.Nil // row vanished concurrently — fall back to defensive create
+			case locked.SupplierReference != nil && strings.TrimSpace(*locked.SupplierReference) != "":
+				return nil // placed by a concurrent submitter — idempotent no-op
+			case locked.SubmitAttemptedAt != nil:
+				// OPE-517: a previous attempt committed the submit intent but never recorded a
+				// reference — the order MAY exist at the supplier. Never resubmit blindly.
+				h.blocker(ctx, tenantID, orderID, unitID, model.BlockerSupplierManualSubmissionRequired,
+					fmt.Sprintf("possible duplicate submission — verify order %s at the supplier before retrying", orderID))
+				return nil
+			}
 		}
 
 		// PREPARE
@@ -153,62 +286,69 @@ func (h *SupplierOrderHandler) Handle(ctx context.Context, event model.Orchestra
 			h.blocker(ctx, tenantID, orderID, unitID, model.BlockerSupplierOrderRejected, "no supplier order provider available")
 			return nil
 		}
-
-		// PREFLIGHT (optional capability)
-		h.fulfillment.RecordStep(ctx, tenantID, unitID, model.StepPreflightSupplierOrder, model.FulfillmentStatusRunning, nil)
-		if pf, isPreflighter := provider.(integration.SupplierPreflighter); isPreflighter {
-			res, pferr := pf.Preflight(ctx, req)
-			if pferr != nil {
-				return fmt.Errorf("supplier preflight: %w", pferr) // retryable transport
-			}
-			if !res.Accepted {
-				code := model.BlockerSupplierOrderRejected
-				desc := "supplier preflight rejected"
-				if len(res.MissingFields) > 0 {
-					code = model.BlockerSupplierOrderMissingData
-					desc = fmt.Sprintf("supplier preflight: missing fields %v", res.MissingFields)
-				}
-				h.blocker(ctx, tenantID, orderID, unitID, code, desc)
-				return nil
-			}
-			if res.PaymentDue {
-				h.blocker(ctx, tenantID, orderID, unitID, model.BlockerSupplierPaymentAwaiting, "supplier order awaiting payment")
-				return nil
-			}
-			if len(res.SplitLines) > 0 {
-				h.blocker(ctx, tenantID, orderID, unitID, model.BlockerSupplierPartialFulfillment, "supplier split requires operator review")
-				return nil
-			}
-		}
-		h.fulfillment.RecordStep(ctx, tenantID, unitID, model.StepPreflightSupplierOrder, model.FulfillmentStatusSucceeded, nil)
-
-		// SUBMIT
-		h.fulfillment.RecordStep(ctx, tenantID, unitID, model.StepCreateDropshipOrder, model.FulfillmentStatusRunning, nil)
-		result, serr := provider.CreateOrder(ctx, req)
-		if serr != nil {
-			// A business rejection is permanent; transport is retryable. The adapter should
-			// wrap business errors as model.Permanent; otherwise treat as retryable.
-			if model.IsPermanent(serr) {
-				h.blocker(ctx, tenantID, orderID, unitID, model.BlockerSupplierOrderRejected, serr.Error())
-				return nil
-			}
-			return fmt.Errorf("supplier create order: %w", serr) // retryable
-		}
-		// Persist the supplier order id: update the gate's pending dropship_orders row when one
-		// exists, otherwise create one (defensive). Either way exactly one row carries the ref.
-		if e := h.recordSubmitted(ctx, tx, tenantID, orderID, supplierID, existingID, ord.Currency, result); e != nil {
-			return e
-		}
-		ref := result.ExternalOrderID
-		if result.OrderNumber != "" {
-			ref = result.OrderNumber
-		}
-		h.fulfillment.RecordStep(ctx, tenantID, unitID, model.StepCreateDropshipOrder, model.FulfillmentStatusSucceeded,
-			map[string]any{"supplier_reference": ref})
-		h.fulfillment.RecordUnitTransition(ctx, tenantID, unitID, model.FulfillmentStatusWaitingExternal)
-		h.fulfillment.AggregateMixedOrder(ctx, tenantID, orderID)
+		prep = &supplierSubmitPrep{existingID: existingID, req: req, provider: provider, currency: ord.Currency}
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
+	return prep, nil
+}
+
+// markSubmitIntent commits the submit-intent marker in its own short transaction, re-checking
+// the locked row first: a reference set concurrently -> no-op (proceed=false), a marker set
+// concurrently -> operator blocker (proceed=false). When no pending row exists it creates one
+// (defensive) carrying the marker, so a retry can never resubmit blindly. It returns the
+// dropship row id to record the supplier reference onto.
+func (h *SupplierOrderHandler) markSubmitIntent(ctx context.Context, tenantID, orderID, supplierID, unitID uuid.UUID, prep *supplierSubmitPrep) (uuid.UUID, bool, error) {
+	dsID := prep.existingID
+	proceed := true
+	err := database.WithTenant(ctx, h.pool, tenantID, func(tx pgx.Tx) error {
+		if dsID != uuid.Nil {
+			locked, lerr := h.dropshipRepo.FindByIDForUpdate(ctx, tx, dsID)
+			if lerr != nil {
+				return fmt.Errorf("lock dropship order for submit intent: %w", lerr) // retryable
+			}
+			if locked != nil {
+				if locked.SupplierReference != nil && strings.TrimSpace(*locked.SupplierReference) != "" {
+					proceed = false // placed by a concurrent submitter — idempotent no-op
+					return nil
+				}
+				if locked.SubmitAttemptedAt != nil {
+					h.blocker(ctx, tenantID, orderID, unitID, model.BlockerSupplierManualSubmissionRequired,
+						fmt.Sprintf("possible duplicate submission — verify order %s at the supplier before retrying", orderID))
+					proceed = false
+					return nil
+				}
+				return h.dropshipRepo.MarkSubmitAttempted(ctx, tx, dsID)
+			}
+			dsID = uuid.Nil // row vanished — defensive create below
+		}
+		currency := prep.currency
+		if currency == "" {
+			currency = "PLN"
+		}
+		d := &model.DropshipOrder{
+			ID:         uuid.New(),
+			TenantID:   tenantID,
+			OrderID:    orderID,
+			SupplierID: supplierID,
+			Status:     "pending",
+			Currency:   currency,
+		}
+		if cerr := h.dropshipRepo.Create(ctx, tx, d); cerr != nil {
+			return fmt.Errorf("create dropship order for submit intent: %w", cerr)
+		}
+		if merr := h.dropshipRepo.MarkSubmitAttempted(ctx, tx, d.ID); merr != nil {
+			return merr
+		}
+		dsID = d.ID
+		return nil
+	})
+	if err != nil {
+		return uuid.Nil, false, err
+	}
+	return dsID, proceed, nil
 }
 
 // blocker records the blocked step + unit transition + a typed supplier blocker (best-effort).
@@ -219,43 +359,6 @@ func (h *SupplierOrderHandler) blocker(ctx context.Context, tenantID, orderID, u
 	h.fulfillment.RecordUnitTransition(ctx, tenantID, unitID, model.FulfillmentStatusBlocked)
 	h.fulfillment.CreateSupplierBlocker(ctx, tenantID, orderID, &unitID, code, desc)
 	h.fulfillment.AggregateMixedOrder(ctx, tenantID, orderID)
-}
-
-// recordSubmitted persists the supplier order id (external order id, or the supplier's order
-// number when present) onto the dropship_orders row: it updates the gate's pending row when
-// existingID is set, otherwise creates a new one (defensive — the gate normally pre-creates
-// it). Runs inside the handler's tx so the supplier_reference write commits with the
-// idempotency guard's read, guaranteeing exactly one row carries the reference.
-func (h *SupplierOrderHandler) recordSubmitted(ctx context.Context, tx pgx.Tx, tenantID, orderID, supplierID, existingID uuid.UUID, currency string, result *integration.SupplierOrderResult) error {
-	ref := result.ExternalOrderID
-	if result.OrderNumber != "" {
-		ref = result.OrderNumber
-	}
-	if currency == "" {
-		currency = "PLN"
-	}
-	if existingID != uuid.Nil {
-		if err := h.dropshipRepo.UpdateFields(ctx, tx, existingID, model.UpdateDropshipStatusRequest{
-			Status:            "sent",
-			SupplierReference: &ref,
-		}); err != nil {
-			return fmt.Errorf("update dropship order with supplier reference: %w", err)
-		}
-		return nil
-	}
-	d := &model.DropshipOrder{
-		ID:                uuid.New(),
-		TenantID:          tenantID,
-		OrderID:           orderID,
-		SupplierID:        supplierID,
-		Status:            "sent",
-		SupplierReference: &ref,
-		Currency:          currency,
-	}
-	if err := h.dropshipRepo.Create(ctx, tx, d); err != nil {
-		return fmt.Errorf("record dropship order: %w", err)
-	}
-	return nil
 }
 
 // Compile-time assertion that the handler satisfies OrchestrationHandler.
