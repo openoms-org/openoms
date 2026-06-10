@@ -2,13 +2,61 @@ package automation
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
+
+// --- fakes for the OPE-421 orchestration-routed set_status path ---
+
+type fakeTransitioner struct {
+	calls int
+}
+
+func (f *fakeTransitioner) TransitionStatus(_ context.Context, _, _ uuid.UUID, _ model.StatusTransitionRequest, _ uuid.UUID, _ string) (*model.Order, error) {
+	f.calls++
+	return &model.Order{}, nil
+}
+
+type fakeProcessEnsurer struct {
+	getCalls    int
+	createCalls int
+	existing    *model.FulfillmentProcess // returned by GetProcessByOrder when non-nil
+}
+
+func (f *fakeProcessEnsurer) GetProcessByOrder(_ context.Context, _ pgx.Tx, _ uuid.UUID) (*model.FulfillmentProcess, error) {
+	f.getCalls++
+	if f.existing != nil {
+		return f.existing, nil
+	}
+	return nil, pgx.ErrNoRows
+}
+
+func (f *fakeProcessEnsurer) CreateProcess(_ context.Context, _ pgx.Tx, p model.FulfillmentProcess) (*model.FulfillmentProcess, error) {
+	f.createCalls++
+	p.ID = uuid.New()
+	return &p, nil
+}
+
+type fakeEnqueuer struct {
+	calls  int
+	events []model.OrchestrationOutboxEvent
+}
+
+func (f *fakeEnqueuer) EnqueueEvent(_ context.Context, _ repository.Querier, e model.OrchestrationOutboxEvent) (bool, *model.OrchestrationOutboxEvent, error) {
+	f.calls++
+	f.events = append(f.events, e)
+	return true, &e, nil
+}
 
 func TestDefaultActionExecutor_ActivateListing_NilDeps(t *testing.T) {
 	executor := NewDefaultActionExecutor(slog.Default())
@@ -229,4 +277,119 @@ func TestSubstituteVariables(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+// TestSetStatusIdempotencyKey verifies the stable (rule, order, target) dedup key.
+func TestSetStatusIdempotencyKey(t *testing.T) {
+	ruleID := uuid.MustParse("11111111-1111-1111-1111-111111111111")
+	orderID := uuid.MustParse("22222222-2222-2222-2222-222222222222")
+	key := setStatusIdempotencyKey(ruleID, orderID, "confirmed")
+	assert.Equal(t, "automation.set_status:"+ruleID.String()+":"+orderID.String()+":confirmed", key)
+	// Same (rule, order, target) -> identical key (dedup); different target -> different key.
+	assert.Equal(t, key, setStatusIdempotencyKey(ruleID, orderID, "confirmed"))
+	assert.NotEqual(t, key, setStatusIdempotencyKey(ruleID, orderID, "shipped"))
+}
+
+// TestExecuteSetStatus_OrchestrationDisabled_UsesDirectPath verifies the default
+// (flag off): set_status calls TransitionStatus directly and never enqueues.
+func TestExecuteSetStatus_OrchestrationDisabled_UsesDirectPath(t *testing.T) {
+	tr := &fakeTransitioner{}
+	enq := &fakeEnqueuer{}
+	ens := &fakeProcessEnsurer{}
+	executor := NewDefaultActionExecutor(slog.Default())
+	executor.SetOrderServices(tr, nil, nil, &pgxpool.Pool{})
+	// Routing explicitly disabled (matching the zero value).
+	executor.SetOrchestration(false, enq, ens)
+
+	err := executor.ExecuteAction(context.Background(), uuid.New(), Action{
+		Type:   "set_status",
+		Params: map[string]any{"status": "confirmed"},
+	}, Event{EntityType: "order", EntityID: uuid.New()})
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, tr.calls, "disabled path calls TransitionStatus directly")
+	assert.Equal(t, 0, enq.calls, "disabled path never enqueues")
+	assert.Equal(t, 0, ens.getCalls, "disabled path does no fulfillment-process work")
+}
+
+// TestExecuteSetStatus_OrchestrationEnabled_Enqueues exercises the tx-bound
+// orchestration path directly (with fakes, no DB): it ensures a process and
+// enqueues exactly one automation.set_status event with the right type/key/payload,
+// and the transitioner is NOT invoked.
+func TestExecuteSetStatus_OrchestrationEnabled_Enqueues(t *testing.T) {
+	tr := &fakeTransitioner{}
+	enq := &fakeEnqueuer{}
+	ens := &fakeProcessEnsurer{} // empty -> GetProcessByOrder returns ErrNoRows -> CreateProcess
+	executor := NewDefaultActionExecutor(slog.Default())
+	executor.SetOrderServices(tr, nil, nil, &pgxpool.Pool{})
+	executor.SetOrchestration(true, enq, ens)
+
+	ruleID := uuid.New()
+	orderID := uuid.New()
+	tenantID := uuid.New()
+	payload := map[string]any{
+		"order_id":      orderID.String(),
+		"target_status": "confirmed",
+		"rule_id":       ruleID.String(),
+		"action_index":  0,
+	}
+	idemKey := setStatusIdempotencyKey(ruleID, orderID, "confirmed")
+
+	// Call the tx-bound helper directly (the WithTenant wrapper needs a real pool).
+	err := executor.ensureProcessAndEnqueueSetStatus(context.Background(), nil, tenantID, orderID, idemKey, payload)
+	require.NoError(t, err)
+
+	assert.Equal(t, 0, tr.calls, "orchestration path must NOT call TransitionStatus")
+	assert.Equal(t, 1, ens.getCalls, "looks up the process once")
+	assert.Equal(t, 1, ens.createCalls, "creates the process when none exists")
+	require.Len(t, enq.events, 1, "enqueues exactly one event")
+	ev := enq.events[0]
+	assert.Equal(t, EventAutomationSetStatus, ev.EventType)
+	assert.Equal(t, idemKey, ev.IdempotencyKey)
+	assert.Equal(t, tenantID, ev.TenantID)
+	assert.NotEqual(t, uuid.Nil, ev.ProcessID, "event is anchored to a process")
+}
+
+// TestExecuteSetStatus_OrchestrationEnabled_ReusesExistingProcess verifies the
+// ensure-process step is idempotent: an existing process is reused, not recreated.
+func TestExecuteSetStatus_OrchestrationEnabled_ReusesExistingProcess(t *testing.T) {
+	enq := &fakeEnqueuer{}
+	existing := &model.FulfillmentProcess{ID: uuid.New()}
+	ens := &fakeProcessEnsurer{existing: existing}
+	executor := NewDefaultActionExecutor(slog.Default())
+	executor.SetOrderServices(&fakeTransitioner{}, nil, nil, &pgxpool.Pool{})
+	executor.SetOrchestration(true, enq, ens)
+
+	err := executor.ensureProcessAndEnqueueSetStatus(context.Background(), nil, uuid.New(), uuid.New(), "k", map[string]any{})
+	require.NoError(t, err)
+	assert.Equal(t, 1, ens.getCalls)
+	assert.Equal(t, 0, ens.createCalls, "existing process is reused, not recreated")
+	require.Len(t, enq.events, 1)
+	assert.Equal(t, existing.ID, enq.events[0].ProcessID)
+}
+
+// TestExecuteSetStatus_OrchestrationEnabled_LookupErrorPropagates verifies a
+// non-ErrNoRows lookup failure surfaces to the caller (engine logs it) rather than
+// being swallowed.
+func TestExecuteSetStatus_OrchestrationEnabled_LookupErrorPropagates(t *testing.T) {
+	enq := &fakeEnqueuer{}
+	ens := &errLookupEnsurer{err: errors.New("boom")}
+	executor := NewDefaultActionExecutor(slog.Default())
+	executor.SetOrderServices(&fakeTransitioner{}, nil, nil, &pgxpool.Pool{})
+	executor.SetOrchestration(true, enq, ens)
+
+	err := executor.ensureProcessAndEnqueueSetStatus(context.Background(), nil, uuid.New(), uuid.New(), "k", map[string]any{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "lookup fulfillment process")
+	assert.Equal(t, 0, enq.calls, "no event enqueued when the process lookup fails")
+}
+
+type errLookupEnsurer struct{ err error }
+
+func (e *errLookupEnsurer) GetProcessByOrder(_ context.Context, _ pgx.Tx, _ uuid.UUID) (*model.FulfillmentProcess, error) {
+	return nil, e.err
+}
+
+func (e *errLookupEnsurer) CreateProcess(_ context.Context, _ pgx.Tx, p model.FulfillmentProcess) (*model.FulfillmentProcess, error) {
+	return &p, nil
 }

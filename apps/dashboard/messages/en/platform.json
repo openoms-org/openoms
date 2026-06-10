@@ -1,0 +1,483 @@
+{
+  "platform": {
+    "retry": "Retry",
+    "loadError": "Failed to load data. Please try again.",
+    "saveError": "Failed to save. Please try again.",
+    "saving": "Saving…",
+    "accessRequired": {
+      "title": "Platform administration access required",
+      "description": "This section is available only to platform administrators. Your account does not have platform permissions."
+    },
+    "registry": {
+      "title": "Provider Integration Studio",
+      "description": "Browse provider definitions and inspect their published versions.",
+      "emptyTitle": "No provider definitions",
+      "emptyDescription": "No provider definitions have been registered yet.",
+      "columns": {
+        "key": "Key",
+        "name": "Name",
+        "type": "Type",
+        "latestState": "Latest published state"
+      }
+    },
+    "detail": {
+      "backToRegistry": "Back to registry",
+      "metadataTitle": "Overview",
+      "versionsTitle": "Versions",
+      "versionsEmpty": "No versions have been created for this provider.",
+      "noPublishedVersion": "No published version",
+      "notFoundTitle": "Provider not found",
+      "notFoundDescription": "The requested provider definition could not be found.",
+      "fields": {
+        "providerKey": "Provider key",
+        "providerType": "Type",
+        "owner": "Owner",
+        "regions": "Regions",
+        "businessDomains": "Business domains",
+        "notes": "Notes",
+        "createdAt": "Created",
+        "updatedAt": "Updated"
+      },
+      "versionsColumns": {
+        "version": "Version",
+        "state": "State",
+        "changelog": "Changelog",
+        "createdAt": "Created"
+      }
+    },
+    "publicationState": {
+      "research": "Research",
+      "designed": "Designed",
+      "adapter_in_progress": "Adapter in progress",
+      "internal_validation": "Internal validation",
+      "private_beta": "Private beta",
+      "available": "Available",
+      "deprecated": "Deprecated",
+      "retired": "Retired"
+    },
+    "versionConfig": {
+      "title": "Version configuration",
+      "description": "Edit the credential schema, capabilities, and status mappings for a version. Published versions are read-only.",
+      "noVersionsTitle": "No versions yet",
+      "noVersionsDescription": "Create a draft version to configure its schema, capabilities, and status mappings.",
+      "tabs": {
+        "schema": "Credential schema",
+        "capabilities": "Capabilities",
+        "statusMappings": "Status mappings",
+        "validation": "Validation",
+        "publication": "Publication review",
+        "tenantVisibility": "Tenant visibility"
+      }
+    },
+    "schemaBuilder": {
+      "fieldsTitle": "Fields",
+      "fieldsDescription": "Structured credential and settings fields, grouped by purpose.",
+      "editorTitle": "Field properties",
+      "selectField": "Select a field to edit its properties.",
+      "addField": "Add field",
+      "removeField": "Remove field",
+      "noFields": "No fields in this group.",
+      "unnamedKey": "(no key)",
+      "hasError": "Error",
+      "readOnlyNotice": "This version is published and read-only. Create a new draft version to make changes.",
+      "fixErrors": "Fix the highlighted errors before saving.",
+      "save": "Save schema",
+      "saved": "Schema saved.",
+      "errorCount": "{count, plural, one {# blocking error} other {# blocking errors}}",
+      "group": {
+        "secret_credentials": "Secret credentials",
+        "settings": "Settings",
+        "environment": "Environment",
+        "sync": "Sync",
+        "feature_toggles": "Feature toggles",
+        "provider_options": "Provider options"
+      },
+      "field": {
+        "label": "Label",
+        "key": "Key",
+        "keyHint": "Generated from the label; editable before publication.",
+        "type": "Type",
+        "environment": "Environment",
+        "required": "Required",
+        "secret": "Secret",
+        "secretWarning": "This field name looks sensitive. Enable Secret so its value is encrypted and never previewed.",
+        "enumValues": "Allowed values",
+        "enumPlaceholder": "value_a, value_b, value_c",
+        "min": "Min",
+        "max": "Max",
+        "minLength": "Min length",
+        "maxLength": "Max length",
+        "regex": "Pattern (regex)",
+        "helpText": "Tenant help text",
+        "capabilityEnabled": "Enables capability",
+        "capabilityPlaceholder": "supplier.order.create",
+        "testConnectionDependency": "Required for test connection"
+      },
+      "fieldType": {
+        "string": "Text",
+        "password": "Password",
+        "number": "Number",
+        "boolean": "Boolean",
+        "enum": "Select",
+        "url": "URL",
+        "textarea": "Long text"
+      },
+      "envScope": {
+        "": "Any environment",
+        "all": "Any environment",
+        "production": "Production only",
+        "sandbox": "Sandbox only"
+      },
+      "validation": {
+        "keyRequired": "Key is required.",
+        "keyDuplicate": "Key must be unique across the schema.",
+        "labelRequired": "Label is required.",
+        "enumValuesRequired": "Select fields must declare at least one allowed value.",
+        "regexInvalid": "Pattern is not a valid regular expression.",
+        "minGreaterThanMax": "Min must not be greater than Max.",
+        "minLengthGreaterThanMaxLength": "Min length must not be greater than Max length.",
+        "secretRecommended": "This field looks sensitive — consider enabling Secret."
+      },
+      "preview": {
+        "title": "Tenant setup preview",
+        "description": "How tenants will see this setup form. Secret fields never preview a raw value.",
+        "environment": "Environment",
+        "empty": "Add complete fields to preview the tenant setup form.",
+        "secret": "Secret",
+        "visible": "Visible"
+      }
+    },
+    "capabilityMatrix": {
+      "title": "Capability matrix",
+      "description": "Each capability has a support state, channel, mode, freshness, and evidence.",
+      "readOnlyNotice": "This version is published and read-only. Create a new draft version to make changes.",
+      "addRow": "Add capability",
+      "removeRow": "Remove capability",
+      "filterAll": "All states",
+      "empty": "No capabilities declared for this version.",
+      "unnamed": "(no key)",
+      "keyRequired": "Every capability needs a key before saving.",
+      "save": "Save capabilities",
+      "saved": "Capabilities saved.",
+      "evidenceRequired": "Evidence required",
+      "evidenceRequiredHint": "This support state requires recorded evidence.",
+      "noEvidence": "No evidence",
+      "openEvidence": "Open evidence",
+      "probeReferenced": "Probe referenced",
+      "probeNone": "No probe reference",
+      "visibilityShown": "Shown to customers",
+      "visibilityHidden": "Hidden from customers",
+      "domain": {
+        "supplier": "Supplier",
+        "marketplace": "Marketplace",
+        "carrier": "Carrier",
+        "shop": "Shop",
+        "invoicing": "Invoicing",
+        "edi": "EDI",
+        "order": "Order",
+        "other": "Other"
+      },
+      "fields": {
+        "capabilityKey": "Capability",
+        "supportState": "Support state",
+        "channel": "Channel",
+        "mode": "Mode",
+        "freshness": "Freshness",
+        "latencySla": "Latency SLA (s)",
+        "requiredInputs": "Required inputs",
+        "providedOutputs": "Provided outputs",
+        "evidence": "Evidence",
+        "evidencePlaceholder": "Evidence link or reference",
+        "validationProbe": "Validation probe",
+        "validationProbeHint": "Derived from evidence — references a validation probe or run.",
+        "customerVisibility": "Customer visibility",
+        "customerVisibilityHint": "Derived from support state — unknown and unsupported stay hidden."
+      },
+      "supportStatus": {
+        "supported": "Supported",
+        "configured": "Configured",
+        "unsupported": "Not supported",
+        "requires_manual": "Manual",
+        "degraded": "Degraded",
+        "unknown": "Unknown"
+      },
+      "supportStatusHint": {
+        "supported": "Verified and automatable.",
+        "configured": "Configured and working for this provider.",
+        "unsupported": "The provider does not offer this capability.",
+        "requires_manual": "Works through a controlled manual process.",
+        "degraded": "Works in a limited or degraded way.",
+        "unknown": "No evidence yet — blocks publication if the capability is required."
+      }
+    },
+    "statusMapping": {
+      "title": "Status mappings",
+      "description": "Map raw provider statuses to canonical statuses. Unknown statuses become gaps, never silent successes.",
+      "readOnlyNotice": "This version is published and read-only. Create a new draft version to make changes.",
+      "addRow": "Add mapping",
+      "removeRow": "Remove mapping",
+      "empty": "No mappings for this level yet.",
+      "rawRequired": "Every mapping needs a raw status before saving.",
+      "save": "Save mappings",
+      "saved": "Mappings saved.",
+      "blocksAutomation": "Blocks automation",
+      "warningCount": "{count, plural, one {# blocking warning} other {# blocking warnings}}",
+      "domainNotSupported": "This level is not configurable yet. Order, line, and shipment levels are supported today.",
+      "domain": {
+        "order": "Order",
+        "line": "Order line",
+        "shipment": "Shipment",
+        "package": "Package",
+        "invoice": "Invoice",
+        "return": "Return"
+      },
+      "confidence": {
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low"
+      },
+      "fields": {
+        "rawStatus": "Raw status",
+        "notes": "Notes",
+        "notesPlaceholder": "Raw source / sample payload reference",
+        "canonicalStatus": "Canonical status",
+        "canonicalPlaceholder": "e.g. shipped",
+        "confidence": "Confidence",
+        "eventType": "Event type",
+        "stepKey": "Step key",
+        "terminal": "Terminal status"
+      },
+      "warning": {
+        "terminalLowConfidence": "Terminal status with confidence below high — confirm before allowing automatic transitions.",
+        "shipmentOverwritesOrder": "A shipment status must not overwrite a commercial order status.",
+        "unknownNeedsGap": "Unknown status must be filed as a gap, not mapped to a successful status."
+      },
+      "gaps": {
+        "title": "{count, plural, one {# open gap} other {# open gaps}}",
+        "none": "No open integration gaps.",
+        "noDescription": "(no description)",
+        "acknowledge": "Acknowledge",
+        "resolve": "Resolve",
+        "resolved": "Gap resolved.",
+        "severity": {
+          "info": "Info",
+          "warning": "Warning",
+          "action_required": "Action required",
+          "system_error": "System error"
+        },
+        "status": {
+          "open": "Open",
+          "acknowledged": "Acknowledged",
+          "resolved": "Resolved"
+        },
+        "type": {
+          "missing_source_docs": "Missing source docs",
+          "missing_credential_field": "Missing credential field",
+          "missing_status_mapping": "Missing status mapping",
+          "unsupported_capability": "Unsupported capability",
+          "stale_data_risk": "Stale data risk",
+          "missing_tracking": "Missing tracking",
+          "missing_order_preflight": "Missing order preflight",
+          "ambiguous_product_identity": "Ambiguous product identity",
+          "auth_failure": "Auth failure",
+          "provider_business_error": "Provider business error",
+          "parser_failure": "Parser failure",
+          "manual_fallback_required": "Manual fallback required"
+        }
+      }
+    },
+    "validationLab": {
+      "probesTitle": "Validation probes",
+      "probesDescription": "Probes declared for this version, grouped by safety class.",
+      "loadingProbes": "Loading probes…",
+      "noProbesTitle": "No probes declared",
+      "noProbesDescription": "Declare validation probes for this version to run repeatable checks.",
+      "runTitle": "Run validation",
+      "runDescription": "Open an immutable validation run for an environment.",
+      "environment": "Environment",
+      "startRun": "Start validation run",
+      "runStarted": "Validation run started.",
+      "safetyNote": "Probe execution is recorded as an immutable run. Production writes and destructive probes are gated.",
+      "productionPermissionRequired": "Production runs require the providers:secrets permission.",
+      "allowDestructive": "Allow destructive probes",
+      "allowDestructiveHint": "Destructive probes cancel or delete provider state and are never part of the default suite.",
+      "destructiveConfirmTitle": "Run destructive probes?",
+      "destructiveConfirmDescription": "This run is allowed to execute destructive probes that cancel or delete provider state. This cannot be undone.",
+      "destructiveConfirmAction": "Run with destructive probes",
+      "probeRequired": "Required",
+      "runsTitle": "Validation runs",
+      "runsDescription": "Immutable validation history with per-probe results and evidence.",
+      "loadingRuns": "Loading runs…",
+      "noRunsTitle": "No validation runs yet",
+      "noRunsDescription": "Start a validation run to record results and evidence.",
+      "loadingResults": "Loading results…",
+      "selectRun": "Select a run to see its results.",
+      "noResults": "No results recorded for this run yet.",
+      "openEvidence": "View evidence",
+      "finishedAt": "Finished {time}",
+      "runInProgress": "In progress",
+      "safety": {
+        "read_only": "Read only",
+        "sandbox_write": "Sandbox write",
+        "production_write": "Production write",
+        "destructive": "Destructive"
+      },
+      "safetyHint": {
+        "read_only": "Does not mutate provider state.",
+        "sandbox_write": "Mutates the sandbox/test environment.",
+        "production_write": "Mutates production state — opt-in and permission-gated.",
+        "destructive": "Cancels or deletes irreversibly — separate danger flow."
+      },
+      "env": {
+        "sandbox": "Sandbox",
+        "production": "Production"
+      },
+      "verdict": {
+        "pending": "Pending",
+        "passed": "Passed",
+        "failed": "Failed",
+        "error": "Error"
+      },
+      "resultStatus": {
+        "passed": "Passed",
+        "failed": "Failed",
+        "skipped": "Skipped",
+        "error": "Error"
+      },
+      "probeType": {
+        "auth_check": "Authentication",
+        "endpoint_reachability": "Connectivity",
+        "feed_fetch": "Feed fetch",
+        "feed_parse": "Feed parse",
+        "sample_catalog_read": "Catalog read",
+        "sample_stock_read": "Stock read",
+        "sample_price_read": "Price read",
+        "order_preflight": "Order preflight",
+        "sandbox_order_create": "Test order create",
+        "order_status_read": "Order status read",
+        "shipment_tracking_read": "Tracking read",
+        "invoice_read": "Invoice read",
+        "webhook_signature_verification": "Webhook signature",
+        "malformed_payload_test": "Malformed payload",
+        "rate_limit_behavior": "Rate limit"
+      }
+    },
+    "evidence": {
+      "title": "Evidence",
+      "description": "Redacted probe evidence with hashes and metadata. Raw secrets are never shown.",
+      "noRun": "No run selected.",
+      "empty": "No evidence recorded for this run.",
+      "sensitiveAllowed": "Sensitive evidence access",
+      "redactedOnly": "Redacted preview",
+      "observation": "Observation",
+      "noObservation": "(no observation)",
+      "findings": "Findings",
+      "payloadHash": "Payload hash",
+      "recordedAt": "Recorded",
+      "reveal": "Reveal",
+      "hide": "Hide",
+      "redactedNotice": "Sensitive content is masked. The providers:secrets permission is required to reveal it."
+    },
+    "publicationReview": {
+      "title": "Publication review",
+      "description": "Publishing is a deliberate decision based on validation and evidence.",
+      "currentState": "Current state",
+      "lastValidation": "Last validation",
+      "noValidation": "No completed validation",
+      "rollbackTarget": "Rollback target",
+      "noRollback": "No prior state",
+      "versionCount": "Versions",
+      "derived": "Derived",
+      "gatesTitle": "Readiness gates G1–G9",
+      "gatesDescription": "Gates are derived from version state, schema, capabilities, validation and gaps. Manual gates require human sign-off.",
+      "gapsTitle": "Gaps",
+      "blockingGaps": "{count, plural, one {# blocking gap} other {# blocking gaps}}",
+      "warningGaps": "{count, plural, one {# warning} other {# warnings}}",
+      "actionsTitle": "Lifecycle actions",
+      "actionsDescription": "Only legal transitions are offered. Exposure-increasing actions require all gates to pass.",
+      "noTransitions": "No lifecycle transitions are available from this state.",
+      "published": "Lifecycle state updated.",
+      "disabled": "Provider version disabled.",
+      "reason": "Reason (optional)",
+      "reasonRequired": "Reason",
+      "reasonRequiredHint": "A reason is required to emergency-disable.",
+      "reasonPlaceholder": "Why this transition is being made",
+      "confirmTitle": "Transition to {state}?",
+      "confirmDescription": "This changes the version's publication state and customer visibility.",
+      "confirmAction": "Confirm transition",
+      "emergencyDisable": "Emergency disable",
+      "emergencyDisableHint": "Immediately pulls an available or private-beta version back to internal validation.",
+      "emergencyDisableTitle": "Emergency disable this version?",
+      "emergencyDisableDescription": "Customers lose access immediately. The version returns to internal validation.",
+      "emergencyDisableAction": "Disable now",
+      "gate": {
+        "G1": "Platform security",
+        "G2": "Data foundation",
+        "G3": "Validation engine",
+        "G4": "Publication control",
+        "G5": "Evidence safety",
+        "G6": "Migration safety",
+        "G7": "Operational readiness",
+        "G8": "Certification",
+        "G9": "Security review"
+      },
+      "gateStatus": {
+        "pass": "Pass",
+        "warn": "Warning",
+        "blocked": "Blocked",
+        "manual": "Manual"
+      },
+      "gateReason": {
+        "g1Ok": "Platform-admin auth, permissions and route isolation enforced.",
+        "g2Ok": "Credential schema, capabilities and mappings exist.",
+        "g2NoSchema": "No credential schema fields defined for this version.",
+        "g3Ok": "Last validation run passed.",
+        "g3NoRun": "No completed validation run yet.",
+        "g3LastRunFailed": "Last completed validation run did not pass.",
+        "g3OpenBlockingGaps": "Open blocking gaps invalidate the last validation.",
+        "g4Ok": "Customer visibility is controlled by backend publication state.",
+        "g5Ok": "Validation runs recorded redacted evidence with hashes.",
+        "g5NoEvidence": "No evidence recorded yet — run validation to capture it.",
+        "g6Ok": "All declared capabilities have an explicit support state.",
+        "g6CapabilitiesIncomplete": "Some capabilities are still unknown.",
+        "g7Manual": "Runbooks, dashboards and alerts require manual sign-off.",
+        "g8Manual": "Class certification requires manual sign-off.",
+        "g9Manual": "Threat model and security review require manual sign-off."
+      },
+      "transitionTo": {
+        "research": "Move to research",
+        "designed": "Move to designed",
+        "adapter_in_progress": "Start adapter",
+        "internal_validation": "Move to internal validation",
+        "private_beta": "Enable private beta",
+        "available": "Promote to available",
+        "deprecated": "Deprecate",
+        "retired": "Retire"
+      },
+      "disabledReason": {
+        "illegalTransition": "This transition is not allowed from the current state.",
+        "blockedGates": "Blocked readiness gates must pass first.",
+        "blockingGaps": "Open blocking gaps must be resolved first."
+      }
+    },
+    "tenantVisibility": {
+      "title": "Tenant visibility",
+      "description": "Control which tenants can see this provider version.",
+      "publicAvailability": "Public availability",
+      "allTenants": "Visible to all tenants",
+      "privateBetaExplainer": "This version is in private beta — only allowlisted tenants can see it.",
+      "onlyPrivateBeta": "Per-tenant allowlisting is only available while a version is in private beta.",
+      "enableTenant": "Add tenant to beta",
+      "enabled": "Tenant added to the private-beta allowlist.",
+      "enableTenantTitle": "Enable tenant for private beta",
+      "enableTenantDescription": "The tenant will be able to see and configure this private-beta version.",
+      "enableTenantAction": "Add to allowlist",
+      "tenantId": "Tenant ID",
+      "tenantIdInvalid": "Enter a valid tenant UUID.",
+      "allowlistTitle": "Private-beta allowlist",
+      "allowlistUnavailable": "Listing the current allowlist is not yet available — there is no read endpoint for tenant enablements.",
+      "downgradesTitle": "Tenant capability downgrades",
+      "downgradesUnavailable": "Per-tenant capability downgrades are not yet available — no backend endpoint exists."
+    }
+  }
+}

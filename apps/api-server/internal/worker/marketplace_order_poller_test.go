@@ -17,6 +17,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
+	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
 	amazonsdk "github.com/openoms-org/openoms/packages/amazon-sp-sdk"
 	ebaysdk "github.com/openoms-org/openoms/packages/ebay-go-sdk"
@@ -43,6 +44,30 @@ func TestMarketplaceOrderPoller_NameDifferentProvider(t *testing.T) {
 		Logger:       slog.Default(),
 	})
 	assert.Equal(t, "amazon_order_poller", p.Name())
+}
+
+func TestMarketplaceOrderPoller_WithFulfillment(t *testing.T) {
+	p := NewMarketplaceOrderPoller(MarketplaceOrderPollerConfig{
+		ProviderName: "allegro",
+		Interval:     45 * time.Second,
+		Logger:       slog.Default(),
+	})
+	// Default: no fulfillment service wired (OPE-416 routing off).
+	assert.Nil(t, p.fulfillment)
+
+	// WithFulfillment wires the service and returns the poller for chaining. A nil
+	// service is allowed (the gated service no-ops on its own); the wiring just records it.
+	svc := service.NewFulfillmentService(false, nil, nil)
+	got := p.WithFulfillment(svc)
+	assert.Same(t, p, got, "WithFulfillment returns the poller for chaining")
+	assert.Same(t, svc, p.fulfillment)
+}
+
+func TestMarketplaceOrderPoller_WithFulfillment_NilReceiverSafe(t *testing.T) {
+	var p *MarketplaceOrderPoller // nil
+	assert.NotPanics(t, func() {
+		assert.Nil(t, p.WithFulfillment(service.NewFulfillmentService(false, nil, nil)))
+	})
 }
 
 func TestMarketplaceOrderPoller_Interval(t *testing.T) {

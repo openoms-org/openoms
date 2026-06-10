@@ -62,6 +62,7 @@ func isCSRFExempt(path string) bool {
 		"/v1/public/",
 		"/v1/webhooks/",
 		"/v1/supplier-portal/",
+		"/v1/external-workflows/",
 		"/health",
 		"/metrics",
 	}

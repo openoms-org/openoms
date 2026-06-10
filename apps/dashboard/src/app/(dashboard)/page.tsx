@@ -4,11 +4,13 @@ import { useCallback } from "react";
 import { useAuthStore } from "@/lib/auth";
 import { useOnboarding } from "@/hooks/use-onboarding";
 import { useOperationsDashboard } from "@/hooks/use-operations-dashboard";
+import { FulfillmentControlTowerPanel } from "@/components/dashboard/fulfillment-control-tower-panel";
 import { IntegrationHealthPanel } from "@/components/dashboard/integration-health-panel";
 import { OperationalExceptions } from "@/components/dashboard/operational-exceptions";
 import { OperationsActivity } from "@/components/dashboard/operations-activity";
 import { OperationsSummaryStrip } from "@/components/dashboard/operations-summary-strip";
 import { OrchestrationMap } from "@/components/dashboard/orchestration-map";
+import { ParityReadinessIndicator } from "@/components/dashboard/parity-readiness-indicator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
@@ -24,6 +26,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useHydratedState } from "@/hooks/use-effect-synced-state";
+import { isProcessBackedDashboard } from "@/lib/fulfillment-dashboard";
 
 const QUICKSTART_DISMISSED_KEY = "openoms_quickstart_dismissed";
 
@@ -93,6 +96,14 @@ function QuickStartCard() {
 export default function DashboardPage() {
   const t = useTranslations("dashboard");
   const tc = useTranslations("common");
+  // OPE-423c: build-time cutover flag. Default/unset → "heuristic", i.e. the
+  // current production behavior (legacy heuristic section primary). Flip to
+  // "process-backed" once the parity gate (OPE-423b) is met to make the
+  // process-backed control tower primary. Both code paths are kept (dual-read),
+  // so flipping is reversible. NOTE: the legacy hook below is always called
+  // (React rules of hooks); in process-backed mode its data simply is not
+  // rendered, keeping the legacy path warm and the switch reversible.
+  const processBacked = isProcessBackedDashboard();
   const {
     stages,
     exceptions,
@@ -112,12 +123,16 @@ export default function DashboardPage() {
     "inline-flex items-center gap-2 rounded-md border border-success/30 bg-success/10 px-3 py-2 font-medium text-success";
   let headerStatusKey = "operations.syncOk";
 
-  if (isLoading) {
+  // The header status banner derives from the heuristic model, so only drive it
+  // off heuristic state when the heuristic view is primary. In process-backed
+  // mode the control tower carries its own per-section status, so the header
+  // stays neutral (syncOk) rather than reflecting heuristic loading/issues.
+  if (!processBacked && isLoading) {
     HeaderStatusIcon = RefreshCw;
     headerStatusClass =
       "inline-flex items-center gap-2 rounded-md border border-info/30 bg-info/10 px-3 py-2 font-medium text-info";
     headerStatusKey = "operations.statusLoading";
-  } else if (hasOperationalIssues) {
+  } else if (!processBacked && hasOperationalIssues) {
     HeaderStatusIcon = AlertTriangle;
     headerStatusClass =
       "inline-flex items-center gap-2 rounded-md border border-warning/40 bg-warning/15 px-3 py-2 font-medium text-warning";
@@ -152,7 +167,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {isError && (
+        {!processBacked && isError && (
           <div className="rounded-md border border-destructive bg-destructive/10 p-4">
             <p className="text-sm text-destructive">{tc("loadError")}</p>
             <Button
@@ -166,22 +181,48 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <OperationsSummaryStrip
-          stages={stages}
-          exceptions={exceptions}
-          integrationHealth={integrationHealth}
-          isLoading={isLoading}
-        />
+        {processBacked ? (
+          <>
+            {/* OPE-423c: process-backed primary view. The control tower (OPE-419)
+                is promoted to the primary operations section and the parity
+                readiness indicator shows the cutover verdict. The legacy
+                heuristic blocks are intentionally not rendered in this mode, but
+                their code path is preserved (dual-read) so the flag is reversible. */}
+            <FulfillmentControlTowerPanel />
+            <ParityReadinessIndicator />
+          </>
+        ) : (
+          <>
+            <OperationsSummaryStrip
+              stages={stages}
+              exceptions={exceptions}
+              integrationHealth={integrationHealth}
+              isLoading={isLoading}
+            />
 
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_400px]">
-          <div className="space-y-5">
-            <OrchestrationMap stages={stages} isLoading={isLoading} />
-            <OperationsActivity items={activity} isLoading={isLoading} />
-          </div>
-          <OperationalExceptions exceptions={exceptions} isLoading={isLoading} />
-        </div>
+            <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_400px]">
+              <div className="space-y-5">
+                <OrchestrationMap stages={stages} isLoading={isLoading} />
+                <OperationsActivity items={activity} isLoading={isLoading} />
+              </div>
+              <OperationalExceptions
+                exceptions={exceptions}
+                isLoading={isLoading}
+              />
+            </div>
 
-        <IntegrationHealthPanel items={integrationHealth} isLoading={isLoading} />
+            <IntegrationHealthPanel
+              items={integrationHealth}
+              isLoading={isLoading}
+            />
+
+            {/* OPE-419 (additive): process-backed fulfillment control tower.
+                Renders intentional empty/zero states while
+                FULFILLMENT_PROCESS_ENABLED is off; self-guards on operator role.
+                The heuristic dashboard above is unchanged. */}
+            <FulfillmentControlTowerPanel />
+          </>
+        )}
 
         <div className="space-y-4">
           <OnboardingWizard />

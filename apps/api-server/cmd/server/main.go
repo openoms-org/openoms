@@ -15,6 +15,7 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/redis/go-redis/v9"
 
 	// Register marketplace providers via init().
@@ -46,6 +47,9 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/handler"
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
+	"github.com/openoms-org/openoms/apps/api-server/internal/obsmetrics"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	"github.com/openoms-org/openoms/apps/api-server/internal/router"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
@@ -315,10 +319,41 @@ func run() error {
 	emailService := service.NewEmailService(tenantRepo, pool)
 	smsService := service.NewSMSService(tenantRepo, pool)
 	webhookDispatchService := service.NewWebhookDispatchService(tenantRepo, webhookDeliveryRepo, pool)
-	orderService := service.NewOrderService(orderRepo, auditRepo, tenantRepo, pool, emailService, webhookDispatchService)
+	// Fulfillment commands (OPE-416): gated bridge from order creation to the
+	// fulfillment process + orchestration outbox. A no-op when disabled.
+	fulfillmentRepo := repository.NewFulfillmentRepository()
+	orchestrationRepo := repository.NewOrchestrationRepository()
+	fulfillmentAttemptRepo := repository.NewFulfillmentAttemptRepository()
+	// OPE-422: additive, best-effort observability collector for the fulfillment /
+	// orchestration / provider-validation paths. Injected (nil-safe) into the
+	// services + worker below and registered with the Prometheus MetricsCollector so
+	// the existing /metrics handler exposes it. Uses ONLY bounded enum labels.
+	fulfillmentMetrics := obsmetrics.NewFulfillmentMetrics()
+	// OPE-417: best-effort provider-attempt recording is wired via WithRecording.
+	// It stays a no-op until FULFILLMENT_PROCESS_ENABLED is set.
+	fulfillmentService := service.NewFulfillmentService(cfg.FulfillmentProcessEnabled, fulfillmentRepo, orchestrationRepo).
+		WithRecording(pool, fulfillmentAttemptRepo).
+		WithMetrics(fulfillmentMetrics)
+	// OPE-418: gated supplier-availability read-model. The supplier sync writes snapshots
+	// and dropship routing / stock propagation consult the resolver. A complete no-op
+	// (Enabled()==false) until SUPPLIER_AVAILABILITY_ENABLED is set.
+	supplierAvailabilityRepo := repository.NewSupplierAvailabilityRepository()
+	supplierAvailabilityService := service.NewSupplierAvailabilityService(
+		cfg.SupplierAvailabilityEnabled, pool, supplierAvailabilityRepo, auditRepo)
+	// OPE-419: tenant-safe operations/fulfillment READ API over the canonical
+	// fulfillment model. Always active (read endpoints return empty results until
+	// fulfillment data is recorded); reuses the OPE-414..418 repositories.
+	// OPE-422: best-effort stuck/blocked gauges + operator-action audit.
+	fulfillmentReadService := service.NewFulfillmentReadService(pool, fulfillmentRepo, fulfillmentAttemptRepo, orchestrationRepo).
+		WithMetrics(fulfillmentMetrics).
+		WithAudit(auditRepo)
+	fulfillmentHandler := handler.NewFulfillmentHandler(fulfillmentReadService)
+	operationsHandler := handler.NewOperationsHandler(fulfillmentReadService)
+	orderService := service.NewOrderService(orderRepo, auditRepo, tenantRepo, pool, emailService, webhookDispatchService, fulfillmentService)
 	returnService := service.NewReturnService(returnRepo, orderRepo, auditRepo, pool, webhookDispatchService)
 	shipmentService := service.NewShipmentService(shipmentRepo, orderRepo, productRepo, auditRepo, tenantRepo, pool, webhookDispatchService)
 	shipmentService.SetWorkerPool(workerPool)
+	shipmentService.SetFulfillmentService(fulfillmentService) // OPE-417: gated best-effort recording
 	productService := service.NewProductService(productRepo, auditRepo, pool, webhookDispatchService)
 	integrationService := service.NewIntegrationService(integrationRepo, auditRepo, pool, encryptionKey)
 	labelService := service.NewLabelService(
@@ -327,6 +362,7 @@ func run() error {
 		pool, encryptionKey, cfg.UploadDir, cfg.BaseURL,
 		objectStorage,
 	)
+	labelService.SetFulfillmentService(fulfillmentService) // OPE-417: gated best-effort recording
 	webhookService := service.NewWebhookService(webhookRepo, tenantRepo, pool, cfg.AllegroWebhookSecret, cfg.InPostWebhookSecret)
 	providerWebhookSecretResolver := service.NewProviderWebhookSecretResolver(workerPool, encryptionKey)
 	statsService := service.NewStatsService(statsRepo, pool)
@@ -335,10 +371,12 @@ func run() error {
 	orderService.SetSMSService(smsService)
 	orderService.SetShipmentService(shipmentService)
 	shipmentService.SetSMSService(smsService)
-	allegroSyncService := service.NewAllegroSyncService(integrationService)
+	allegroSyncService := service.NewAllegroSyncService(integrationService).
+		WithFulfillment(fulfillmentService) // OPE-417 followup: best-effort marketplace-sync provider attempts
 	orderService.SetAllegroSyncService(allegroSyncService)
 	shipmentService.SetAllegroSyncService(allegroSyncService)
-	supplierService := service.NewSupplierService(supplierRepo, supplierProductRepo, supplierCategoryMappingRepo, allegroParameterMappingRepo, productCategoryRepo, productRepo, auditRepo, pool, webhookDispatchService, integrationService, slog.Default())
+	supplierService := service.NewSupplierService(supplierRepo, supplierProductRepo, supplierCategoryMappingRepo, allegroParameterMappingRepo, productCategoryRepo, productRepo, auditRepo, pool, webhookDispatchService, integrationService, slog.Default()).
+		WithAvailability(supplierAvailabilityService) // OPE-418: gated snapshot upsert during catalog sync
 	marketplaceCategoryMappingRepo := repository.NewMarketplaceCategoryMappingRepository()
 	productCategoryService := service.NewProductCategoryService(productCategoryRepo, marketplaceCategoryMappingRepo, auditRepo, pool)
 	variantService := service.NewVariantService(variantRepo, productRepo, auditRepo, pool)
@@ -351,13 +389,58 @@ func run() error {
 	priceListService := service.NewPriceListService(priceListRepo, productRepo, auditRepo, pool)
 	messageTemplateService := service.NewMessageTemplateService(messageTemplateRepo, pool)
 	warehouseDocService := service.NewWarehouseDocumentService(warehouseDocRepo, warehouseDocItemRepo, warehouseStockRepo, auditRepo, pool)
+	warehouseDocService.SetFulfillmentService(fulfillmentService) // OPE-418: gated best-effort unit/step recording
 	exchangeRateService := service.NewExchangeRateService(exchangeRateRepo, auditRepo, pool)
 	ksefService := service.NewKSeFService(invoiceRepo, orderRepo, tenantRepo, auditRepo, pool)
 	invoiceService.SetKSeFService(ksefService)
 	stocktakeService := service.NewStocktakeService(stocktakeRepo, stocktakeItemRepo, warehouseStockRepo, warehouseDocRepo, warehouseDocItemRepo, auditRepo, pool, webhookDispatchService)
 	purchaseOrderService := service.NewPurchaseOrderService(purchaseOrderRepo, purchaseOrderItemRepo, warehouseStockRepo, auditRepo, pool, webhookDispatchService, slog.Default())
+	purchaseOrderService.SetFulfillmentService(fulfillmentService) // OPE-418: gated best-effort recording
 	pickPackService := service.NewPickPackService(pickPackRepo, orderRepo, productRepo, variantRepo, auditRepo, pool)
+	pickPackService.SetFulfillmentService(fulfillmentService) // OPE-418: gated best-effort unit/step recording
 	dropshipService := service.NewDropshipService(dropshipRepo, dropshipItemRepo, orderRepo, productRepo, supplierRepo, auditRepo, integrationService, pool, webhookDispatchService, slog.Default())
+	dropshipService.SetFulfillmentService(fulfillmentService)           // OPE-418: gated best-effort unit/step recording
+	dropshipService.SetAvailabilityService(supplierAvailabilityService) // OPE-418: gated availability-based auto-routing gate
+	// OPE-418/Phase-7: gated supplier-order engine. When SUPPLIER_ORDER_ENABLED is off the
+	// service's Enabled() is false, so the gate's API branch keeps its current behavior (mark
+	// the create_dropship_order step ready, no auto-submit) and no manual blocker is added.
+	supplierOrderService := service.NewSupplierOrderService(cfg.SupplierOrderEnabled, pool, fulfillmentService, orchestrationRepo)
+	dropshipService.SetSupplierOrderService(supplierOrderService)
+	// newSupplierProvider builds a SupplierProvider for a supplier inside a tenant tx: it loads
+	// the supplier, resolves the provider name (xml feed -> btp), decrypts the linked
+	// integration credentials, and constructs the adapter. Returns (nil, nil) when the supplier
+	// has no API provider — mirrors DropshipService.submitToSupplierAPI's provider construction.
+	// Shared by the supplier-order handler (submit) and the status poller (reconcile).
+	newSupplierProvider := func(ctx context.Context, tx pgx.Tx, tenantID, supplierID uuid.UUID) (integration.SupplierProvider, error) {
+		supplier, err := supplierRepo.FindByID(ctx, tx, supplierID)
+		if err != nil {
+			return nil, fmt.Errorf("load supplier: %w", err)
+		}
+		if supplier == nil || supplier.IntegrationID == nil {
+			return nil, nil // no integration — manual process
+		}
+		providerName := supplier.FeedFormat
+		if providerName == "xml" {
+			providerName = "btp"
+		}
+		if !integration.HasSupplierProvider(providerName) {
+			return nil, nil // no provider registered for this format
+		}
+		credJSON, err := integrationService.GetDecryptedCredentialsByID(ctx, tenantID, *supplier.IntegrationID)
+		if err != nil {
+			return nil, fmt.Errorf("decrypt credentials: %w", err)
+		}
+		provider, err := integration.NewSupplierProvider(providerName, credJSON, supplier.Settings)
+		if err != nil {
+			return nil, fmt.Errorf("create provider: %w", err)
+		}
+		return provider, nil
+	}
+	// dropshipItemsLoader resolves the dropship lines for an (order, supplier) into the
+	// supplier-order builder's input shape (OPE-516): the line's ItemID is the SUPPLIER's
+	// catalogue identity from the supplier_products mapping, the EAN comes from the tenant
+	// product, and the tenant's internal SKU is never sent. Runs inside the handler's tx.
+	dropshipItemsLoader := service.NewSupplierOrderItemsLoader(dropshipRepo, dropshipItemRepo, productRepo, supplierProductRepo)
 	recurringOrderService := service.NewRecurringOrderService(recurringOrderRepo, orderRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 
 	// Product listing repo (needed by both stock sync and allegro listings)
@@ -409,6 +492,45 @@ func run() error {
 		Pool:           pool,
 		IntegrationSvc: integrationService,
 	})
+	// OPE-421: gate set_status routing through the orchestration outbox. When
+	// AUTOMATION_ORCHESTRATION_ENABLED is on, executeSetStatus ensures the order's
+	// fulfillment process and enqueues an automation.set_status event instead of
+	// calling TransitionStatus directly; the handler (registered in the
+	// ORCHESTRATION_WORKER_ENABLED block below) drains it. This is the ENQUEUE half
+	// of the dual-flag dependency — processing additionally needs the worker flag.
+	// When the flag is off this is a no-op and automation behaviour is unchanged.
+	automationExecutor.SetOrchestration(cfg.AutomationOrchestrationEnabled, orchestrationRepo, fulfillmentRepo)
+
+	// OPE-421/Phase-13 external-workflow connector (gated by EXTERNAL_WORKFLOW_ENABLED).
+	// When the flag is off the service's Enabled() is false, so the external_workflow action
+	// is a no-op, the callback route is unregistered, and the dispatcher handlers are not
+	// registered — the default build is byte-for-byte unchanged.
+	externalWorkflowTokenRepo := repository.NewExternalWorkflowTokenRepository()
+	externalWorkflowService := service.NewExternalWorkflowService(
+		cfg.ExternalWorkflowEnabled, pool, workerPool, fulfillmentService, orchestrationRepo,
+		externalWorkflowTokenRepo, auditRepo)
+	// loadExternalWorkflowConfig decrypts the integration's external-workflow credentials JSONB
+	// (outbound_url, signing_secret, timeout_seconds, criticality, outbound_field_allowlist).
+	loadExternalWorkflowConfig := func(ctx context.Context, tenantID, integrationID uuid.UUID) (service.ExternalWorkflowConfig, error) {
+		var cfgOut service.ExternalWorkflowConfig
+		credJSON, err := integrationService.GetDecryptedCredentialsByID(ctx, tenantID, integrationID)
+		if err != nil {
+			return cfgOut, err
+		}
+		if err := json.Unmarshal(credJSON, &cfgOut); err != nil {
+			return cfgOut, fmt.Errorf("parse external workflow config: %w", err)
+		}
+		return cfgOut, nil
+	}
+	externalWorkflowService.SetConfigLoader(loadExternalWorkflowConfig)
+	externalWorkflowService.SetOrderLoader(func(ctx context.Context, tx pgx.Tx, orderID uuid.UUID) (*model.Order, error) {
+		return orderRepo.FindByID(ctx, tx, orderID)
+	})
+	automationExecutor.SetExternalWorkflow(externalWorkflowService)
+	externalWorkflowCallbackHandler := handler.NewExternalWorkflowCallbackHandler(externalWorkflowService)
+	// SSRF-safe HTTP client for the outbound signed dispatch (same protection as webhook dispatch).
+	externalWorkflowHTTPClient := netutil.SafeHTTPClient(15 * time.Second)
+
 	automationEngine := automation.NewEngine(automationRuleRepo, automationRuleLogRepo, pool, automationExecutor, slog.Default())
 	automationEngine.SetDelayedActionRepo(delayedActionRepo)
 	automationService := service.NewAutomationService(automationRuleRepo, automationRuleLogRepo, pool, automationEngine, slog.Default())
@@ -606,8 +728,8 @@ func run() error {
 	marketplaceCategoryMappingHandler := handler.NewMarketplaceCategoryMappingHandler(marketplaceCategoryMappingRepo, pool)
 
 	// Import service & handler
-	importService := service.NewImportService(orderRepo, auditRepo, tenantRepo, pool)
-	baseLinkerImportService := service.NewBaseLinkerImportService(orderRepo, customerRepo, auditRepo, tenantRepo, pool)
+	importService := service.NewImportService(orderRepo, auditRepo, tenantRepo, pool, fulfillmentService)
+	baseLinkerImportService := service.NewBaseLinkerImportService(orderRepo, customerRepo, auditRepo, tenantRepo, pool, fulfillmentService)
 	importHandler := handler.NewImportHandler(importService, baseLinkerImportService)
 
 	// Automation handler
@@ -802,6 +924,9 @@ func run() error {
 
 	// Prometheus metrics collector
 	metricsCollector := middleware.NewMetricsCollector()
+	// OPE-422: expose the additive fulfillment/orchestration/validation metrics
+	// through the same /metrics handler.
+	metricsCollector.Register(fulfillmentMetrics)
 
 	// Platform-admin boundary (OPE-404): separate from tenant RBAC, not tenant-scoped.
 	platformAdminRepo := repository.NewPlatformAdminRepository(pool)
@@ -814,10 +939,12 @@ func run() error {
 	providerPublicationRepo := repository.NewProviderPublicationRepository(pool)
 	providerSchemaRepo := repository.NewProviderSchemaRepository(pool)
 	providerCapabilityRepo := repository.NewProviderCapabilityRepository(pool)
-	providerRegistryService := service.NewProviderRegistryService(pool, providerDefinitionRepo, providerVersionRepo, providerPublicationRepo, providerSchemaRepo, providerCapabilityRepo)
+	providerRegistryService := service.NewProviderRegistryService(pool, providerDefinitionRepo, providerVersionRepo, providerPublicationRepo, providerSchemaRepo, providerCapabilityRepo).
+		WithMetrics(fulfillmentMetrics) // OPE-422: best-effort publication-transition metrics
 	providerHandler := handler.NewProviderHandler(providerRegistryService, platformAuditRepo)
 	providerValidationRepo := repository.NewProviderValidationRepository(pool)
-	providerValidationService := service.NewProviderValidationService(pool, providerVersionRepo, providerCapabilityRepo, providerValidationRepo)
+	providerValidationService := service.NewProviderValidationService(pool, providerVersionRepo, providerCapabilityRepo, providerValidationRepo).
+		WithMetrics(fulfillmentMetrics) // OPE-422: best-effort validation-run + failure metrics
 	providerValidationHandler := handler.NewProviderValidationHandler(providerValidationService, platformAuditRepo)
 
 	// Provider registry seed (OPE-412): idempotently create draft registry
@@ -942,6 +1069,9 @@ func run() error {
 		PlatformAdmin:              platformAdminRepo,
 		Provider:                   providerHandler,
 		ProviderValidation:         providerValidationHandler,
+		Fulfillment:                fulfillmentHandler,
+		Operations:                 operationsHandler,
+		ExternalWorkflowCallback:   externalWorkflowCallbackHandler,
 	})
 
 	// Start background workers (use workerPool for cross-tenant queries).
@@ -949,19 +1079,21 @@ func run() error {
 	// execution when HPA scales to multiple pods.
 	workerMgr := worker.NewManager(workerPool, slog.Default(), redisClient)
 	workerMgr.Register(worker.NewOAuthRefresher(workerPool, encryptionKey, slog.Default()))
-	workerMgr.Register(worker.NewAllegroOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, labelService, slog.Default()))
-	workerMgr.Register(worker.NewStockSyncWorker(workerPool, encryptionKey, slog.Default()))
+	workerMgr.Register(worker.NewAllegroOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, labelService, slog.Default()).WithFulfillment(fulfillmentService))
+	workerMgr.Register(worker.NewStockSyncWorker(workerPool, encryptionKey, slog.Default()).WithAvailability(supplierAvailabilityService)) // OPE-418: gated channel-increase gate
 	workerMgr.Register(worker.NewPriceSyncWorker(workerPool, encryptionKey, slog.Default()))
-	workerMgr.Register(worker.NewTrackingPoller(workerPool, encryptionKey, shipmentRepo, shipmentService, slog.Default()))
-	workerMgr.Register(worker.NewErliOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
-	workerMgr.Register(worker.NewAmazonOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
+	trackingPoller := worker.NewTrackingPoller(workerPool, encryptionKey, shipmentRepo, shipmentService, slog.Default())
+	trackingPoller.SetFulfillmentRecorder(fulfillmentService) // OPE-417: gated best-effort recording
+	workerMgr.Register(trackingPoller)
+	workerMgr.Register(worker.NewErliOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()).WithFulfillment(fulfillmentService))
+	workerMgr.Register(worker.NewAmazonOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()).WithFulfillment(fulfillmentService))
 	workerMgr.Register(worker.NewAmazonFeedStatusWorker(workerPool, encryptionKey, slog.Default()))
-	workerMgr.Register(worker.NewWooCommerceOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
-	workerMgr.Register(worker.NewShoperOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
-	workerMgr.Register(worker.NewPrestaShopOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
-	workerMgr.Register(worker.NewShopifyOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
-	workerMgr.Register(worker.NewOLXOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
-	workerMgr.Register(worker.NewEbayOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()))
+	workerMgr.Register(worker.NewWooCommerceOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()).WithFulfillment(fulfillmentService))
+	workerMgr.Register(worker.NewShoperOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()).WithFulfillment(fulfillmentService))
+	workerMgr.Register(worker.NewPrestaShopOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()).WithFulfillment(fulfillmentService))
+	workerMgr.Register(worker.NewShopifyOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()).WithFulfillment(fulfillmentService))
+	workerMgr.Register(worker.NewOLXOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()).WithFulfillment(fulfillmentService))
+	workerMgr.Register(worker.NewEbayOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()).WithFulfillment(fulfillmentService))
 	workerMgr.Register(worker.NewSupplierSyncWorker(workerPool, supplierService, slog.Default()))
 	workerMgr.Register(worker.NewExchangeRateWorker(workerPool, exchangeRateService, slog.Default()))
 	workerMgr.Register(worker.NewKSeFStatusWorker(workerPool, ksefService, slog.Default()))
@@ -971,6 +1103,73 @@ func run() error {
 	workerMgr.Register(worker.NewListingSyncWorker(workerPool, listingSyncRepo, listingSyncService, slog.Default()))
 	if cfg.BillingEnabled() && checkoutSvc != nil {
 		workerMgr.Register(worker.NewBillingReconciliationWorker(workerPool, checkoutSvc, slog.Default()))
+	}
+	// Fulfillment orchestration outbox worker (OPE-415). Gated off by default.
+	// OPE-416 registers the first real handler (order.created) on the dispatcher.
+	if cfg.OrchestrationWorkerEnabled {
+		orchestrationDispatcher := service.NewOrchestrationDispatcher()
+		orchestrationDispatcher.Register(service.EventOrderCreated, service.NewOrderCreatedHandler(pool, fulfillmentRepo))
+		// OPE-513: ack fulfillment.step events. EmitFulfillmentStep enqueues them on
+		// the SUCCESS paths of shipment/label/tracking operations whenever
+		// FULFILLMENT_PROCESS_ENABLED recording is on, so this handler is registered
+		// UNCONDITIONALLY within the worker block — without it the dispatcher would
+		// fail every fulfillment.step permanently and open spurious blockers on
+		// healthy operations. The events are observability-only (the step was already
+		// recorded by the emitter's caller), so the handler is a no-op ack.
+		orchestrationDispatcher.Register(service.EventFulfillmentStep, service.NewFulfillmentStepHandler())
+		// OPE-421: register the automation.set_status handler only when BOTH the
+		// orchestration worker AND automation orchestration routing are enabled. This
+		// is the PROCESSING half of the dual-flag dependency: the executor enqueues
+		// automation.set_status events when AUTOMATION_ORCHESTRATION_ENABLED is on, and
+		// this handler (which applies the idempotent transition via the order service)
+		// drains them only when ORCHESTRATION_WORKER_ENABLED is also on. With routing
+		// on but the worker off, events are durably enqueued but left unprocessed
+		// (expected, opt-in). orderService's Get/TransitionStatus set tenant context
+		// internally, matching the worker handler contract.
+		if cfg.AutomationOrchestrationEnabled {
+			orchestrationDispatcher.Register(automation.EventAutomationSetStatus, service.NewAutomationStatusTransitionHandler(orderService))
+		}
+		// OPE-421/Phase-13: register the external-workflow dispatch + follow-on-command
+		// handlers only when EXTERNAL_WORKFLOW_ENABLED is also on. Off => unregistered, so a
+		// stray external_workflow event would become a visible blocker rather than dispatch.
+		if cfg.ExternalWorkflowEnabled {
+			orchestrationDispatcher.Register(service.EventExternalWorkflow,
+				service.NewExternalWorkflowHandler(externalWorkflowHTTPClient, loadExternalWorkflowConfig, workerPool, orchestrationRepo))
+			orchestrationDispatcher.Register(service.EventExternalWorkflowCommand,
+				service.NewExternalWorkflowCommandHandler(orderService))
+		}
+		// OPE-418/Phase-7: register the supplier-order submit handler + the reconcile poller
+		// only when SUPPLIER_ORDER_ENABLED is also on. Off => unregistered, so a stray
+		// supplier.order.submit event becomes a visible blocker rather than dispatching, and the
+		// poller never runs — the default build is byte-for-byte unchanged.
+		if cfg.SupplierOrderEnabled {
+			orchestrationDispatcher.Register(service.EventSupplierOrderSubmit,
+				service.NewSupplierOrderHandler(pool, fulfillmentService, dropshipRepo, orderRepo, dropshipItemsLoader, newSupplierProvider))
+			workerMgr.Register(worker.NewSupplierOrderStatusPoller(
+				workerPool, cfg.SupplierOrderEnabled, fulfillmentService, dropshipRepo, newSupplierProvider, slog.Default()))
+		}
+		// OPE-422: best-effort outbox metrics (claimed/processed/failed + queue depth).
+		workerMgr.Register(worker.NewOrchestrationWorker(workerPool, orchestrationRepo, orchestrationDispatcher, fulfillmentRepo, 0, slog.Default()).
+			WithMetrics(fulfillmentMetrics))
+	}
+	// Fulfillment-process backfill worker (OPE-423a). DOUBLE gated: it is a complete
+	// no-op unless FULFILLMENT_BACKFILL_ENABLED is set, and even then only COUNTS
+	// (dry run) unless FULFILLMENT_BACKFILL_DRY_RUN is explicitly false. Registered
+	// only when enabled so a disabled deployment carries zero behaviour change. It
+	// backfills processes for legacy non-terminal orders so they join process-backed
+	// orchestration; the order.created events it enqueues are drained by the
+	// orchestration worker above (enable ORCHESTRATION_WORKER_ENABLED to process them).
+	if cfg.FulfillmentBackfillEnabled {
+		fulfillmentBackfillService := service.NewFulfillmentBackfillService(fulfillmentRepo, orchestrationRepo)
+		workerMgr.Register(worker.NewFulfillmentBackfillWorker(
+			workerPool, fulfillmentBackfillService, cfg.FulfillmentBackfillEnabled, cfg.FulfillmentBackfillDryRun, slog.Default()))
+	}
+	// Global stuck/blocked process gauge sweeper (OPE-422 followup). Registered only
+	// when fulfillment recording is on (there are processes to count); it counts across
+	// all tenants on the privileged worker pool and publishes a single label-free
+	// aggregate per tick. Read-only, best-effort.
+	if cfg.FulfillmentProcessEnabled {
+		workerMgr.Register(worker.NewFulfillmentGaugeSweeper(workerPool, fulfillmentReadService, slog.Default()))
 	}
 	if cfg.WorkersEnabled {
 		go workerMgr.Start(context.Background())

@@ -123,6 +123,9 @@ type RouterDeps struct { //nolint:revive
 	PlatformAdmin              middleware.PlatformAdminLookup
 	Provider                   *handler.ProviderHandler
 	ProviderValidation         *handler.ProviderValidationHandler
+	Fulfillment                *handler.FulfillmentHandler
+	Operations                 *handler.OperationsHandler
+	ExternalWorkflowCallback   *handler.ExternalWorkflowCallbackHandler
 }
 
 // New constructs the chi router with all routes registered.
@@ -255,6 +258,15 @@ func New(deps RouterDeps) *chi.Mux {
 	if deps.StripeWebhook != nil {
 		r.With(middleware.RateLimitWith(deps.RateLimiter, 120, 1*time.Minute), middleware.MaxBodySize(1<<16)).
 			Post("/v1/webhooks/stripe", deps.StripeWebhook.HandleWebhook)
+	}
+
+	// External-workflow callback — no JWT, token + HMAC + single-use nonce authenticated,
+	// rate-limited. OPE-421/Phase-13: registered ONLY when EXTERNAL_WORKFLOW_ENABLED is on, so
+	// when the connector is off the route is absent and chi returns 404 (the default build is
+	// byte-for-byte unchanged).
+	if deps.Config != nil && deps.Config.ExternalWorkflowEnabled && deps.ExternalWorkflowCallback != nil {
+		r.With(middleware.RateLimitWith(deps.RateLimiter, 60, 1*time.Minute), middleware.MaxBodySize(1<<20)).
+			Post("/v1/external-workflows/callback", deps.ExternalWorkflowCallback.Callback)
 	}
 
 	// Public return self-service routes — no JWT, rate-limited
@@ -1258,6 +1270,29 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Post("/transactions/{id}/unmatch", deps.Reconciliation.Unmatch)
 				r.Get("/summary", deps.Reconciliation.GetSummary)
 			})
+
+			// Fulfillment read API + operator actions (OPE-419) — tenant-scoped,
+			// RLS-enforced. Reads guarded by orders.view, actions by orders.edit.
+			if deps.Fulfillment != nil {
+				r.Route("/fulfillment", func(r chi.Router) {
+					r.With(requirePermission(model.PermOrdersView)).Get("/processes", deps.Fulfillment.ListProcesses)
+					r.With(requirePermission(model.PermOrdersView)).Get("/processes/{id}", deps.Fulfillment.GetProcess)
+					r.With(requirePermission(model.PermOrdersView)).Get("/orders/{orderID}", deps.Fulfillment.GetOrderFulfillment)
+					r.With(requirePermission(model.PermOrdersEdit)).Post("/blockers/{id}/resolve", deps.Fulfillment.ResolveBlocker)
+					r.With(requirePermission(model.PermOrdersEdit)).Post("/steps/{id}/retry", deps.Fulfillment.RetryStep)
+				})
+			}
+
+			// Operations control tower (OPE-419) — tenant-scoped read aggregates.
+			if deps.Operations != nil {
+				r.Route("/operations", func(r chi.Router) {
+					r.With(requirePermission(model.PermOrdersView)).Get("/summary", deps.Operations.Summary)
+					r.With(requirePermission(model.PermOrdersView)).Get("/exceptions", deps.Operations.Exceptions)
+					r.With(requirePermission(model.PermOrdersView)).Get("/integration-capability-summary", deps.Operations.IntegrationCapabilitySummary)
+					// OPE-423: read-only legacy-vs-process parity / verification report.
+					r.With(requirePermission(model.PermOrdersView)).Get("/parity", deps.Operations.Parity)
+				})
+			}
 
 		})
 

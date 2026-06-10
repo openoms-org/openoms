@@ -726,7 +726,7 @@ func TestCreateAutomationRuleRequest_Validate(t *testing.T) {
 					Priority:     &priority,
 					TriggerEvent: "order.created",
 					Conditions:   json.RawMessage(`[{"field":"total_amount","operator":"gt","value":100}]`),
-					Actions:      json.RawMessage(`[{"type":"transition_status","config":{"status":"confirmed"}}]`),
+					Actions:      json.RawMessage(`[{"type":"set_status","params":{"status":"confirmed"}}]`),
 				}
 			}(),
 		},

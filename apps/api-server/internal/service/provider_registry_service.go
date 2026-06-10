@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/obsmetrics"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
@@ -44,6 +45,10 @@ type ProviderRegistryService struct {
 	pub     *repository.ProviderPublicationRepository
 	schemas *repository.ProviderSchemaRepository
 	caps    *repository.ProviderCapabilityRepository
+	// metrics is an OPTIONAL, best-effort observability handle (OPE-422). nil-receiver
+	// safe, so every record call is a no-op when it is not wired and can never affect
+	// a lifecycle transition.
+	metrics *obsmetrics.FulfillmentMetrics
 }
 
 // NewProviderRegistryService wires the service to the pool and its repositories.
@@ -58,9 +63,21 @@ func NewProviderRegistryService(
 	return &ProviderRegistryService{pool: pool, defs: defs, vers: vers, pub: pub, schemas: schemas, caps: caps}
 }
 
+// WithMetrics wires the OPTIONAL metrics collector (OPE-422). Returns the service
+// for chaining. Safe to omit: the collector is nil-receiver safe.
+func (s *ProviderRegistryService) WithMetrics(m *obsmetrics.FulfillmentMetrics) *ProviderRegistryService {
+	if s == nil {
+		return nil
+	}
+	s.metrics = m
+	return s
+}
+
 // SetCapabilities replaces the capability profile set of a version (frozen once
-// published; structurally validated). Atomic DELETE+INSERT.
+// published; structurally validated). Atomic DELETE+INSERT; the frozen check is
+// re-run under the definition-row lock so it cannot race a publish transition.
 func (s *ProviderRegistryService) SetCapabilities(ctx context.Context, versionID uuid.UUID, caps []model.ProviderCapability) ([]model.ProviderCapability, error) {
+	// Fast pre-check for a friendly error; re-checked authoritatively under lock.
 	v, err := s.GetVersion(ctx, versionID)
 	if err != nil {
 		return nil, err
@@ -72,6 +89,9 @@ func (s *ProviderRegistryService) SetCapabilities(ctx context.Context, versionID
 		return nil, fmt.Errorf("%w: %s", ErrInvalidCapability, err.Error())
 	}
 	if err := s.inTx(ctx, func(tx pgx.Tx) error {
+		if err := requireUnpublishedLocked(ctx, tx, versionID); err != nil {
+			return err
+		}
 		return s.caps.ReplaceCapabilities(ctx, tx, versionID, caps)
 	}); err != nil {
 		return nil, err
@@ -88,8 +108,10 @@ func (s *ProviderRegistryService) GetCapabilities(ctx context.Context, versionID
 }
 
 // SetStatusMappings replaces the status-mapping set of a version (frozen once
-// published; structurally validated). Atomic DELETE+INSERT.
+// published; structurally validated). Atomic DELETE+INSERT; the frozen check is
+// re-run under the definition-row lock so it cannot race a publish transition.
 func (s *ProviderRegistryService) SetStatusMappings(ctx context.Context, versionID uuid.UUID, mappings []model.ProviderStatusMapping) ([]model.ProviderStatusMapping, error) {
+	// Fast pre-check for a friendly error; re-checked authoritatively under lock.
 	v, err := s.GetVersion(ctx, versionID)
 	if err != nil {
 		return nil, err
@@ -101,6 +123,9 @@ func (s *ProviderRegistryService) SetStatusMappings(ctx context.Context, version
 		return nil, fmt.Errorf("%w: %s", ErrInvalidStatusMapping, err.Error())
 	}
 	if err := s.inTx(ctx, func(tx pgx.Tx) error {
+		if err := requireUnpublishedLocked(ctx, tx, versionID); err != nil {
+			return err
+		}
 		return s.caps.ReplaceStatusMappings(ctx, tx, versionID, mappings)
 	}); err != nil {
 		return nil, err
@@ -152,8 +177,10 @@ func (s *ProviderRegistryService) UpdateGapStatus(ctx context.Context, gapID uui
 
 // SetSchema stores the credential/settings field schema for a version. Rejected
 // once the version is published (frozen), or when the schema is structurally
-// invalid.
+// invalid. The frozen check is re-run under the definition-row lock in the same
+// transaction as the write, so it cannot race a publish transition.
 func (s *ProviderRegistryService) SetSchema(ctx context.Context, versionID uuid.UUID, groups []model.ProviderFieldGroup) (*model.ProviderFieldSchema, error) {
+	// Fast pre-check for a friendly error; re-checked authoritatively under lock.
 	v, err := s.GetVersion(ctx, versionID)
 	if err != nil {
 		return nil, err
@@ -164,7 +191,17 @@ func (s *ProviderRegistryService) SetSchema(ctx context.Context, versionID uuid.
 	if err := model.ValidateFieldSchema(groups); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidFieldSchema, err.Error())
 	}
-	return s.schemas.Upsert(ctx, versionID, groups)
+	var saved *model.ProviderFieldSchema
+	if err := s.inTx(ctx, func(tx pgx.Tx) error {
+		if err := requireUnpublishedLocked(ctx, tx, versionID); err != nil {
+			return err
+		}
+		saved, err = s.schemas.Upsert(ctx, tx, versionID, groups)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+	return saved, nil
 }
 
 // GetSchema returns the field schema for a version. If the version exists but
@@ -314,8 +351,11 @@ func (s *ProviderRegistryService) ListVersions(ctx context.Context, defID uuid.U
 }
 
 // UpdateVersionMetadata edits changelog/compatibility notes; rejected once the
-// version is in a published (frozen) state.
+// version is in a published (frozen) state. The frozen check is re-run under
+// the definition-row lock in the same transaction as the write, so it cannot
+// race a publish transition.
 func (s *ProviderRegistryService) UpdateVersionMetadata(ctx context.Context, versionID uuid.UUID, changelog, compat string) (*model.ProviderVersion, error) {
+	// Fast pre-check for a friendly error; re-checked authoritatively under lock.
 	v, err := s.GetVersion(ctx, versionID)
 	if err != nil {
 		return nil, err
@@ -323,21 +363,48 @@ func (s *ProviderRegistryService) UpdateVersionMetadata(ctx context.Context, ver
 	if model.IsPublishedState(v.PublicationState) {
 		return nil, ErrProviderVersionFrozen
 	}
-	return s.vers.UpdateMetadata(ctx, versionID, changelog, compat)
+	var updated *model.ProviderVersion
+	if err := s.inTx(ctx, func(tx pgx.Tx) error {
+		if err := requireUnpublishedLocked(ctx, tx, versionID); err != nil {
+			return err
+		}
+		updated, err = s.vers.UpdateMetadata(ctx, tx, versionID, changelog, compat)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+	return updated, nil
 }
 
-// lockAndReadState locks the version's owning definition row (serializing all
-// lifecycle operations for that provider family) and returns the version's
-// authoritative current state + definition id read under that lock.
-func (s *ProviderRegistryService) lockAndReadState(ctx context.Context, tx pgx.Tx, versionID uuid.UUID) (string, uuid.UUID, error) {
-	var state string
+// lockProviderVersionState locks the version's owning definition row
+// (serializing all lifecycle operations and frozen-checked mutations for that
+// provider family) and returns the version's authoritative current state +
+// definition id read under that lock. Shared by the registry and validation
+// services so every published-version freeze check serializes with Transition.
+//
+// The lock and the state read are two statements on purpose: under READ
+// COMMITTED a single blocked `SELECT ... FOR UPDATE OF d` would, after the
+// conflicting transaction commits, still return the version row from its
+// pre-wait snapshot (EvalPlanQual only re-reads the locked definition row,
+// which the lifecycle code locks but never modifies). The second statement
+// starts after the lock is held and therefore sees the committed state.
+func lockProviderVersionState(ctx context.Context, tx pgx.Tx, versionID uuid.UUID) (string, uuid.UUID, error) {
 	var defID uuid.UUID
 	err := tx.QueryRow(ctx,
-		`SELECT v.publication_state, v.provider_definition_id
+		`SELECT d.id
 		   FROM provider_versions v
 		   JOIN provider_definitions d ON d.id = v.provider_definition_id
 		  WHERE v.id = $1
-		  FOR UPDATE OF d`, versionID).Scan(&state, &defID)
+		  FOR UPDATE OF d`, versionID).Scan(&defID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", uuid.Nil, ErrProviderVersionNotFound
+		}
+		return "", uuid.Nil, err
+	}
+	var state string
+	err = tx.QueryRow(ctx,
+		`SELECT publication_state FROM provider_versions WHERE id = $1`, versionID).Scan(&state)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return "", uuid.Nil, ErrProviderVersionNotFound
@@ -345,6 +412,22 @@ func (s *ProviderRegistryService) lockAndReadState(ctx context.Context, tx pgx.T
 		return "", uuid.Nil, err
 	}
 	return state, defID, nil
+}
+
+// requireUnpublishedLocked locks the version's owning definition row and
+// returns ErrProviderVersionFrozen when the version is already in a published
+// (frozen) state. It is the authoritative re-check that frozen-gated mutations
+// run inside their transaction, so check+write are atomic and serialized with
+// Transition (OPE-515).
+func requireUnpublishedLocked(ctx context.Context, tx pgx.Tx, versionID uuid.UUID) error {
+	state, _, err := lockProviderVersionState(ctx, tx, versionID)
+	if err != nil {
+		return err
+	}
+	if model.IsPublishedState(state) {
+		return ErrProviderVersionFrozen
+	}
+	return nil
 }
 
 // Transition moves a version along the lifecycle graph. The authoritative
@@ -363,7 +446,7 @@ func (s *ProviderRegistryService) Transition(ctx context.Context, versionID uuid
 		return nil, fmt.Errorf("%w: %s -> %s", ErrIllegalProviderTransition, pre.PublicationState, toState)
 	}
 	err = s.inTx(ctx, func(tx pgx.Tx) error {
-		from, defID, err := s.lockAndReadState(ctx, tx, versionID)
+		from, defID, err := lockProviderVersionState(ctx, tx, versionID)
 		if err != nil {
 			return err
 		}
@@ -378,6 +461,10 @@ func (s *ProviderRegistryService) Transition(ctx context.Context, versionID uuid
 	if err != nil {
 		return nil, err
 	}
+	// Best-effort metric AFTER the transition commits (OPE-422). toState is a bounded
+	// publication-state enum (validated above); the collector coerces anything else to
+	// "other". version id / actor id are NEVER used as labels. nil-safe.
+	s.metrics.RecordPublicationTransition(toState)
 	return s.vers.GetByID(ctx, versionID)
 }
 
@@ -431,7 +518,7 @@ func (s *ProviderRegistryService) EmergencyDisable(ctx context.Context, versionI
 		return nil, ErrProviderDisableStateInvalid
 	}
 	err = s.inTx(ctx, func(tx pgx.Tx) error {
-		from, defID, err := s.lockAndReadState(ctx, tx, versionID)
+		from, defID, err := lockProviderVersionState(ctx, tx, versionID)
 		if err != nil {
 			return err
 		}

@@ -82,6 +82,42 @@ var validPriorities = map[string]bool{
 	"low": true, "normal": true, "high": true, "urgent": true,
 }
 
+// Order status keys for the built-in lifecycle (see DefaultOrderStatusConfig).
+const (
+	OrderStatusNew            = "new"
+	OrderStatusConfirmed      = "confirmed"
+	OrderStatusProcessing     = "processing"
+	OrderStatusReadyToShip    = "ready_to_ship"
+	OrderStatusShipped        = "shipped"
+	OrderStatusInTransit      = "in_transit"
+	OrderStatusOutForDelivery = "out_for_delivery"
+	OrderStatusDelivered      = "delivered"
+	OrderStatusCompleted      = "completed"
+	OrderStatusOnHold         = "on_hold"
+	OrderStatusCancelled      = "cancelled"
+	OrderStatusRefunded       = "refunded"
+)
+
+// TerminalOrderStatuses are the order statuses from which the lifecycle no longer
+// advances: the order is finished (completed) or closed out (cancelled/refunded).
+// Non-terminal orders are the ones still flowing through fulfillment, so they are
+// the set eligible for fulfillment-process backfill (OPE-423a). Per
+// DefaultOrderStatusConfig, completed and cancelled each have a single onward edge
+// to refunded and refunded is fully terminal; all three are excluded from backfill
+// because none represents an order still flowing through fulfillment.
+var TerminalOrderStatuses = []string{
+	OrderStatusCompleted,
+	OrderStatusCancelled,
+	OrderStatusRefunded,
+}
+
+// IsTerminalOrderStatus reports whether status is a terminal order status (the
+// lifecycle does not advance further). Used to exclude finished/closed orders from
+// fulfillment-process backfill.
+func IsTerminalOrderStatus(status string) bool {
+	return slices.Contains(TerminalOrderStatuses, status)
+}
+
 // IsValidPriority reports whether p is a recognised order priority string.
 func IsValidPriority(p string) bool {
 	return validPriorities[p]

@@ -219,7 +219,8 @@
     "warehouses": "Warehouses",
     "webhookDeliveries": "Webhook deliveries",
     "webhooks": "Webhooks",
-    "workflowBuilder": "Workflow Builder"
+    "workflowBuilder": "Workflow Builder",
+    "fulfillmentOps": "Fulfillment control tower"
   },
   "pagination": {
     "next": "Next",

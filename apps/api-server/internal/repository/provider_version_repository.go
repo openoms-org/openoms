@@ -78,9 +78,10 @@ func (r *ProviderVersionRepository) ListByDefinition(ctx context.Context, defID 
 }
 
 // UpdateMetadata updates the editable changelog/compatibility fields. State is
-// not changed here (use UpdateState). Immutability is enforced in the service.
-func (r *ProviderVersionRepository) UpdateMetadata(ctx context.Context, id uuid.UUID, changelog, compat string) (*model.ProviderVersion, error) {
-	out, err := scanProviderVersion(r.pool.QueryRow(ctx,
+// not changed here (use UpdateState). Immutability is enforced in the service,
+// which passes its transaction so the freeze check and the write are atomic.
+func (r *ProviderVersionRepository) UpdateMetadata(ctx context.Context, q Querier, id uuid.UUID, changelog, compat string) (*model.ProviderVersion, error) {
+	out, err := scanProviderVersion(q.QueryRow(ctx,
 		`UPDATE provider_versions SET changelog = $2, compatibility_notes = $3, updated_at = now()
 		  WHERE id = $1 RETURNING `+providerVersionColumns,
 		id, changelog, compat))

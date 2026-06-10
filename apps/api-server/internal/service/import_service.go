@@ -23,10 +23,11 @@ import (
 
 // ImportService handles CSV import of orders.
 type ImportService struct {
-	orderRepo  repository.OrderRepo
-	auditRepo  repository.AuditRepo
-	tenantRepo repository.TenantRepo
-	pool       *pgxpool.Pool
+	orderRepo   repository.OrderRepo
+	auditRepo   repository.AuditRepo
+	tenantRepo  repository.TenantRepo
+	pool        *pgxpool.Pool
+	fulfillment *FulfillmentService
 }
 
 // ImportOrdersOptions controls CSV order import behavior.
@@ -34,13 +35,16 @@ type ImportOrdersOptions struct {
 	MaxOrdersMonthly int
 }
 
-// NewImportService creates a new ImportService.
-func NewImportService(orderRepo repository.OrderRepo, auditRepo repository.AuditRepo, tenantRepo repository.TenantRepo, pool *pgxpool.Pool) *ImportService {
+// NewImportService creates a new ImportService. fulfillment may be nil (or a
+// disabled FulfillmentService), in which case imported orders do not spin up a
+// fulfillment process.
+func NewImportService(orderRepo repository.OrderRepo, auditRepo repository.AuditRepo, tenantRepo repository.TenantRepo, pool *pgxpool.Pool, fulfillment *FulfillmentService) *ImportService {
 	return &ImportService{
-		orderRepo:  orderRepo,
-		auditRepo:  auditRepo,
-		tenantRepo: tenantRepo,
-		pool:       pool,
+		orderRepo:   orderRepo,
+		auditRepo:   auditRepo,
+		tenantRepo:  tenantRepo,
+		pool:        pool,
+		fulfillment: fulfillment,
 	}
 }
 
@@ -504,6 +508,18 @@ func (s *ImportService) importRow(
 			Message: fmt.Sprintf("failed to create order: %s", err.Error()),
 		})
 		return rowErrors
+	}
+
+	// Route the imported order through the fulfillment commands (OPE-416), in the
+	// same transaction. No-op when the gated service is nil/disabled.
+	if s.fulfillment != nil {
+		if _, err := s.fulfillment.EnsureProcessForOrder(ctx, tx, tenantID, order.ID); err != nil {
+			rowErrors = append(rowErrors, model.ImportError{
+				Row:     rowNum,
+				Message: fmt.Sprintf("failed to create fulfillment process: %s", err.Error()),
+			})
+			return rowErrors
+		}
 	}
 
 	result.Imported++

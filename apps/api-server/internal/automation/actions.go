@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -21,8 +22,16 @@ import (
 	allegroIntegration "github.com/openoms-org/openoms/apps/api-server/internal/integration/allegro"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/netutil"
+	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
 )
+
+// EventAutomationSetStatus is the orchestration outbox event type emitted when a
+// set_status automation action is routed through the orchestration outbox (OPE-421)
+// instead of calling OrderService.TransitionStatus directly. It is consumed by
+// service.AutomationStatusTransitionHandler. Defined here (the producer) and
+// referenced by the handler/registration to keep producer and consumer in sync.
+const EventAutomationSetStatus = "automation.set_status"
 
 // ActionExecutor executes a single automation action within the automation engine.
 // Implementations may discard the caller context for actions that call external APIs
@@ -59,10 +68,32 @@ type EmailSender interface {
 	SendOrderStatusEmail(ctx context.Context, tenantID uuid.UUID, order *model.Order, oldStatus, newStatus string)
 }
 
+// OrchestrationEnqueuer enqueues an orchestration outbox event within the caller's
+// tenant transaction (RLS-scoped, idempotent on tenant + idempotency key).
+// Implemented by *repository.OrchestrationRepository.
+type OrchestrationEnqueuer interface {
+	EnqueueEvent(ctx context.Context, q repository.Querier, e model.OrchestrationOutboxEvent) (bool, *model.OrchestrationOutboxEvent, error)
+}
+
+// FulfillmentProcessEnsurer looks up / creates the fulfillment process anchoring an
+// order's orchestration timeline. Implemented by *repository.FulfillmentRepository.
+type FulfillmentProcessEnsurer interface {
+	GetProcessByOrder(ctx context.Context, tx pgx.Tx, orderID uuid.UUID) (*model.FulfillmentProcess, error)
+	CreateProcess(ctx context.Context, tx pgx.Tx, p model.FulfillmentProcess) (*model.FulfillmentProcess, error)
+}
+
 // InvoiceCreator handles auto-invoice creation on order status change.
 // Implemented by service.InvoiceService.
 type InvoiceCreator interface {
 	HandleOrderStatusChange(ctx context.Context, tenantID uuid.UUID, order *model.Order)
+}
+
+// ExternalWorkflowDispatcher hands an order event to an external workflow engine via the
+// OPE-421/Phase-13 connector (gated). Implemented by *service.ExternalWorkflowService.
+// Enabled() is nil-safe and false unless the connector is wired AND EXTERNAL_WORKFLOW_ENABLED.
+type ExternalWorkflowDispatcher interface {
+	Enabled() bool
+	DispatchForOrder(ctx context.Context, tenantID, orderID, integrationID uuid.UUID) error
 }
 
 // ListingActivatorDeps holds the dependencies needed by the activate_listing action.
@@ -137,6 +168,19 @@ type DefaultActionExecutor struct {
 	listingDeactivatorDeps *ListingDeactivatorDeps
 	marketplaceMessageDeps *MarketplaceMessageDeps
 	pool                   *pgxpool.Pool
+
+	// Orchestration routing (OPE-421). When orchestrationEnabled is true AND both
+	// repositories are wired, executeSetStatus enqueues an automation.set_status
+	// outbox event (anchored to the order's fulfillment process) instead of calling
+	// TransitionStatus directly. The zero value is DISABLED: orchestrationEnabled is
+	// false and the repos are nil, so the direct path runs unchanged.
+	orchestration        OrchestrationEnqueuer
+	fulfillment          FulfillmentProcessEnsurer
+	orchestrationEnabled bool
+
+	// externalWorkflow is the OPE-421/Phase-13 connector (gated). The zero value is nil,
+	// and executeExternalWorkflow is a no-op unless it is wired AND its Enabled() is true.
+	externalWorkflow ExternalWorkflowDispatcher
 }
 
 // NewDefaultActionExecutor creates a new DefaultActionExecutor with a safe HTTP client.
@@ -180,6 +224,26 @@ func (e *DefaultActionExecutor) SetMarketplaceMessageDeps(deps *MarketplaceMessa
 	e.marketplaceMessageDeps = deps
 }
 
+// SetOrchestration enables routing set_status actions through the orchestration
+// outbox (OPE-421). When enabled is true and both repositories are non-nil,
+// executeSetStatus enqueues an automation.set_status event (ensuring the order's
+// fulfillment process first) rather than calling TransitionStatus directly. Passing
+// enabled=false (or leaving this unset) keeps the byte-for-byte unchanged direct
+// path — the zero-value executor is always in the off state. The pool used for the
+// enqueue transaction is the one already wired via SetOrderServices.
+func (e *DefaultActionExecutor) SetOrchestration(enabled bool, orchestration OrchestrationEnqueuer, fulfillment FulfillmentProcessEnsurer) {
+	e.orchestrationEnabled = enabled
+	e.orchestration = orchestration
+	e.fulfillment = fulfillment
+}
+
+// SetExternalWorkflow wires the OPE-421/Phase-13 external-workflow connector. When unset (or
+// when its Enabled() is false) the external_workflow action is a no-op — the default path is
+// byte-for-byte unchanged. Mirrors the SetOrchestration gating pattern.
+func (e *DefaultActionExecutor) SetExternalWorkflow(dispatcher ExternalWorkflowDispatcher) {
+	e.externalWorkflow = dispatcher
+}
+
 // ExecuteAction dispatches an automation action based on its type.
 func (e *DefaultActionExecutor) ExecuteAction(ctx context.Context, tenantID uuid.UUID, action Action, event Event) error {
 	switch action.Type {
@@ -199,9 +263,31 @@ func (e *DefaultActionExecutor) ExecuteAction(ctx context.Context, tenantID uuid
 		return e.executeDeactivateListing(ctx, tenantID, action, event)
 	case "send_marketplace_message":
 		return e.executeSendMarketplaceMessage(ctx, tenantID, action, event)
+	case "external_workflow":
+		return e.executeExternalWorkflow(ctx, tenantID, action, event)
 	default:
 		return fmt.Errorf("unknown action type: %s", action.Type)
 	}
+}
+
+// executeExternalWorkflow hands the event to an external workflow engine via the
+// external-workflow connector (OPE-421/Phase-13). Gated/best-effort: a no-op when the
+// connector is nil/disabled, so the default build is byte-for-byte unchanged.
+func (e *DefaultActionExecutor) executeExternalWorkflow(_ context.Context, tenantID uuid.UUID, action Action, event Event) error {
+	if e.externalWorkflow == nil || !e.externalWorkflow.Enabled() {
+		return nil
+	}
+	if event.EntityType != "order" {
+		return fmt.Errorf("external_workflow action only supports order entities, got %q", event.EntityType)
+	}
+	integrationIDStr, _ := action.Params["integration_id"].(string)
+	integrationID, err := uuid.Parse(integrationIDStr)
+	if err != nil {
+		return fmt.Errorf("external_workflow: invalid integration_id: %w", err)
+	}
+	// Use a fresh context: the dispatch enqueue must complete regardless of the original
+	// request timeout/cancellation (mirrors the other external-effect actions).
+	return e.externalWorkflow.DispatchForOrder(context.Background(), tenantID, event.EntityID, integrationID)
 }
 
 // executeSetStatus transitions an order to the target status specified in action params.
@@ -226,15 +312,27 @@ func (e *DefaultActionExecutor) executeSetStatus(_ context.Context, tenantID uui
 		return fmt.Errorf("set_status action missing 'status' parameter")
 	}
 
+	// Use a fresh context in case the original is cancelled.
+	bgCtx := context.Background()
+
+	// OPE-421: when orchestration routing is enabled, the transition is performed
+	// asynchronously and idempotently by AutomationStatusTransitionHandler. We
+	// ensure the order's fulfillment process exists (the outbox FK requires a
+	// process), enqueue an automation.set_status event, and return WITHOUT calling
+	// TransitionStatus here. The enqueue is deduped on its idempotency key so a
+	// re-fire of the same (rule, order, target) is a no-op. When routing is disabled
+	// (the default) this whole block is skipped and the direct path below runs
+	// byte-for-byte unchanged.
+	if e.orchestrationEnabled && e.orchestration != nil && e.fulfillment != nil && e.pool != nil {
+		return e.enqueueSetStatus(bgCtx, tenantID, action, event, targetStatus)
+	}
+
 	// Use Force=true because automation rules are system-driven and should
 	// bypass normal transition validation rules.
 	req := model.StatusTransitionRequest{
 		Status: targetStatus,
 		Force:  true,
 	}
-
-	// Use a fresh context in case the original is cancelled.
-	bgCtx := context.Background()
 
 	_, err := e.orderTransitioner.TransitionStatus(bgCtx, tenantID, event.EntityID, req, uuid.Nil, "automation")
 	if err != nil {
@@ -252,6 +350,86 @@ func (e *DefaultActionExecutor) executeSetStatus(_ context.Context, tenantID uui
 		"order_id", event.EntityID,
 		"target_status", targetStatus,
 	)
+	return nil
+}
+
+// setStatusIdempotencyKey builds the stable outbox dedup key for an orchestrated
+// set_status action. Keying on (rule, order, target) means a repeated fire of the
+// same rule on the same order toward the same status enqueues at most one event.
+// The action index is intentionally excluded so two set_status actions in one rule
+// targeting the same status still collapse to one transition.
+func setStatusIdempotencyKey(ruleID, orderID uuid.UUID, targetStatus string) string {
+	return EventAutomationSetStatus + ":" + ruleID.String() + ":" + orderID.String() + ":" + targetStatus
+}
+
+// enqueueSetStatus is the OPE-421 orchestration-routed path for set_status. It runs
+// a single tenant transaction that (1) ensures the order's fulfillment process
+// exists — the outbox process_id FK is NOT NULL — and (2) enqueues an
+// automation.set_status event idempotently. It performs NO direct transition; the
+// OrchestrationWorker + AutomationStatusTransitionHandler apply it asynchronously
+// and idempotently. On error it returns to the engine (which records it in
+// automation_rule_logs); it never panics and never silently drops the action.
+func (e *DefaultActionExecutor) enqueueSetStatus(ctx context.Context, tenantID uuid.UUID, action Action, event Event, targetStatus string) error {
+	payload := map[string]any{
+		"order_id":      event.EntityID.String(),
+		"target_status": targetStatus,
+		"rule_id":       action.RuleID.String(),
+		"action_index":  action.ActionIndex,
+	}
+	idemKey := setStatusIdempotencyKey(action.RuleID, event.EntityID, targetStatus)
+
+	err := database.WithTenant(ctx, e.pool, tenantID, func(tx pgx.Tx) error {
+		return e.ensureProcessAndEnqueueSetStatus(ctx, tx, tenantID, event.EntityID, idemKey, payload)
+	})
+	if err != nil {
+		e.logger.Error("automation action set_status: enqueue failed",
+			"tenant_id", tenantID,
+			"order_id", event.EntityID,
+			"target_status", targetStatus,
+			"error", err,
+		)
+		return fmt.Errorf("set_status enqueue: %w", err)
+	}
+
+	e.logger.Info("automation action set_status enqueued via orchestration outbox",
+		"tenant_id", tenantID,
+		"order_id", event.EntityID,
+		"target_status", targetStatus,
+		"idempotency_key", idemKey,
+	)
+	return nil
+}
+
+// ensureProcessAndEnqueueSetStatus runs the tenant-tx-bound work for the
+// orchestration-routed set_status: it ensures a fulfillment process exists for the
+// order (idempotent — reuse on hit, create only on pgx.ErrNoRows) and enqueues the
+// automation.set_status outbox event (idempotent on idemKey). Split out of
+// enqueueSetStatus so the DB-bound logic is unit-testable with fakes; the tx is
+// passed straight through to the repositories.
+func (e *DefaultActionExecutor) ensureProcessAndEnqueueSetStatus(ctx context.Context, tx pgx.Tx, tenantID, orderID uuid.UUID, idemKey string, payload map[string]any) error {
+	proc, perr := e.fulfillment.GetProcessByOrder(ctx, tx, orderID)
+	if perr != nil {
+		if !errors.Is(perr, pgx.ErrNoRows) {
+			return fmt.Errorf("lookup fulfillment process: %w", perr)
+		}
+		proc, perr = e.fulfillment.CreateProcess(ctx, tx, model.FulfillmentProcess{
+			TenantID: tenantID,
+			OrderID:  orderID,
+		})
+		if perr != nil {
+			return fmt.Errorf("create fulfillment process: %w", perr)
+		}
+	}
+
+	if _, _, eerr := e.orchestration.EnqueueEvent(ctx, tx, model.OrchestrationOutboxEvent{
+		TenantID:       tenantID,
+		ProcessID:      proc.ID,
+		EventType:      EventAutomationSetStatus,
+		IdempotencyKey: idemKey,
+		Payload:        payload,
+	}); eerr != nil {
+		return fmt.Errorf("enqueue automation.set_status event: %w", eerr)
+	}
 	return nil
 }
 

@@ -1,0 +1,14 @@
+-- OPE-419 Operations / fulfillment read API indexes
+-- The read API filters and aggregates fulfillment processes by status:
+--   * ListProcessesFiltered  -> WHERE aggregate_status = ANY / health_status = ANY
+--   * ListProcessesByAggregateStatuses -> WHERE aggregate_status = ANY
+--   * CountProcessesByStatus  -> GROUP BY aggregate_status, health_status
+-- RLS also appends tenant_id = current_setting('app.current_tenant_id'), so a
+-- composite (tenant_id, aggregate_status, health_status) index supports both the
+-- tenant filter and the status filter/grouping. The existing
+-- idx_fulfillment_processes_order covers (tenant_id, order_id) only, which does
+-- not serve these status predicates.
+--
+-- These tables are new (OPE-414) and prod-empty, so the build is instant; the
+-- index-lock-ok marker documents that there is no large-table lock concern.
+CREATE INDEX idx_fulfillment_processes_status ON public.fulfillment_processes (tenant_id, aggregate_status, health_status); -- migrate:index-lock-ok

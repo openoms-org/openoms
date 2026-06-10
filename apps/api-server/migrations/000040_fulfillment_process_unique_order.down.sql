@@ -1,0 +1,12 @@
+-- OPE-423a-followup rollback: drop the unique (tenant_id, order_id) index. The
+-- pre-existing non-unique idx_fulfillment_processes_order was left in place by the up
+-- migration, so the (tenant_id, order_id) lookup still has an index after rollback.
+--
+-- NOTE: CreateProcess uses INSERT ... ON CONFLICT (tenant_id, order_id) DO NOTHING,
+-- which REQUIRES this unique index. Apply this down migration only together with
+-- reverting the application to a build that does not use that ON CONFLICT clause
+-- (i.e. a full rollback of both schema and image) — otherwise CreateProcess will error
+-- with "no unique or exclusion constraint matching the ON CONFLICT". A normal
+-- `helm rollback` (image reverted, this down NOT auto-run) is unaffected: the old
+-- plain-INSERT code works fine with the unique index still present.
+DROP INDEX IF EXISTS public.uq_fulfillment_processes_tenant_order;

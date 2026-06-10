@@ -50,6 +50,60 @@ type Config struct {
 	// class-first catalog of existing providers at startup (OPE-412).
 	SeedProviders bool `env:"SEED_PROVIDERS" envDefault:"false"`
 
+	// OrchestrationWorkerEnabled enables the fulfillment outbox worker (OPE-415).
+	// Off by default until side-effect handlers are registered (OPE-416+).
+	OrchestrationWorkerEnabled bool `env:"ORCHESTRATION_WORKER_ENABLED" envDefault:"false"`
+
+	// FulfillmentProcessEnabled routes order creation through the fulfillment
+	// commands (OPE-416): on each new order it creates a fulfillment process and
+	// enqueues an order.created orchestration event in the order's transaction.
+	// Off by default — zero behavior change until enabled.
+	FulfillmentProcessEnabled bool `env:"FULFILLMENT_PROCESS_ENABLED" envDefault:"false"`
+
+	// SupplierAvailabilityEnabled turns on the OPE-418 supplier-availability read-model:
+	// the supplier sync writes snapshots and dropship routing / stock propagation consult
+	// the resolver. Default false -> the legacy supplier_products.stock_quantity path is
+	// unchanged.
+	SupplierAvailabilityEnabled bool `env:"SUPPLIER_AVAILABILITY_ENABLED" envDefault:"false"`
+
+	// SupplierOrderEnabled turns on the OPE-418/Phase-7 supplier-order engine: the dropship
+	// gate enqueues supplier.order.submit for API-capable routable units, and the handler +
+	// status poller run. Default false -> the gate's API branch keeps its current behavior
+	// (mark the create_dropship_order step ready, no auto-submit).
+	SupplierOrderEnabled bool `env:"SUPPLIER_ORDER_ENABLED" envDefault:"false"`
+
+	// AutomationOrchestrationEnabled routes set_status automation actions through
+	// the orchestration outbox (OPE-421) instead of calling OrderService.TransitionStatus
+	// directly: the action ensures a fulfillment process for the order and enqueues an
+	// automation.set_status event; the OrchestrationWorker drains it and a handler
+	// performs the idempotent transition. Off by default — automation behaviour is
+	// byte-for-byte unchanged until enabled. NOTE the dual-flag dependency: enqueue
+	// needs AUTOMATION_ORCHESTRATION_ENABLED, processing additionally needs
+	// ORCHESTRATION_WORKER_ENABLED. With the former on and the latter off, set_status
+	// events are durably enqueued but sit unprocessed in the outbox (expected, opt-in).
+	AutomationOrchestrationEnabled bool `env:"AUTOMATION_ORCHESTRATION_ENABLED" envDefault:"false"`
+
+	// FulfillmentBackfillEnabled turns the fulfillment-process backfill worker on
+	// (OPE-423a). When false (the default) the worker is a complete no-op: existing
+	// orders are never touched. It is the FIRST of two gates — see
+	// FulfillmentBackfillDryRun for the second. Backfilling closes the gap between
+	// legacy orders (created before fulfillment processes existed / while
+	// FULFILLMENT_PROCESS_ENABLED was off) and process-backed orchestration.
+	FulfillmentBackfillEnabled bool `env:"FULFILLMENT_BACKFILL_ENABLED" envDefault:"false"`
+
+	// FulfillmentBackfillDryRun is the SECOND gate (OPE-423a) and defaults to true:
+	// even when the backfill worker is ENABLED it only COUNTS the orders that would
+	// be backfilled (no writes) unless this is explicitly set to false. Writing
+	// therefore requires BOTH FULFILLMENT_BACKFILL_ENABLED=true AND
+	// FULFILLMENT_BACKFILL_DRY_RUN=false — a deliberate two-flag opt-in so a plain
+	// enable can never mutate production data by accident.
+	FulfillmentBackfillDryRun bool `env:"FULFILLMENT_BACKFILL_DRY_RUN" envDefault:"true"`
+
+	// ExternalWorkflowEnabled turns on the OPE-421/Phase-13 external-workflow connector:
+	// the external_workflow action dispatches + the callback route is registered. Default
+	// false -> the action is a no-op and the callback route returns 404.
+	ExternalWorkflowEnabled bool `env:"EXTERNAL_WORKFLOW_ENABLED" envDefault:"false"`
+
 	UploadDir     string `env:"UPLOAD_DIR" envDefault:"./uploads"`
 	MaxUploadSize int64  `env:"MAX_UPLOAD_SIZE" envDefault:"10485760"` // 10MB
 

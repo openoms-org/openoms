@@ -54,6 +54,7 @@ import {
   Route,
   Share2,
   MailCheck,
+  Gauge,
 } from "lucide-react";
 
 export interface NavItem {
@@ -117,6 +118,7 @@ export const navItems: NavItem[] = [
   { href: "/settings/print-templates", label: "printTemplates", icon: Printer, group: "catalog" },
 
   // ── Logistics ──
+  { href: "/operations/fulfillment", label: "fulfillmentOps", icon: Gauge, adminOnly: true, group: "logistics" },
   { href: "/shipments", label: "shipments", icon: Truck, group: "logistics" },
   { href: "/carriers", label: "carriers", icon: Route, adminOnly: true, group: "logistics" },
   { href: "/packing", label: "packing", icon: ScanBarcode, group: "logistics" },
