@@ -1561,6 +1561,10 @@ Dispatcher:  OrchestrationDispatcher (mapa event_type → handler). OPE-415 dost
              realne handlery = OPE-416/417/418. Nieznany event_type → PermanentError.
 Retry:       sukces→succeeded; błąd retryable→pending + next_attempt_at = now+backoff (30s×2^n,
              cap 1h); permanent (PermanentError) lub wyczerpane attempts→failed + fulfillment_blocker.
+Reaper:      każdy tick zaczyna się od reap-pass (OPE-534): wiersze 'claimed' starsze niż
+             10 min (crash workera między claim a mark) wracają do 'pending' z backoffem
+             (przerwana próba liczy się do attempts); wyczerpane attempts → failed +
+             fulfillment_blocker; wiszące 'running' attempts zamykane jako failed.
 ```
 
 ### Routing tworzenia zamówień przez fulfillment (OPE-416, tor B)
