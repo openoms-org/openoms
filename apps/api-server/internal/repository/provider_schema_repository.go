@@ -43,8 +43,10 @@ func decodeSchemaRow(id, versionID uuid.UUID, raw []byte, s *model.ProviderField
 	return nil
 }
 
-// Upsert stores (creating or replacing) the field schema for a version.
-func (r *ProviderSchemaRepository) Upsert(ctx context.Context, versionID uuid.UUID, groups []model.ProviderFieldGroup) (*model.ProviderFieldSchema, error) {
+// Upsert stores (creating or replacing) the field schema for a version, using
+// the given querier (the pool, or a caller's transaction so the write can be
+// atomic with the published-version freeze check).
+func (r *ProviderSchemaRepository) Upsert(ctx context.Context, q Querier, versionID uuid.UUID, groups []model.ProviderFieldGroup) (*model.ProviderFieldSchema, error) {
 	if groups == nil {
 		groups = []model.ProviderFieldGroup{}
 	}
@@ -54,7 +56,7 @@ func (r *ProviderSchemaRepository) Upsert(ctx context.Context, versionID uuid.UU
 	}
 	var s model.ProviderFieldSchema
 	var raw []byte
-	err = r.pool.QueryRow(ctx,
+	err = q.QueryRow(ctx,
 		`INSERT INTO provider_field_schemas (provider_version_id, schema)
 		 VALUES ($1, $2::jsonb)
 		 ON CONFLICT (provider_version_id)

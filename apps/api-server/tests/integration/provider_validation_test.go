@@ -89,6 +89,22 @@ func TestProviderValidation_RunLifecycleAndGap(t *testing.T) {
 	_, err = val.CompleteRun(ctx, run.ID)
 	require.ErrorIs(t, err, service.ErrValidationRunFinalized)
 
+	// The rejected writes left the finalized run untouched: verdict, results
+	// and the auto-created gap are unchanged.
+	unchanged, err := val.GetRunWithResults(ctx, run.ID)
+	require.NoError(t, err)
+	assert.Equal(t, model.RunVerdictFailed, unchanged.Verdict)
+	assert.Equal(t, done.FinishedAt, unchanged.FinishedAt)
+	require.Len(t, unchanged.Results, 2)
+	for _, res := range unchanged.Results {
+		if res.Label == "auth" {
+			assert.Equal(t, model.ResultStatusFailed, res.Status, "rejected RecordResult must not change a finalized result")
+		}
+	}
+	gaps, err = reg.ListGaps(ctx, ver.ID)
+	require.NoError(t, err)
+	assert.Len(t, gaps, 1, "rejected CompleteRun must not create duplicate gaps")
+
 	// Probes frozen once the version is published.
 	for _, to := range []string{
 		model.ProviderStateDesigned, model.ProviderStateAdapterInProgress,
