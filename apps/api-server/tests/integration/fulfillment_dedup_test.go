@@ -15,6 +15,7 @@ import (
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
 
 // OPE-523 (CQ-FULF-03): EnsureUnit/RecordStep dedupe application-side in separate
@@ -135,3 +136,157 @@ func TestFulfillmentDedup_StepUniqueBackstop(t *testing.T) {
 
 // raceTimeout bounds the channel-orchestrated race tests below.
 const raceTimeout = 10 * time.Second
+
+// TestFulfillmentDedup_ConcurrentEnsureUnit_CollapsesToOneRow reproduces the
+// OPE-523 race deterministically: transaction 1 inserts a keyed dropship unit and
+// stays open (uncommitted), so the concurrent EnsureUnit's read-then-create misses
+// it (READ COMMITTED) and proceeds to INSERT — exactly the poller-vs-operator
+// double-create. The ON CONFLICT DO NOTHING arbiter blocks on tx1's in-flight
+// insert, and once tx1 commits the loser re-fetches and returns the WINNING row
+// instead of inserting a duplicate (or aborting its transaction).
+func TestFulfillmentDedup_ConcurrentEnsureUnit_CollapsesToOneRow(t *testing.T) {
+	ctx := context.Background()
+	tenantID := seedTenant(t, ctx)
+	orderID, processID := seedFulfillmentOrder(t, ctx, tenantID, "Race Unit Customer")
+
+	svc := newUnitService()
+	fRepo := repository.NewFulfillmentRepository()
+	supplierKey := uuid.New().String()
+
+	inserted := make(chan struct{})
+	release := make(chan struct{})
+	winnerDone := make(chan error, 1)
+
+	var winnerID uuid.UUID
+	go func() {
+		winnerDone <- database.WithTenant(ctx, appPool, tenantID, func(tx pgx.Tx) error {
+			u, e := fRepo.CreateUnit(ctx, tx, model.FulfillmentUnit{
+				TenantID:  tenantID,
+				ProcessID: processID,
+				UnitType:  model.UnitTypeDropship,
+				Metadata:  map[string]any{"key": supplierKey},
+			})
+			if e != nil {
+				return e
+			}
+			winnerID = u.ID
+			close(inserted) // row inserted but NOT committed yet
+			select {
+			case <-release:
+			case <-time.After(raceTimeout):
+			}
+			return nil // commit
+		})
+	}()
+
+	<-inserted
+	loserDone := make(chan *model.FulfillmentUnit, 1)
+	go func() {
+		// EnsureUnit's ListUnits cannot see tx1's uncommitted row, so it reaches
+		// CreateUnit and blocks on the unique-index speculative insert until tx1
+		// commits — the real-world race window, held open deterministically.
+		loserDone <- svc.EnsureUnit(ctx, tenantID, orderID, model.UnitTypeDropship, supplierKey, nil)
+	}()
+
+	// Give the loser time to pass its read phase and block on the insert, then
+	// let the winner commit. (If scheduling is slow and the loser starts after the
+	// commit, it simply takes the read-dedupe path — the assertions hold either way.)
+	time.Sleep(300 * time.Millisecond)
+	close(release)
+
+	require.NoError(t, <-winnerDone)
+	var loser *model.FulfillmentUnit
+	select {
+	case loser = <-loserDone:
+	case <-time.After(raceTimeout):
+		t.Fatal("EnsureUnit did not return within the race timeout")
+	}
+	require.NotNil(t, loser, "EnsureUnit must survive losing the create race and return the winning unit")
+	assert.Equal(t, winnerID, loser.ID, "the racing EnsureUnit must return the winner, not a duplicate")
+
+	require.NoError(t, database.WithTenant(ctx, appPool, tenantID, func(tx pgx.Tx) error {
+		var n int
+		if e := tx.QueryRow(ctx,
+			`SELECT count(*) FROM fulfillment_units WHERE process_id = $1 AND unit_type = $2`,
+			processID, model.UnitTypeDropship).Scan(&n); e != nil {
+			return e
+		}
+		assert.Equal(t, 1, n, "exactly one dropship unit row must exist after the race")
+		return nil
+	}))
+}
+
+// TestFulfillmentDedup_ConcurrentRecordStep_UpdatesWinner is the step analogue:
+// transaction 1 inserts the (unit, step_key) row and stays open, so the concurrent
+// RecordStep's ListSteps misses it and reaches CreateStep, which blocks on the
+// unique index until tx1 commits. The loser must then apply its UPDATE to the
+// winning row (attempts increment + status), never insert a duplicate or abort.
+func TestFulfillmentDedup_ConcurrentRecordStep_UpdatesWinner(t *testing.T) {
+	ctx := context.Background()
+	tenantID := seedTenant(t, ctx)
+	orderID, _ := seedFulfillmentOrder(t, ctx, tenantID, "Race Step Customer")
+
+	svc := newUnitService()
+	fRepo := repository.NewFulfillmentRepository()
+	unit := svc.EnsureUnit(ctx, tenantID, orderID, model.UnitTypeWarehouse, "", nil)
+	require.NotNil(t, unit)
+
+	inserted := make(chan struct{})
+	release := make(chan struct{})
+	winnerDone := make(chan error, 1)
+
+	var winnerID uuid.UUID
+	go func() {
+		winnerDone <- database.WithTenant(ctx, appPool, tenantID, func(tx pgx.Tx) error {
+			s, e := fRepo.CreateStep(ctx, tx, model.FulfillmentStep{
+				TenantID: tenantID,
+				UnitID:   unit.ID,
+				StepKey:  model.StepPackItems,
+				Status:   model.FulfillmentStatusRunning,
+				Attempts: 1,
+			})
+			if e != nil {
+				return e
+			}
+			winnerID = s.ID
+			close(inserted)
+			select {
+			case <-release:
+			case <-time.After(raceTimeout):
+			}
+			return nil // commit
+		})
+	}()
+
+	<-inserted
+	loserDone := make(chan *model.FulfillmentStep, 1)
+	go func() {
+		loserDone <- svc.RecordStep(ctx, tenantID, unit.ID, model.StepPackItems, model.FulfillmentStatusSucceeded, nil)
+	}()
+
+	time.Sleep(300 * time.Millisecond)
+	close(release)
+
+	require.NoError(t, <-winnerDone)
+	var loser *model.FulfillmentStep
+	select {
+	case loser = <-loserDone:
+	case <-time.After(raceTimeout):
+		t.Fatal("RecordStep did not return within the race timeout")
+	}
+	require.NotNil(t, loser, "RecordStep must survive losing the create race and update the winning step")
+	assert.Equal(t, winnerID, loser.ID, "the racing RecordStep must update the winner, not insert a duplicate")
+	assert.Equal(t, 2, loser.Attempts, "the loser's call still counts as an attempt on the winning row")
+	assert.Equal(t, model.FulfillmentStatusSucceeded, loser.Status)
+
+	require.NoError(t, database.WithTenant(ctx, appPool, tenantID, func(tx pgx.Tx) error {
+		var n int
+		if e := tx.QueryRow(ctx,
+			`SELECT count(*) FROM fulfillment_steps WHERE unit_id = $1 AND step_key = $2`,
+			unit.ID, model.StepPackItems).Scan(&n); e != nil {
+			return e
+		}
+		assert.Equal(t, 1, n, "exactly one step row must exist after the race")
+		return nil
+	}))
+}

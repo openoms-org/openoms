@@ -389,15 +389,42 @@ func scanUnit(row interface{ Scan(...any) error }) (*model.FulfillmentUnit, erro
 	return &u, nil
 }
 
-// CreateUnit inserts a fulfillment unit.
+// CreateUnit inserts a fulfillment unit. ON CONFLICT ... DO NOTHING makes it
+// race-safe against the uq_fulfillment_units_dedupe unique index (migration
+// 000045): EnsureUnit dedupes read-then-create, but under READ COMMITTED two
+// concurrent creators (e.g. the supplier-order status poller + an operator
+// dropship action) can both miss the existing row and both insert. ON CONFLICT
+// collapses that to a single row WITHOUT aborting the surrounding transaction (a
+// bare unique violation would abort it — fatal for best-effort recording). On a
+// conflict the INSERT returns no row, so we re-fetch the winner by the same dedupe
+// key (process, unit_type, metadata->>'key'); the index is NULLS NOT DISTINCT
+// (keyless units collapse too), hence IS NOT DISTINCT FROM in the lookup. This
+// mirrors the established CreateProcess pattern (migration 000040).
 func (r *FulfillmentRepository) CreateUnit(ctx context.Context, tx pgx.Tx, u model.FulfillmentUnit) (*model.FulfillmentUnit, error) {
 	if u.Status == "" {
 		u.Status = model.FulfillmentStatusPending
 	}
+	metaJSON := marshalMeta(u.Metadata)
 	out, err := scanUnit(tx.QueryRow(ctx,
 		`INSERT INTO fulfillment_units (tenant_id, process_id, parent_unit_id, unit_type, status, metadata)
-		 VALUES ($1,$2,$3,$4,$5,$6::jsonb) RETURNING `+fulfillmentUnitColumns,
-		u.TenantID, u.ProcessID, u.ParentUnitID, u.UnitType, u.Status, marshalMeta(u.Metadata)))
+		 VALUES ($1,$2,$3,$4,$5,$6::jsonb)
+		 ON CONFLICT (tenant_id, process_id, unit_type, (metadata->>'key')) DO NOTHING
+		 RETURNING `+fulfillmentUnitColumns,
+		u.TenantID, u.ProcessID, u.ParentUnitID, u.UnitType, u.Status, metaJSON))
+	if errors.Is(err, pgx.ErrNoRows) {
+		// Lost the create race — a unit with this dedupe key already exists; the
+		// winner is committed (the arbiter waited on it), so re-fetch and return it.
+		winner, werr := scanUnit(tx.QueryRow(ctx,
+			`SELECT `+fulfillmentUnitColumns+` FROM fulfillment_units
+			  WHERE process_id = $1 AND unit_type = $2
+			    AND (metadata->>'key') IS NOT DISTINCT FROM ($3::jsonb->>'key')
+			  ORDER BY created_at LIMIT 1`,
+			u.ProcessID, u.UnitType, metaJSON))
+		if werr != nil {
+			return nil, fmt.Errorf("create fulfillment unit: lookup winner after dedupe conflict: %w", werr)
+		}
+		return winner, nil
+	}
 	if err != nil {
 		return nil, fmt.Errorf("create fulfillment unit: %w", err)
 	}
@@ -452,15 +479,35 @@ func scanStep(row interface{ Scan(...any) error }) (*model.FulfillmentStep, erro
 	return &s, nil
 }
 
-// CreateStep inserts a fulfillment step.
+// ErrFulfillmentStepConflict reports that CreateStep lost a (tenant_id, unit_id,
+// step_key) uniqueness race against the uq_fulfillment_steps_unit_step index
+// (migration 000045): a concurrent transaction created the step first. The
+// caller's transaction is NOT aborted (ON CONFLICT DO NOTHING), and the winning
+// row is committed and visible to the caller's next statement — the caller should
+// re-read it and apply its update (RecordStep's attempts-increment branch) instead
+// of inserting. Unlike CreateUnit, the winner is not returned transparently here,
+// because the caller's intent is an upsert: it must know it lost so it can apply
+// its status/attempts update to the winning row.
+var ErrFulfillmentStepConflict = errors.New("fulfillment step already exists for (unit, step_key)")
+
+// CreateStep inserts a fulfillment step. ON CONFLICT ... DO NOTHING makes it
+// race-safe against uq_fulfillment_steps_unit_step (migration 000045): RecordStep
+// dedupes read-then-create, but two concurrent recorders can both miss the
+// existing row and both insert. On a conflict the INSERT returns no row and
+// ErrFulfillmentStepConflict is returned (the transaction stays usable).
 func (r *FulfillmentRepository) CreateStep(ctx context.Context, tx pgx.Tx, s model.FulfillmentStep) (*model.FulfillmentStep, error) {
 	if s.Status == "" {
 		s.Status = model.FulfillmentStatusPending
 	}
 	out, err := scanStep(tx.QueryRow(ctx,
 		`INSERT INTO fulfillment_steps (tenant_id, unit_id, step_key, status, attempts, metadata)
-		 VALUES ($1,$2,$3,$4,$5,$6::jsonb) RETURNING `+fulfillmentStepColumns,
+		 VALUES ($1,$2,$3,$4,$5,$6::jsonb)
+		 ON CONFLICT (tenant_id, unit_id, step_key) DO NOTHING
+		 RETURNING `+fulfillmentStepColumns,
 		s.TenantID, s.UnitID, s.StepKey, s.Status, s.Attempts, marshalMeta(s.Metadata)))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrFulfillmentStepConflict
+	}
 	if err != nil {
 		return nil, fmt.Errorf("create fulfillment step: %w", err)
 	}
