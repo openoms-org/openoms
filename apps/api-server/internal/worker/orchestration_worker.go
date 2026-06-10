@@ -27,8 +27,11 @@ const orchestrationBatchLimit = 50
 // A claim is transient — processEvent runs synchronously and parked events are
 // re-queued to 'pending' in the same flow — so a claim older than this is evidence
 // of a worker that crashed between ClaimDue and Mark*. Far above any legitimate
-// dispatch duration (outbound HTTP is client-timeout-bounded), far below
-// operator-noticeable starvation.
+// single dispatch (outbound HTTP is client-timeout-bounded to <=30s), far below
+// operator-noticeable starvation. NOTE: claimed_at is stamped on the WHOLE batch at
+// claim time, so a worst-case batch (batchLimit x max client timeout) can outlive
+// this window — harmless while worker runs are serialized (Manager atomic + Redis
+// lease, replicaCount=1); revisit before any multi-replica worker rollout.
 const staleClaimTimeout = 10 * time.Minute
 
 // reapBatchLimit caps how many stale claims are reaped per tick.

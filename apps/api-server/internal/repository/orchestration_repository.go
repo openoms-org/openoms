@@ -99,9 +99,11 @@ func (r *OrchestrationRepository) ClaimDue(ctx context.Context, q Querier, limit
 // ListStaleClaimed returns claimed outbox rows whose claim is older than olderThan —
 // evidence of a worker that crashed between ClaimDue and Mark* (OPE-534). Cross-tenant
 // by design (same privileged-pool justification as ClaimDue): the reaper must see every
-// tenant's stranded rows. FOR UPDATE SKIP LOCKED so concurrent worker instances never
-// reap the same row twice, and a row being actively processed (its claimer still holds
-// no lock — claims are NOT held in a tx) is protected by the age threshold instead.
+// tenant's stranded rows. FOR UPDATE SKIP LOCKED only de-conflicts reapers running in
+// the same instant — this is an autocommit statement, so its locks release at statement
+// end and do NOT serialize list-then-mark across instances. Claims are not held in a tx
+// either, so the REAL protections are the age threshold (claimed_at) plus the worker
+// Manager's per-worker serialization (in-process atomic + cross-pod Redis lease).
 func (r *OrchestrationRepository) ListStaleClaimed(ctx context.Context, q Querier, olderThan time.Duration, limit int) ([]model.OrchestrationOutboxEvent, error) {
 	rows, err := q.Query(ctx,
 		`SELECT `+orchestrationOutboxColumns+`
