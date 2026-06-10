@@ -32,7 +32,9 @@ func scanProbe(row interface{ Scan(...any) error }) (*model.ProviderValidationPr
 		return nil, err
 	}
 	if len(config) > 0 {
-		_ = json.Unmarshal(config, &p.Config)
+		if err := json.Unmarshal(config, &p.Config); err != nil {
+			return nil, fmt.Errorf("decode probe config: %w", err)
+		}
 	}
 	return &p, nil
 }
