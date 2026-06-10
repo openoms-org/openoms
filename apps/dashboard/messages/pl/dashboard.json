@@ -198,7 +198,9 @@
         "loadError": "Nie udało się załadować wyjątków.",
         "noBlocker": "Wymaga uwagi",
         "orderRef": "Zamówienie {orderId}",
-        "title": "Wymaga działania"
+        "shownOfTotal": "{shown} z {total}",
+        "title": "Wymaga działania",
+        "topPreview": "{count, plural, one {# najnowszy} few {# najnowsze} other {# najnowszych}}"
       },
       "healthStatus": {
         "action_required": "Wymaga działania",

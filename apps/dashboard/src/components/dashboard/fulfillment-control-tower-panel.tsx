@@ -13,6 +13,7 @@ import { OperationsBucketSummary } from "@/components/dashboard/operations-bucke
 import { FulfillmentExceptionsFeed } from "@/components/dashboard/fulfillment-exceptions-feed";
 import { FulfillmentDetailPanel } from "@/components/fulfillment/fulfillment-detail-panel";
 import { Button } from "@/components/ui/button";
+import { exceptionPopulationFromBuckets } from "@/lib/fulfillment-exceptions";
 import type { FulfillmentExceptionItem } from "@/types/fulfillment";
 
 const PREVIEW_EXCEPTION_LIMIT = 3;
@@ -73,6 +74,7 @@ export function FulfillmentControlTowerPanel() {
           onRetry={() => exceptions.refetch()}
           onSelect={setSelected}
           maxItems={PREVIEW_EXCEPTION_LIMIT}
+          totalCount={exceptionPopulationFromBuckets(summary.data?.buckets)}
         />
       </div>
 

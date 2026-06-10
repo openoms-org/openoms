@@ -198,7 +198,9 @@
         "loadError": "Could not load exceptions.",
         "noBlocker": "Needs attention",
         "orderRef": "Order {orderId}",
-        "title": "Needs action now"
+        "shownOfTotal": "{shown} of {total}",
+        "title": "Needs action now",
+        "topPreview": "latest {count}"
       },
       "healthStatus": {
         "action_required": "Action required",

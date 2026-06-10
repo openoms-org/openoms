@@ -175,6 +175,75 @@ describe("FulfillmentExceptionsFeed", () => {
     ).toBeInTheDocument();
   });
 
+  it("qualifies a capped preview badge against the true population (shown of total)", () => {
+    const items = ["proc-1", "proc-2", "proc-3"].map((id) =>
+      exceptionItem({ process: { ...exceptionItem().process, id } }),
+    );
+
+    render(
+      <FulfillmentExceptionsFeed
+        items={items}
+        isLoading={false}
+        onSelect={vi.fn()}
+        maxItems={3}
+        totalCount={12}
+      />,
+    );
+
+    // The badge must NOT present the capped preview size as the total.
+    expect(
+      screen.getByText("fulfillment.exceptions.shownOfTotal"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("3")).not.toBeInTheDocument();
+  });
+
+  it("shows the bare count when the capped preview covers the whole population", () => {
+    const item = exceptionItem();
+
+    render(
+      <FulfillmentExceptionsFeed
+        items={[item]}
+        isLoading={false}
+        onSelect={vi.fn()}
+        maxItems={3}
+        totalCount={1}
+      />,
+    );
+
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(
+      screen.queryByText("fulfillment.exceptions.shownOfTotal"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("marks a capped badge as a preview when the population is unknown", () => {
+    render(
+      <FulfillmentExceptionsFeed
+        items={[exceptionItem()]}
+        isLoading={false}
+        onSelect={vi.fn()}
+        maxItems={3}
+      />,
+    );
+
+    expect(
+      screen.getByText("fulfillment.exceptions.topPreview"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("1")).not.toBeInTheDocument();
+  });
+
+  it("keeps the bare count when the list is not capped", () => {
+    render(
+      <FulfillmentExceptionsFeed
+        items={[exceptionItem()]}
+        isLoading={false}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("1")).toBeInTheDocument();
+  });
+
   it("humanizes a blocker code missing from the catalogs instead of leaking the raw key", () => {
     const item = exceptionItem({
       top_blocker: {
