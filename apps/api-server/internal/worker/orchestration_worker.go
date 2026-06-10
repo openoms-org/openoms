@@ -87,6 +87,15 @@ func NewOrchestrationWorker(pool *pgxpool.Pool, repo *repository.OrchestrationRe
 	}
 }
 
+// nextRetryAt returns when a failed event should be retried. attempts is the
+// event's PRE-attempt counter (model.OrchestrationOutboxEvent.Attempts); the
+// backoff input is the attempt number that just failed (attempts+1), so every
+// requeue path — panic, start-attempt failure and dispatch failure — computes
+// an identical backoff for the same event state (OPE-522).
+func nextRetryAt(now time.Time, attempts int) time.Time {
+	return now.Add(model.NextOutboxBackoff(attempts + 1))
+}
+
 // Name returns the worker identifier.
 func (w *OrchestrationWorker) Name() string { return "orchestration" }
 
@@ -136,7 +145,7 @@ func (w *OrchestrationWorker) processEvent(ctx context.Context, e model.Orchestr
 			if att != nil {
 				_ = w.repo.FinishAttempt(ctx, w.pool, att.ID, model.AttemptStatusFailed, fmt.Sprintf("panic: %v", r))
 			}
-			_ = w.repo.MarkFailedRetry(ctx, w.pool, e.ID, fmt.Sprintf("panic: %v", r), time.Now().UTC().Add(model.NextOutboxBackoff(e.Attempts+1)))
+			_ = w.repo.MarkFailedRetry(ctx, w.pool, e.ID, fmt.Sprintf("panic: %v", r), nextRetryAt(time.Now().UTC(), e.Attempts))
 			w.recordOutcome("failed")
 		}
 	}()
@@ -147,7 +156,7 @@ func (w *OrchestrationWorker) processEvent(ctx context.Context, e model.Orchestr
 	if err != nil {
 		// Re-queue rather than leaving the row stuck as 'claimed'.
 		log.Error("orchestration start attempt failed", "error", err)
-		_ = w.repo.MarkFailedRetry(ctx, w.pool, e.ID, fmt.Sprintf("start attempt error: %v", err), time.Now().UTC().Add(model.NextOutboxBackoff(e.Attempts)))
+		_ = w.repo.MarkFailedRetry(ctx, w.pool, e.ID, fmt.Sprintf("start attempt error: %v", err), nextRetryAt(time.Now().UTC(), e.Attempts))
 		w.recordOutcome("failed")
 		return
 	}
@@ -189,7 +198,7 @@ func (w *OrchestrationWorker) processEvent(ctx context.Context, e model.Orchestr
 		w.recordOutcome("failed")
 		return
 	}
-	next := time.Now().UTC().Add(model.NextOutboxBackoff(attemptNumber))
+	next := nextRetryAt(time.Now().UTC(), e.Attempts)
 	if err := w.repo.MarkFailedRetry(ctx, w.pool, e.ID, dispErr.Error(), next); err != nil {
 		log.Error("orchestration mark retry failed", "error", err)
 	}

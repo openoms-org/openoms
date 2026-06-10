@@ -3,11 +3,31 @@ package worker
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/obsmetrics"
 )
+
+// TestNextRetryAt_BackoffInputConsistency guards the OPE-522 off-by-one: every
+// requeue path (panic, start-attempt failure, dispatch failure) computes its
+// backoff via nextRetryAt from the event's PRE-attempt counter, and the backoff
+// input must be the attempt number that just failed (attempts+1) — never the raw
+// pre-attempt counter.
+func TestNextRetryAt_BackoffInputConsistency(t *testing.T) {
+	now := time.Date(2026, 6, 10, 12, 0, 0, 0, time.UTC)
+
+	// First failure (Attempts=0 before the attempt) backs off by
+	// NextOutboxBackoff(1) = 60s, NOT NextOutboxBackoff(0) = 30s.
+	assert.Equal(t, now.Add(60*time.Second), nextRetryAt(now, 0))
+
+	for _, attempts := range []int{0, 1, 2, 5, 20} {
+		assert.Equal(t, now.Add(model.NextOutboxBackoff(attempts+1)), nextRetryAt(now, attempts),
+			"attempts=%d", attempts)
+	}
+}
 
 func renderMetrics(m *obsmetrics.FulfillmentMetrics) string {
 	var b strings.Builder
