@@ -263,6 +263,7 @@ type SupplierProductRepo interface {
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 	FindByEAN(ctx context.Context, tx pgx.Tx, ean string) (*model.SupplierProduct, error)
 	FindBySupplierAndExternalID(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID, externalID string) (*model.SupplierProduct, error)
+	FindBySupplierAndProductID(ctx context.Context, tx pgx.Tx, supplierID, productID uuid.UUID) (*model.SupplierProduct, error)
 	UpsertByExternalID(ctx context.Context, tx pgx.Tx, sp *model.SupplierProduct) error
 	FindByIDs(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]model.SupplierProduct, error)
 	LinkToProduct(ctx context.Context, tx pgx.Tx, id uuid.UUID, productID uuid.UUID) error
@@ -413,10 +414,12 @@ type PriceListRepo interface {
 type DropshipOrderRepo interface {
 	List(ctx context.Context, tx pgx.Tx, filter model.DropshipOrderListFilter) ([]model.DropshipOrder, int, error)
 	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.DropshipOrder, error)
+	FindByIDForUpdate(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.DropshipOrder, error)
 	FindByOrderID(ctx context.Context, tx pgx.Tx, orderID uuid.UUID) ([]model.DropshipOrder, error)
 	Create(ctx context.Context, tx pgx.Tx, d *model.DropshipOrder) error
 	UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string) error
 	UpdateFields(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateDropshipStatusRequest) error
+	MarkSubmitAttempted(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 }
 

@@ -589,14 +589,26 @@ func (s *DropshipService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 // UpdateStatus updates the status of a dropship order with optional tracking info.
 // When transitioning to "sent" and the supplier has a linked integration,
 // the order is automatically submitted to the supplier's API.
+//
+// OPE-517/OPE-518 two-phase submit: the deciding transaction locks the row FOR UPDATE,
+// checks supplier_reference AND the submit-intent marker, prepares the supplier request and
+// commits the marker; provider.CreateOrder then runs with NO open transaction; a finalize
+// transaction records the reference + status. When the marker is already set (a previous
+// attempt may have placed the order at the supplier) the auto-submit is SKIPPED and the
+// transition proceeds as a pure status update — that is the operator resolution path for
+// the supplier_manual_submission_required blocker.
 func (s *DropshipService) UpdateStatus(ctx context.Context, tenantID, id uuid.UUID, req model.UpdateDropshipStatusRequest, actorID uuid.UUID, ip string) (*model.DropshipOrder, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
 	}
 
 	var d *model.DropshipOrder
+	var submission *supplierSubmission
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		existing, err := s.dropshipRepo.FindByID(ctx, tx, id)
+		// OPE-518: lock the row FOR UPDATE before reading supplier_reference so this manual
+		// transition serializes against the supplier-order engine's submit handler — the
+		// second submitter sees the first one's committed outcome instead of racing it.
+		existing, err := s.dropshipRepo.FindByIDForUpdate(ctx, tx, id)
 		if err != nil {
 			return err
 		}
@@ -614,49 +626,77 @@ func (s *DropshipService) UpdateStatus(ctx context.Context, tenantID, id uuid.UU
 		// double-submit when the OPE-418/Phase-7 supplier-order engine (supplier.order.submit
 		// handler) has already placed the order and set the reference on this row.
 		alreadySubmitted := existing.SupplierReference != nil && strings.TrimSpace(*existing.SupplierReference) != ""
-		if req.Status == "sent" && existing.Status == "pending" && !alreadySubmitted {
-			if result, err := s.submitToSupplierAPI(ctx, tx, tenantID, existing); err != nil {
+		// OPE-517: a set submit-intent marker means a previous attempt may have placed the
+		// order at the supplier — never auto-resubmit. The transition proceeds as a pure
+		// status update so the operator can resolve the blocker manually (verifying at the
+		// supplier and entering the reference by hand).
+		markerSet := existing.SubmitAttemptedAt != nil
+		if req.Status == "sent" && existing.Status == "pending" && !alreadySubmitted && !markerSet {
+			sub, serr := s.prepareSupplierSubmission(ctx, tx, tenantID, existing)
+			if serr != nil {
 				s.logger.Error("failed to submit dropship order to supplier API",
-					"dropship_order_id", id, "supplier_id", existing.SupplierID, "error", err)
-				return fmt.Errorf("submit to supplier: %w", err)
-			} else if result != nil {
-				ref := result.ExternalOrderID
-				if result.OrderNumber != "" {
-					ref = result.OrderNumber
+					"dropship_order_id", id, "supplier_id", existing.SupplierID, "error", serr)
+				return fmt.Errorf("submit to supplier: %w", serr)
+			}
+			if sub != nil {
+				// Two-phase: commit the submit intent in this tx; CreateOrder runs after the
+				// commit, and the finalize tx below records the reference.
+				if merr := s.dropshipRepo.MarkSubmitAttempted(ctx, tx, id); merr != nil {
+					return merr
 				}
-				req.SupplierReference = &ref
+				submission = sub
+				return nil
 			}
 		}
-
-		if err := s.dropshipRepo.UpdateFields(ctx, tx, id, req); err != nil {
-			return err
-		}
-
-		d, err = s.dropshipRepo.FindByID(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-		items, err := s.dropshipItemRepo.ListByDropshipOrderID(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-		if items == nil {
-			items = []model.DropshipOrderItem{}
-		}
-		d.Items = items
-
-		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
-			TenantID:   tenantID,
-			UserID:     actorID,
-			Action:     "dropship_order.status_updated",
-			EntityType: "dropship_order",
-			EntityID:   id,
-			Changes:    map[string]string{"from": existing.Status, "to": req.Status},
-			IPAddress:  ip,
-		})
+		// No supplier API call — finalize in this same transaction (single-tx, as before).
+		var ferr error
+		d, ferr = s.finalizeStatusUpdate(ctx, tx, tenantID, id, existing.Status, req, actorID, ip)
+		return ferr
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	if submission != nil {
+		// Supplier I/O with NO open transaction (OPE-517). ClientOrderNumber is the
+		// supplier-side idempotency token (the dropship order id, as before).
+		result, serr := submission.provider.CreateOrder(ctx, submission.req)
+		if serr != nil {
+			// The committed marker stays set: a later pending→sent transition will NOT
+			// auto-resubmit — the operator verifies at the supplier first.
+			s.logger.Error("failed to submit dropship order to supplier API",
+				"dropship_order_id", id, "supplier_id", submission.supplierID, "error", serr)
+			return nil, fmt.Errorf("submit to supplier: %w", serr)
+		}
+		ref := result.ExternalOrderID
+		if result.OrderNumber != "" {
+			ref = result.OrderNumber
+		}
+		req.SupplierReference = &ref
+		s.logger.Info("dropship order submitted to supplier API",
+			"dropship_order_id", id,
+			"supplier", submission.supplierName,
+			"external_order_id", result.ExternalOrderID,
+			"order_number", result.OrderNumber)
+
+		err = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+			// Re-lock and finalize; the marker is KEPT as historical evidence. If this tx
+			// fails after the successful CreateOrder, the marker guarantees no later
+			// auto-resubmit (and the unique submitted-once index backstops duplicates).
+			locked, lerr := s.dropshipRepo.FindByIDForUpdate(ctx, tx, id)
+			if lerr != nil {
+				return lerr
+			}
+			if locked == nil {
+				return ErrDropshipOrderNotFound
+			}
+			var ferr error
+			d, ferr = s.finalizeStatusUpdate(ctx, tx, tenantID, id, locked.Status, req, actorID, ip)
+			return ferr
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if s.webhookDispatch != nil {
@@ -665,6 +705,39 @@ func (s *DropshipService) UpdateStatus(ctx context.Context, tenantID, id uuid.UU
 	// OPE-418: map the dropship status change onto the dropship unit + supplier
 	// steps (gated, best-effort — never affects the result above).
 	s.recordDropshipTransition(ctx, tenantID, d)
+	return d, nil
+}
+
+// finalizeStatusUpdate applies the status update, reloads the order with its items, and
+// writes the audit entry — inside the caller's transaction (which holds the row lock).
+func (s *DropshipService) finalizeStatusUpdate(ctx context.Context, tx pgx.Tx, tenantID, id uuid.UUID, fromStatus string, req model.UpdateDropshipStatusRequest, actorID uuid.UUID, ip string) (*model.DropshipOrder, error) {
+	if err := s.dropshipRepo.UpdateFields(ctx, tx, id, req); err != nil {
+		return nil, err
+	}
+	d, err := s.dropshipRepo.FindByID(ctx, tx, id)
+	if err != nil {
+		return nil, err
+	}
+	items, err := s.dropshipItemRepo.ListByDropshipOrderID(ctx, tx, id)
+	if err != nil {
+		return nil, err
+	}
+	if items == nil {
+		items = []model.DropshipOrderItem{}
+	}
+	d.Items = items
+
+	if err := s.auditRepo.Log(ctx, tx, model.AuditEntry{
+		TenantID:   tenantID,
+		UserID:     actorID,
+		Action:     "dropship_order.status_updated",
+		EntityType: "dropship_order",
+		EntityID:   id,
+		Changes:    map[string]string{"from": fromStatus, "to": req.Status},
+		IPAddress:  ip,
+	}); err != nil {
+		return nil, err
+	}
 	return d, nil
 }
 
@@ -725,9 +798,20 @@ func (s *DropshipService) Cancel(ctx context.Context, tenantID, id uuid.UUID, ac
 	return d, nil
 }
 
-// submitToSupplierAPI submits a dropship order to the supplier's API (e.g. BTP).
-// Returns nil result if the supplier has no linked integration (manual process).
-func (s *DropshipService) submitToSupplierAPI(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, order *model.DropshipOrder) (*integration.SupplierOrderResult, error) {
+// supplierSubmission is a prepared supplier API submission: everything resolved inside the
+// deciding transaction so provider.CreateOrder can run with NO open transaction (OPE-517).
+type supplierSubmission struct {
+	provider     integration.SupplierProvider
+	req          integration.SupplierOrderRequest
+	supplierID   uuid.UUID
+	supplierName string
+}
+
+// prepareSupplierSubmission resolves the supplier provider + order request for a dropship
+// order (e.g. BTP). Returns nil if the supplier has no linked integration or no registered
+// provider (manual process). It performs NO supplier I/O — the caller invokes CreateOrder
+// after the deciding transaction commits.
+func (s *DropshipService) prepareSupplierSubmission(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, order *model.DropshipOrder) (*supplierSubmission, error) {
 	// Load supplier to check for integration
 	supplier, err := s.supplierRepo.FindByID(ctx, tx, order.SupplierID)
 	if err != nil {
@@ -801,18 +885,12 @@ func (s *DropshipService) submitToSupplierAPI(ctx context.Context, tx pgx.Tx, te
 		return nil, fmt.Errorf("no order lines could be built")
 	}
 
-	result, err := provider.CreateOrder(ctx, req)
-	if err != nil {
-		return nil, fmt.Errorf("API call: %w", err)
-	}
-
-	s.logger.Info("dropship order submitted to supplier API",
-		"dropship_order_id", order.ID,
-		"supplier", supplier.Name,
-		"external_order_id", result.ExternalOrderID,
-		"order_number", result.OrderNumber)
-
-	return result, nil
+	return &supplierSubmission{
+		provider:     provider,
+		req:          req,
+		supplierID:   order.SupplierID,
+		supplierName: supplier.Name,
+	}, nil
 }
 
 // isValidDropshipTransition checks if a status transition is valid.
