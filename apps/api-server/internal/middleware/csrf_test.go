@@ -34,6 +34,8 @@ func TestIsCSRFExempt_ExemptPaths(t *testing.T) {
 		{"/v1/public/anything", "public wildcard"},
 		{"/v1/webhooks/allegro", "webhooks allegro"},
 		{"/v1/webhooks/inpost", "webhooks inpost"},
+		{"/v1/supplier-portal/orders", "supplier portal orders"},
+		{"/v1/external-workflows/callback", "external workflow callback"},
 		{"/health", "health"},
 		{"/metrics", "metrics"},
 	}
@@ -54,6 +56,7 @@ func TestIsCSRFExempt_NonExemptPaths(t *testing.T) {
 		{"/v1/products", "products"},
 		{"/v1/auth/logout", "logout should require CSRF"},
 		{"/v1/auth/2fa/enable", "2fa enable (not exempt prefix)"},
+		{"/v1/external-workflows", "external-workflows root without trailing slash"},
 		{"/v1/users/me", "users me"},
 		{"/v1/settings/company", "settings"},
 		{"/", "root"},
@@ -240,6 +243,8 @@ func TestCSRF_ExemptPaths_BypassValidation(t *testing.T) {
 		"/v1/public/returns/status",
 		"/v1/webhooks/allegro",
 		"/v1/webhooks/inpost",
+		"/v1/supplier-portal/orders",
+		"/v1/external-workflows/callback",
 		"/health",
 		"/metrics",
 	}
