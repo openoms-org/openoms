@@ -24,10 +24,13 @@ import (
 // ── Test doubles for the supplier adapter ────────────────────────────────────
 
 // fakeAPISupplier implements the bare SupplierProvider + the optional status reader.
+// createCalls counts CreateOrder invocations (the OPE-517 marker tests assert the supplier
+// is called at most once per (order, supplier)).
 type fakeAPISupplier struct {
-	createErr  error
-	externalID string
-	status     *integration.SupplierOrderStatus
+	createErr   error
+	externalID  string
+	status      *integration.SupplierOrderStatus
+	createCalls int
 }
 
 func (f *fakeAPISupplier) ProviderName() string { return "fake-api" }
@@ -38,6 +41,7 @@ func (f *fakeAPISupplier) FetchInventory(context.Context) ([]integration.Supplie
 	return nil, nil
 }
 func (f *fakeAPISupplier) CreateOrder(_ context.Context, _ integration.SupplierOrderRequest) (*integration.SupplierOrderResult, error) {
+	f.createCalls++
 	if f.createErr != nil {
 		return nil, f.createErr
 	}
@@ -319,6 +323,178 @@ func TestSupplierOrder_IdempotentResubmit(t *testing.T) {
 		assert.Equal(t, "SUP-IDEM-1", *orders[0].SupplierReference)
 		return nil
 	}))
+}
+
+// TestSupplierOrder_MarkerBlocksResubmit: a submit-intent marker (submit_attempted_at set)
+// with supplier_reference still NULL means a previous attempt may have placed the order at
+// the supplier (e.g. the recording tx failed after CreateOrder succeeded). The handler must
+// NOT call CreateOrder again — it opens a supplier_manual_submission_required blocker and
+// acks the event (OPE-517).
+func TestSupplierOrder_MarkerBlocksResubmit(t *testing.T) {
+	ctx := context.Background()
+	tenantA := seedTenant(t, ctx)
+	orderID, processID := seedFulfillmentOrder(t, ctx, tenantA, "Marker Customer")
+	supplierID := seedSupplier(t, ctx, tenantA)
+
+	fSvc := newUnitService()
+	unit := seedDropshipUnit(t, ctx, fSvc, tenantA, orderID, supplierID)
+	dsID := seedPendingDropshipOrder(t, ctx, tenantA, orderID, supplierID,
+		[]model.DropshipOrderItem{{SKU: "SKU-MARK", ProductName: "Marked", Quantity: 1}})
+
+	// Simulate a previous attempt that committed the intent marker but never recorded the
+	// reference (tx commit failed after CreateOrder).
+	_, err := superPool.Exec(ctx,
+		`UPDATE dropship_orders SET submit_attempted_at = NOW() WHERE id = $1`, dsID)
+	require.NoError(t, err)
+
+	provider := &fakeAPISupplier{externalID: "SUP-MARK-1"}
+	handler := service.NewSupplierOrderHandler(appPool, fSvc,
+		repository.NewDropshipOrderRepository(), repository.NewOrderRepository(),
+		itemsLoaderFor(), providerFactoryFor(provider))
+
+	err = handler.Handle(ctx, model.OrchestrationOutboxEvent{
+		TenantID:  tenantA,
+		ProcessID: processID,
+		EventType: service.EventSupplierOrderSubmit,
+		Payload: map[string]any{
+			"order_id":    orderID.String(),
+			"supplier_id": supplierID.String(),
+			"unit_id":     unit.ID.String(),
+		},
+	})
+	require.NoError(t, err, "marker branch acks the event (operator blocker, no retry loop)")
+	assert.Equal(t, 0, provider.createCalls, "marker present -> CreateOrder must NOT be called")
+
+	dsRepo := repository.NewDropshipOrderRepository()
+	fRepo := repository.NewFulfillmentRepository()
+	require.NoError(t, database.WithTenant(ctx, appPool, tenantA, func(tx pgx.Tx) error {
+		d, e := dsRepo.FindByID(ctx, tx, dsID)
+		if e != nil {
+			return e
+		}
+		require.NotNil(t, d)
+		assert.Nil(t, d.SupplierReference, "no reference is recorded on the marker branch")
+		assert.Equal(t, "pending", d.Status)
+		require.NotNil(t, d.SubmitAttemptedAt, "marker is kept as historical evidence")
+
+		blockers, e := fRepo.ListBlockers(ctx, tx, processID)
+		if e != nil {
+			return e
+		}
+		require.Len(t, blockers, 1)
+		assert.Equal(t, model.BlockerSupplierManualSubmissionRequired, blockers[0].Code)
+		assert.Contains(t, blockers[0].Description, "possible duplicate submission")
+		return nil
+	}))
+}
+
+// TestSupplierOrder_AmbiguousCreateRetryHitsMarker: a transport-failing CreateOrder (the
+// supplier MAY have received the order) leaves the marker set; the retry must not call
+// CreateOrder again — it opens the operator blocker instead (OPE-517).
+func TestSupplierOrder_AmbiguousCreateRetryHitsMarker(t *testing.T) {
+	ctx := context.Background()
+	tenantA := seedTenant(t, ctx)
+	orderID, processID := seedFulfillmentOrder(t, ctx, tenantA, "Ambiguous Retry Customer")
+	supplierID := seedSupplier(t, ctx, tenantA)
+
+	fSvc := newUnitService()
+	unit := seedDropshipUnit(t, ctx, fSvc, tenantA, orderID, supplierID)
+	dsID := seedPendingDropshipOrder(t, ctx, tenantA, orderID, supplierID,
+		[]model.DropshipOrderItem{{SKU: "SKU-AMB", ProductName: "Ambiguous", Quantity: 1}})
+
+	provider := &fakeAPISupplier{createErr: errors.New("connection reset by peer")}
+	handler := service.NewSupplierOrderHandler(appPool, fSvc,
+		repository.NewDropshipOrderRepository(), repository.NewOrderRepository(),
+		itemsLoaderFor(), providerFactoryFor(provider))
+	evt := model.OrchestrationOutboxEvent{
+		TenantID:  tenantA,
+		ProcessID: processID,
+		EventType: service.EventSupplierOrderSubmit,
+		Payload: map[string]any{
+			"order_id":    orderID.String(),
+			"supplier_id": supplierID.String(),
+			"unit_id":     unit.ID.String(),
+		},
+	}
+
+	require.Error(t, handler.Handle(ctx, evt), "first attempt fails on transport (retryable)")
+	assert.Equal(t, 1, provider.createCalls)
+
+	// Retry (what the orchestration worker would do): marker branch, no second CreateOrder.
+	provider.createErr = nil // even a now-healthy supplier must not be called again
+	require.NoError(t, handler.Handle(ctx, evt))
+	assert.Equal(t, 1, provider.createCalls, "retry after ambiguous failure must not resubmit")
+
+	dsRepo := repository.NewDropshipOrderRepository()
+	fRepo := repository.NewFulfillmentRepository()
+	require.NoError(t, database.WithTenant(ctx, appPool, tenantA, func(tx pgx.Tx) error {
+		d, e := dsRepo.FindByID(ctx, tx, dsID)
+		if e != nil {
+			return e
+		}
+		require.NotNil(t, d)
+		assert.Nil(t, d.SupplierReference)
+		require.NotNil(t, d.SubmitAttemptedAt)
+		blockers, e := fRepo.ListBlockers(ctx, tx, processID)
+		if e != nil {
+			return e
+		}
+		require.Len(t, blockers, 1)
+		assert.Equal(t, model.BlockerSupplierManualSubmissionRequired, blockers[0].Code)
+		return nil
+	}))
+}
+
+// TestSupplierOrder_SubmittedOnceBackstop: (a) two sequential submits -> exactly one
+// CreateOrder call; (b) the uq_dropship_orders_submitted_once partial unique index rejects a
+// second SUBMITTED row (supplier_reference set) for the same (order, supplier) (OPE-517 v1
+// backstop — the planned multi-document-split feature must relax this index).
+func TestSupplierOrder_SubmittedOnceBackstop(t *testing.T) {
+	ctx := context.Background()
+	tenantA := seedTenant(t, ctx)
+	orderID, processID := seedFulfillmentOrder(t, ctx, tenantA, "Backstop Customer")
+	supplierID := seedSupplier(t, ctx, tenantA)
+
+	fSvc := newUnitService()
+	unit := seedDropshipUnit(t, ctx, fSvc, tenantA, orderID, supplierID)
+	seedPendingDropshipOrder(t, ctx, tenantA, orderID, supplierID,
+		[]model.DropshipOrderItem{{SKU: "SKU-BACK", ProductName: "Backstop", Quantity: 1}})
+
+	provider := &fakeAPISupplier{externalID: "SUP-BACK-1"}
+	handler := service.NewSupplierOrderHandler(appPool, fSvc,
+		repository.NewDropshipOrderRepository(), repository.NewOrderRepository(),
+		itemsLoaderFor(), providerFactoryFor(provider))
+	evt := model.OrchestrationOutboxEvent{
+		TenantID:  tenantA,
+		ProcessID: processID,
+		EventType: service.EventSupplierOrderSubmit,
+		Payload: map[string]any{
+			"order_id":    orderID.String(),
+			"supplier_id": supplierID.String(),
+			"unit_id":     unit.ID.String(),
+		},
+	}
+	require.NoError(t, handler.Handle(ctx, evt))
+	require.NoError(t, handler.Handle(ctx, evt))
+	assert.Equal(t, 1, provider.createCalls, "two sequential submits -> exactly one CreateOrder call")
+
+	// DB-level backstop: inserting a second submitted row directly must violate the index.
+	dsRepo := repository.NewDropshipOrderRepository()
+	ref2 := "SUP-BACK-DUP"
+	err := database.WithTenant(ctx, appPool, tenantA, func(tx pgx.Tx) error {
+		return dsRepo.Create(ctx, tx, &model.DropshipOrder{
+			ID:                uuid.New(),
+			TenantID:          tenantA,
+			OrderID:           orderID,
+			SupplierID:        supplierID,
+			SupplierName:      "Fake Supplier",
+			Status:            "sent",
+			SupplierReference: &ref2,
+			Currency:          "PLN",
+		})
+	})
+	require.Error(t, err, "second submitted row for the same (order, supplier) must be rejected")
+	assert.Contains(t, err.Error(), "uq_dropship_orders_submitted_once")
 }
 
 // TestSupplierOrder_Reconcile: the poller maps a "SHIPPED" raw status to "shipped" and
