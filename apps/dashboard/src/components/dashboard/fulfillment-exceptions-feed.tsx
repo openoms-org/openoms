@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   BucketBadge,
-  blockerReasonKey,
+  blockerReasonLabel,
 } from "@/components/fulfillment/fulfillment-status-badge";
 import type { FulfillmentExceptionItem } from "@/types/fulfillment";
 
@@ -97,7 +97,7 @@ export function FulfillmentExceptionsFeed({
             {visible.map((item) => {
               const blocker = item.top_blocker;
               const reason = blocker
-                ? t(blockerReasonKey(blocker.code))
+                ? blockerReasonLabel(t, blocker.code)
                 : t("fulfillment.exceptions.noBlocker");
 
               return (

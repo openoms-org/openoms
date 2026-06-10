@@ -174,6 +174,28 @@ describe("FulfillmentExceptionsFeed", () => {
       screen.getByText("fulfillment.exceptions.emptyTitle"),
     ).toBeInTheDocument();
   });
+
+  it("humanizes a blocker code missing from the catalogs instead of leaking the raw key", () => {
+    const item = exceptionItem({
+      top_blocker: {
+        ...exceptionItem().top_blocker!,
+        code: "brand_new_backend_code",
+      },
+    });
+
+    render(
+      <FulfillmentExceptionsFeed
+        items={[item]}
+        isLoading={false}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Brand new backend code")).toBeInTheDocument();
+    expect(
+      screen.queryByText("fulfillment.blockerCode.brand_new_backend_code"),
+    ).not.toBeInTheDocument();
+  });
 });
 
 describe("FulfillmentDetailPanel actions", () => {
@@ -278,6 +300,64 @@ describe("FulfillmentDetailPanel actions", () => {
     await user.click(confirmButtons[confirmButtons.length - 1]);
 
     await waitFor(() => expect(retryHit).toBe("step-1"));
+  });
+
+  it("labels known provider operations via i18n and humanizes unknown blocker codes / operations", async () => {
+    const withAttempts: FulfillmentProcessDetail = {
+      ...detail,
+      blockers: [
+        {
+          ...detail.blockers[0],
+          id: "blk-unknown",
+          code: "vendor_specific_surprise",
+        },
+      ],
+      provider_attempts: [
+        {
+          id: "att-1",
+          tenant_id: "tenant-1",
+          process_id: "proc-1",
+          provider: "allegro",
+          operation: "sync_tracking_to_marketplace",
+          status: "succeeded",
+          created_at: "2026-06-01T12:00:00Z",
+        },
+        {
+          id: "att-2",
+          tenant_id: "tenant-1",
+          process_id: "proc-1",
+          provider: "inpost",
+          operation: "emit_carrier_manifest",
+          status: "failed",
+          created_at: "2026-06-01T12:05:00Z",
+        },
+      ],
+    };
+    server.use(
+      http.get("*/v1/fulfillment/processes/proc-1", () =>
+        HttpResponse.json(withAttempts),
+      ),
+    );
+
+    renderWithProviders(
+      <FulfillmentDetailPanel processId="proc-1" open onOpenChange={vi.fn()} />,
+    );
+
+    // Known operation -> translated (the mock echoes the existing key).
+    expect(
+      await screen.findByText(
+        "fulfillment.providerOp.sync_tracking_to_marketplace",
+      ),
+    ).toBeInTheDocument();
+    // Unknown operation/blocker code -> humanized text, never the raw key.
+    expect(screen.getByText("Emit carrier manifest")).toBeInTheDocument();
+    expect(screen.getByText("Vendor specific surprise")).toBeInTheDocument();
+    expect(
+      screen.queryByText("fulfillment.providerOp.emit_carrier_manifest"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("fulfillment.blockerCode.vendor_specific_surprise"),
+    ).not.toBeInTheDocument();
   });
 });
 
