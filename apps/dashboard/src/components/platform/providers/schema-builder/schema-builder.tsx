@@ -216,16 +216,19 @@ export function SchemaBuilder({ providerId, versionId, readOnly }: SchemaBuilder
                       const isSelected =
                         selected?.groupIndex === gi && selected?.fieldIndex === fi;
                       return (
-                        <li key={`${group.key}-${fi}`}>
+                        <li
+                          key={`${group.key}-${fi}`}
+                          className={cn(
+                            "flex items-center rounded-md border",
+                            isSelected
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:bg-accent",
+                          )}
+                        >
                           <button
                             type="button"
                             onClick={() => setSelected({ groupIndex: gi, fieldIndex: fi })}
-                            className={cn(
-                              "flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm",
-                              isSelected
-                                ? "border-primary bg-primary/5"
-                                : "border-border hover:bg-accent",
-                            )}
+                            className="flex min-w-0 flex-1 items-center justify-between px-3 py-2 text-left text-sm"
                           >
                             <span className="min-w-0 truncate">
                               <span className="font-mono text-xs text-muted-foreground">
@@ -244,17 +247,22 @@ export function SchemaBuilder({ providerId, versionId, readOnly }: SchemaBuilder
                                   {t("schemaBuilder.hasError")}
                                 </Badge>
                               )}
-                              {!readOnly && (
-                                <Trash2
-                                  className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    removeField(gi, fi);
-                                  }}
-                                />
-                              )}
                             </span>
                           </button>
+                          {!readOnly && (
+                            <button
+                              type="button"
+                              aria-label={t("schemaBuilder.removeField")}
+                              title={t("schemaBuilder.removeField")}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeField(gi, fi);
+                              }}
+                              className="mr-2 shrink-0 rounded-sm p-1 text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                         </li>
                       );
                     })}
