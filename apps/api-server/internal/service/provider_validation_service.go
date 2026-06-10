@@ -84,7 +84,10 @@ func (s *ProviderValidationService) getVersion(ctx context.Context, versionID uu
 }
 
 // SetProbes replaces a version's probe set (frozen once published; validated).
+// The frozen check is re-run under the definition-row lock in the same
+// transaction as the write, so it cannot race a publish transition.
 func (s *ProviderValidationService) SetProbes(ctx context.Context, versionID uuid.UUID, probes []model.ProviderValidationProbe) ([]model.ProviderValidationProbe, error) {
+	// Fast pre-check for a friendly error; re-checked authoritatively under lock.
 	v, err := s.getVersion(ctx, versionID)
 	if err != nil {
 		return nil, err
@@ -96,6 +99,9 @@ func (s *ProviderValidationService) SetProbes(ctx context.Context, versionID uui
 		return nil, fmt.Errorf("%w: %s", ErrInvalidProbe, err.Error())
 	}
 	if err := s.inTx(ctx, func(tx pgx.Tx) error {
+		if err := requireUnpublishedLocked(ctx, tx, versionID); err != nil {
+			return err
+		}
 		return s.val.ReplaceProbes(ctx, tx, versionID, probes)
 	}); err != nil {
 		return nil, err
