@@ -108,16 +108,25 @@
         "waiting_external": "Waiting for external"
       },
       "blockerCode": {
+        "automation_action_failed": "Automated fulfillment action failed",
         "channel_stock_stale": "Channel stock data is stale",
         "external_status_unmapped": "External status has no mapping",
+        "external_workflow_timeout": "External workflow timed out",
         "integration_capability_degraded": "Integration capability is degraded",
         "integration_capability_missing": "Required integration capability is missing",
         "manual_stock_review_required": "Manual stock review required",
         "stock_ack_missing": "Missing stock acknowledgement from the channel",
         "stock_sync_failed": "Stock sync to the channel failed",
         "stock_write_unsupported": "Stock write is not supported by this integration",
+        "supplier_availability_insufficient": "Supplier availability is insufficient",
         "supplier_availability_stale": "Supplier availability data is stale",
         "supplier_availability_unknown": "Supplier availability is unknown",
+        "supplier_manual_submission_required": "Supplier order requires manual submission",
+        "supplier_order_ambiguous_sku": "Supplier order has an ambiguous SKU match",
+        "supplier_order_missing_data": "Supplier order is missing required data",
+        "supplier_order_rejected": "Supplier rejected the order",
+        "supplier_partial_fulfillment": "Supplier fulfilled the order only partially",
+        "supplier_payment_awaiting": "Supplier order is awaiting payment",
         "supplier_preflight_required": "Supplier order requires preflight review"
       },
       "buckets": {
@@ -189,7 +198,9 @@
         "loadError": "Could not load exceptions.",
         "noBlocker": "Needs attention",
         "orderRef": "Order {orderId}",
-        "title": "Needs action now"
+        "shownOfTotal": "{shown} of {total}",
+        "title": "Needs action now",
+        "topPreview": "latest {count}"
       },
       "healthStatus": {
         "action_required": "Action required",
@@ -220,7 +231,9 @@
         "create_shipment": "Create shipment",
         "download_label": "Download label",
         "generate_label": "Generate label",
-        "sync_tracking": "Sync tracking"
+        "sync_fulfillment_status": "Sync fulfillment status",
+        "sync_tracking": "Sync tracking",
+        "sync_tracking_to_marketplace": "Sync tracking to marketplace"
       },
       "providerStatus": {
         "failed": "Failed",

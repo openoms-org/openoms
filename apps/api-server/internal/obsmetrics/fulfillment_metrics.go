@@ -28,11 +28,16 @@ const labelOther = "other"
 // duplicated here intentionally: the metrics package stays dependency-free of the
 // domain model, and the allow-lists are what enforce cardinality at the metric edge.
 var (
-	allowedOperations = set("create_shipment", "generate_label", "download_label", "sync_tracking")
-	allowedStatuses   = set("pending", "succeeded", "failed", "ready", "running",
+	// Mirrors model.ProviderOp* (internal/model/provider_attempt.go); when a new
+	// ProviderOp* constant is added there, add its value here too (OPE-527).
+	allowedOperations = set("create_shipment", "generate_label", "download_label", "sync_tracking",
+		"sync_tracking_to_marketplace", "sync_fulfillment_status")
+	allowedStatuses = set("pending", "succeeded", "failed", "ready", "running",
 		"waiting_external", "blocked", "cancelled", "skipped")
-	allowedCategories         = set("integration", "supplier", "operator", "capability", "mapping")
-	allowedOutboxResults      = set("claimed", "processed", "failed")
+	// Mirrors the distinct values of model.blockerCategories
+	// (internal/model/fulfillment.go); keep in sync when a category is added (OPE-527).
+	allowedCategories         = set("integration", "supplier", "operator", "capability", "mapping", "automation")
+	allowedOutboxResults      = set("claimed", "processed", "failed", "reaped")
 	allowedValidationVerdicts = set("pending", "passed", "failed", "error")
 	allowedPublicationStates  = set("research", "designed", "adapter_in_progress", "internal_validation",
 		"private_beta", "available", "deprecated", "retired")
@@ -159,7 +164,7 @@ func (m *FulfillmentMetrics) RecordBlocker(category string) {
 }
 
 // RecordOutboxEvent counts an orchestration outbox event by bounded result
-// (claimed | processed | failed).
+// (claimed | processed | failed | reaped).
 func (m *FulfillmentMetrics) RecordOutboxEvent(result string) {
 	if m == nil {
 		return

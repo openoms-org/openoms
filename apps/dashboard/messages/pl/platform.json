@@ -75,6 +75,7 @@
       "editorTitle": "Właściwości pola",
       "selectField": "Wybierz pole, aby edytować jego właściwości.",
       "addField": "Dodaj pole",
+      "removeField": "Usuń pole",
       "noFields": "Brak pól w tej grupie.",
       "unnamedKey": "(brak klucza)",
       "hasError": "Błąd",

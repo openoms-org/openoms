@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
+import { enumLabel, type EnumTranslator } from "@/lib/i18n-fallback";
 import type {
   AggregateStatus,
   FulfillmentStatus,
@@ -97,7 +98,15 @@ export function BucketBadge({ bucket }: { bucket: OperatorBucket }) {
   );
 }
 
-/** Resolve the i18n key for a blocker code's human-readable reason. */
-export function blockerReasonKey(code: string): string {
-  return `fulfillment.blockerCode.${code}`;
+/**
+ * Human-readable reason for a blocker code. Unknown codes (backend ahead of
+ * the catalogs) degrade to a humanized form instead of the raw dotted key.
+ */
+export function blockerReasonLabel(t: EnumTranslator, code: string): string {
+  return enumLabel(t, "fulfillment.blockerCode", code);
+}
+
+/** Human-readable label for a provider-attempt operation, with the same fallback. */
+export function providerOpLabel(t: EnumTranslator, operation: string): string {
+  return enumLabel(t, "fulfillment.providerOp", operation);
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/getsentry/sentry-go"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -21,6 +22,20 @@ import (
 
 // orchestrationBatchLimit caps how many due outbox rows are processed per run.
 const orchestrationBatchLimit = 50
+
+// staleClaimTimeout is the visibility timeout for claimed outbox rows (OPE-534).
+// A claim is transient — processEvent runs synchronously and parked events are
+// re-queued to 'pending' in the same flow — so a claim older than this is evidence
+// of a worker that crashed between ClaimDue and Mark*. Far above any legitimate
+// single dispatch (outbound HTTP is client-timeout-bounded to <=30s), far below
+// operator-noticeable starvation. NOTE: claimed_at is stamped on the WHOLE batch at
+// claim time, so a worst-case batch (batchLimit x max client timeout) can outlive
+// this window — harmless while worker runs are serialized (Manager atomic + Redis
+// lease, replicaCount=1); revisit before any multi-replica worker rollout.
+const staleClaimTimeout = 10 * time.Minute
+
+// reapBatchLimit caps how many stale claims are reaped per tick.
+const reapBatchLimit = 50
 
 // orchestrationDispatcher routes an outbox event to its handler.
 // Implemented by *service.OrchestrationDispatcher.
@@ -55,7 +70,7 @@ func (w *OrchestrationWorker) WithMetrics(m *obsmetrics.FulfillmentMetrics) *Orc
 }
 
 // recordOutcome counts one processed outbox event by bounded result
-// (processed | failed | claimed). Best-effort, nil-safe.
+// (processed | failed | claimed | reaped). Best-effort, nil-safe.
 func (w *OrchestrationWorker) recordOutcome(result string) {
 	w.metrics.RecordOutboxEvent(result)
 }
@@ -87,14 +102,25 @@ func NewOrchestrationWorker(pool *pgxpool.Pool, repo *repository.OrchestrationRe
 	}
 }
 
+// nextRetryAt returns when a failed event should be retried. attempts is the
+// event's PRE-attempt counter (model.OrchestrationOutboxEvent.Attempts); the
+// backoff input is the attempt number that just failed (attempts+1), so every
+// requeue path — panic, start-attempt failure and dispatch failure — computes
+// an identical backoff for the same event state (OPE-522).
+func nextRetryAt(now time.Time, attempts int) time.Time {
+	return now.Add(model.NextOutboxBackoff(attempts + 1))
+}
+
 // Name returns the worker identifier.
 func (w *OrchestrationWorker) Name() string { return "orchestration" }
 
 // Interval returns how frequently the worker drains the outbox.
 func (w *OrchestrationWorker) Interval() time.Duration { return w.interval }
 
-// Run claims and processes one batch of due outbox events.
+// Run claims and processes one batch of due outbox events. A reap pass first
+// requeues claims stranded by a crashed worker (OPE-534).
 func (w *OrchestrationWorker) Run(ctx context.Context) error {
+	w.reapStaleClaims(ctx)
 	events, err := w.repo.ClaimDue(ctx, w.pool, w.batchLimit)
 	if err != nil {
 		return fmt.Errorf("claim due outbox events: %w", err)
@@ -111,6 +137,48 @@ func (w *OrchestrationWorker) Run(ctx context.Context) error {
 		w.setQueueDepth(depth)
 	}
 	return nil
+}
+
+// reapStaleClaims requeues outbox rows stranded in 'claimed' by a worker crash
+// (OPE-534): the interrupted attempt counts toward max_attempts (MarkFailedRetry
+// increments the counter), dangling 'running' attempt rows are closed, and an
+// exhausted event fails permanently with the standard blocker. Best-effort: any
+// error is logged and never blocks the normal claim/dispatch cycle.
+func (w *OrchestrationWorker) reapStaleClaims(ctx context.Context) {
+	stale, err := w.repo.ListStaleClaimed(ctx, w.pool, staleClaimTimeout, reapBatchLimit)
+	if err != nil {
+		w.logger.Warn("orchestration stale-claim reap skipped (best-effort)", "error", err)
+		return
+	}
+	for i := range stale {
+		e := stale[i]
+		log := w.logger.With(
+			"correlation_id", e.IdempotencyKey,
+			"event_id", e.ID,
+			"event_type", e.EventType,
+			"process_id", e.ProcessID,
+			"claimed_at", e.ClaimedAt,
+		)
+		if _, aerr := w.repo.FailRunningAttempts(ctx, w.pool, e.ID, "reaped: worker crashed mid-attempt"); aerr != nil {
+			log.Warn("orchestration reap: close dangling attempts failed (best-effort)", "error", aerr)
+		}
+		reapErrMsg := "reaped: claim exceeded visibility timeout (worker crash)"
+		if e.Attempts+1 >= e.MaxAttempts {
+			if merr := w.repo.MarkFailedPermanent(ctx, w.pool, e.ID, reapErrMsg); merr != nil {
+				log.Error("orchestration reap: mark permanent failed", "error", merr)
+				continue
+			}
+			w.openBlocker(ctx, e, errors.New(reapErrMsg))
+			log.Warn("orchestration reap: event exhausted attempts, failed permanently")
+		} else {
+			if merr := w.repo.MarkFailedRetry(ctx, w.pool, e.ID, reapErrMsg, nextRetryAt(time.Now().UTC(), e.Attempts)); merr != nil {
+				log.Error("orchestration reap: requeue failed", "error", merr)
+				continue
+			}
+			log.Warn("orchestration reap: stale claim requeued")
+		}
+		w.recordOutcome("reaped")
+	}
 }
 
 // processEvent executes one claimed event. A panic or error in one event must
@@ -136,7 +204,7 @@ func (w *OrchestrationWorker) processEvent(ctx context.Context, e model.Orchestr
 			if att != nil {
 				_ = w.repo.FinishAttempt(ctx, w.pool, att.ID, model.AttemptStatusFailed, fmt.Sprintf("panic: %v", r))
 			}
-			_ = w.repo.MarkFailedRetry(ctx, w.pool, e.ID, fmt.Sprintf("panic: %v", r), time.Now().UTC().Add(model.NextOutboxBackoff(e.Attempts+1)))
+			_ = w.repo.MarkFailedRetry(ctx, w.pool, e.ID, fmt.Sprintf("panic: %v", r), nextRetryAt(time.Now().UTC(), e.Attempts))
 			w.recordOutcome("failed")
 		}
 	}()
@@ -147,7 +215,7 @@ func (w *OrchestrationWorker) processEvent(ctx context.Context, e model.Orchestr
 	if err != nil {
 		// Re-queue rather than leaving the row stuck as 'claimed'.
 		log.Error("orchestration start attempt failed", "error", err)
-		_ = w.repo.MarkFailedRetry(ctx, w.pool, e.ID, fmt.Sprintf("start attempt error: %v", err), time.Now().UTC().Add(model.NextOutboxBackoff(e.Attempts)))
+		_ = w.repo.MarkFailedRetry(ctx, w.pool, e.ID, fmt.Sprintf("start attempt error: %v", err), nextRetryAt(time.Now().UTC(), e.Attempts))
 		w.recordOutcome("failed")
 		return
 	}
@@ -156,14 +224,15 @@ func (w *OrchestrationWorker) processEvent(ctx context.Context, e model.Orchestr
 
 	// OPE-421: a DeferUntil sentinel means the dispatch SUCCEEDED but the event must stay
 	// pending-callback until a deadline (next_attempt_at). The outbound POST happened, so the
-	// attempt is recorded succeeded; the outbox row is re-queued (pending) at the deadline and
-	// attempts is incremented so a re-dispatch past the deadline (Attempts>0) is treated as a
-	// timeout by the handler. This is NOT a failure outcome.
+	// attempt is recorded succeeded and the outbox row is re-queued (pending) at the deadline.
+	// OPE-514: the succeeded attempt row is the handler's EXPLICIT dispatch evidence — a
+	// re-dispatch past the deadline is classified as a callback timeout only when it exists —
+	// so it is written in the same transaction as the park (never one without the other).
+	// This is NOT a failure outcome.
 	var deferErr *service.DeferUntil
 	if errors.As(dispErr, &deferErr) {
-		_ = w.repo.FinishAttempt(ctx, w.pool, att.ID, model.AttemptStatusSucceeded, "")
-		if err := w.repo.MarkFailedRetry(ctx, w.pool, e.ID, "awaiting external workflow callback", deferErr.At); err != nil {
-			log.Error("orchestration mark pending-callback failed", "error", err)
+		if err := w.parkAwaitingCallback(ctx, att.ID, e.ID, deferErr.At); err != nil {
+			log.Error("orchestration park pending-callback failed", "error", err)
 		}
 		w.recordOutcome("claimed")
 		return
@@ -189,11 +258,30 @@ func (w *OrchestrationWorker) processEvent(ctx context.Context, e model.Orchestr
 		w.recordOutcome("failed")
 		return
 	}
-	next := time.Now().UTC().Add(model.NextOutboxBackoff(attemptNumber))
+	next := nextRetryAt(time.Now().UTC(), e.Attempts)
 	if err := w.repo.MarkFailedRetry(ctx, w.pool, e.ID, dispErr.Error(), next); err != nil {
 		log.Error("orchestration mark retry failed", "error", err)
 	}
 	w.recordOutcome("failed")
+}
+
+// parkAwaitingCallback finishes the dispatch attempt as succeeded AND re-queues the event at
+// the callback deadline in ONE transaction. The succeeded attempt row is the explicit
+// dispatch evidence (OPE-514) consulted by the external-workflow handler on re-dispatch, so
+// it must never be observable without the park (or vice versa).
+func (w *OrchestrationWorker) parkAwaitingCallback(ctx context.Context, attemptID, eventID uuid.UUID, deadline time.Time) error {
+	tx, err := w.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin park transaction: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+	if err := w.repo.FinishAttempt(ctx, tx, attemptID, model.AttemptStatusSucceeded, ""); err != nil {
+		return err
+	}
+	if err := w.repo.MarkFailedRetry(ctx, tx, eventID, "awaiting external workflow callback", deadline); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 // blockerCodeForEvent maps an outbox event type to the fulfillment blocker code

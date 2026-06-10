@@ -19,15 +19,43 @@ import (
 
 const stockBulkBatchSize = 100
 
+// stockSyncListingsQueryLegacy is the default (flag-off) listing-gather query.
+// It is intentionally identical to the pre-OPE-418 query — no products join and
+// no supplier columns — so the gated supplier-availability feature has zero
+// query impact while SUPPLIER_AVAILABILITY_ENABLED is off (OPE-532).
+const stockSyncListingsQueryLegacy = `SELECT pl.id, pl.external_id, pl.stock_override,
+        GREATEST(COALESCE(SUM(ws.quantity), 0) - COALESCE(SUM(ws.reserved), 0), 0) AS available_qty
+ FROM product_listings pl
+ LEFT JOIN warehouse_stock ws ON ws.product_id = pl.product_id AND ws.variant_id IS NULL
+ WHERE pl.integration_id = $1 AND pl.status = 'active'
+   AND pl.external_id IS NOT NULL AND pl.stock_sync_mode = 'auto'
+ GROUP BY pl.id, pl.external_id, pl.stock_override
+ LIMIT 5000`
+
+// stockSyncListingsQueryWithSupplier is the gated variant used only when the
+// supplier-availability resolver (OPE-418) is enabled: it additionally joins
+// products for the dropship supplier link consumed by applyAvailabilityGate.
+const stockSyncListingsQueryWithSupplier = `SELECT pl.id, pl.external_id, pl.stock_override, pl.product_id, p.dropship_supplier_id,
+        GREATEST(COALESCE(SUM(ws.quantity), 0) - COALESCE(SUM(ws.reserved), 0), 0) AS available_qty
+ FROM product_listings pl
+ JOIN products p ON p.id = pl.product_id
+ LEFT JOIN warehouse_stock ws ON ws.product_id = pl.product_id AND ws.variant_id IS NULL
+ WHERE pl.integration_id = $1 AND pl.status = 'active'
+   AND pl.external_id IS NOT NULL AND pl.stock_sync_mode = 'auto'
+ GROUP BY pl.id, pl.external_id, pl.stock_override, pl.product_id, p.dropship_supplier_id
+ LIMIT 5000`
+
 // listingStock holds the data needed to sync stock for a single product listing.
 type listingStock struct {
 	ListingID  string
 	ExternalID string
 	StockQty   int
 	// OPE-418 (gated): product + supplier link and the own-warehouse-derived quantity,
-	// used only when the supplier-availability resolver gate is enabled. WarehouseQty is
-	// the floor below which a supplier-backed listing's pushed stock may always drop (a
-	// decrease is always allowed); SupplierID is set only for supplier-backed products.
+	// populated and used only when the supplier-availability resolver gate is enabled
+	// (zero values otherwise — the legacy gather query does not select them, OPE-532).
+	// WarehouseQty is the floor below which a supplier-backed listing's pushed stock may
+	// always drop (a decrease is always allowed); SupplierID is set only for
+	// supplier-backed products.
 	ProductID    uuid.UUID
 	SupplierID   *uuid.UUID
 	WarehouseQty int
@@ -79,6 +107,11 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 
 	totalSynced := 0
 
+	// OPE-532: the gather query shape is gated — the products join + supplier columns
+	// exist ONLY when the supplier-availability resolver is enabled; flag-off (default)
+	// runs the legacy query unchanged.
+	availabilityEnabled := w.availability.Enabled()
+
 	for _, ti := range tis {
 		if err := checkWorkerContext(ctx); err != nil {
 			return err
@@ -98,18 +131,11 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 		// Phase 1: Gather listings inside a short transaction.
 		var listings []listingStock
 		gatherErr := database.WithTenant(ctx, w.pool, ti.TenantID, func(tx pgx.Tx) error {
-			rows, err := tx.Query(ctx,
-				`SELECT pl.id, pl.external_id, pl.stock_override, pl.product_id, p.dropship_supplier_id,
-				        GREATEST(COALESCE(SUM(ws.quantity), 0) - COALESCE(SUM(ws.reserved), 0), 0) AS available_qty
-				 FROM product_listings pl
-				 JOIN products p ON p.id = pl.product_id
-				 LEFT JOIN warehouse_stock ws ON ws.product_id = pl.product_id AND ws.variant_id IS NULL
-				 WHERE pl.integration_id = $1 AND pl.status = 'active'
-				   AND pl.external_id IS NOT NULL AND pl.stock_sync_mode = 'auto'
-				 GROUP BY pl.id, pl.external_id, pl.stock_override, pl.product_id, p.dropship_supplier_id
-				 LIMIT 5000`,
-				ti.IntegrationID,
-			)
+			query := stockSyncListingsQueryLegacy
+			if availabilityEnabled {
+				query = stockSyncListingsQueryWithSupplier
+			}
+			rows, err := tx.Query(ctx, query, ti.IntegrationID)
 			if err != nil {
 				return err
 			}
@@ -124,8 +150,14 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 				var productID uuid.UUID
 				var supplierID *uuid.UUID
 				var availableQty int
-				if err := rows.Scan(&listingID, &externalID, &stockOverride, &productID, &supplierID, &availableQty); err != nil {
-					w.logger.Error("stock sync: scan listing", "error", err)
+				var scanErr error
+				if availabilityEnabled {
+					scanErr = rows.Scan(&listingID, &externalID, &stockOverride, &productID, &supplierID, &availableQty)
+				} else {
+					scanErr = rows.Scan(&listingID, &externalID, &stockOverride, &availableQty)
+				}
+				if scanErr != nil {
+					w.logger.Error("stock sync: scan listing", "error", scanErr)
 					continue
 				}
 
@@ -134,14 +166,17 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 					stockQty = *stockOverride
 				}
 
-				listings = append(listings, listingStock{
-					ListingID:    listingID,
-					ExternalID:   externalID,
-					StockQty:     stockQty,
-					ProductID:    productID,
-					SupplierID:   supplierID,
-					WarehouseQty: availableQty,
-				})
+				item := listingStock{
+					ListingID:  listingID,
+					ExternalID: externalID,
+					StockQty:   stockQty,
+				}
+				if availabilityEnabled {
+					item.ProductID = productID
+					item.SupplierID = supplierID
+					item.WarehouseQty = availableQty
+				}
+				listings = append(listings, item)
 			}
 			return rows.Err()
 		})
@@ -156,7 +191,7 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 		// own-warehouse-derived quantity only goes out when the policy gate is open and the
 		// availability is trusted; a decrease always goes out. Off by default -> the legacy
 		// warehouse-stock path is unchanged.
-		if w.availability.Enabled() {
+		if availabilityEnabled {
 			w.applyAvailabilityGate(ctx, ti.TenantID, listings)
 		}
 
