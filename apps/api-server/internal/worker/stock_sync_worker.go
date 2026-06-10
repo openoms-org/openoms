@@ -13,15 +13,52 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/crypto"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
+	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
 const stockBulkBatchSize = 100
+
+// stockSyncListingsQueryLegacy is the default (flag-off) listing-gather query.
+// It is intentionally identical to the pre-OPE-418 query — no products join and
+// no supplier columns — so the gated supplier-availability feature has zero
+// query impact while SUPPLIER_AVAILABILITY_ENABLED is off (OPE-532).
+const stockSyncListingsQueryLegacy = `SELECT pl.id, pl.external_id, pl.stock_override,
+        GREATEST(COALESCE(SUM(ws.quantity), 0) - COALESCE(SUM(ws.reserved), 0), 0) AS available_qty
+ FROM product_listings pl
+ LEFT JOIN warehouse_stock ws ON ws.product_id = pl.product_id AND ws.variant_id IS NULL
+ WHERE pl.integration_id = $1 AND pl.status = 'active'
+   AND pl.external_id IS NOT NULL AND pl.stock_sync_mode = 'auto'
+ GROUP BY pl.id, pl.external_id, pl.stock_override
+ LIMIT 5000`
+
+// stockSyncListingsQueryWithSupplier is the gated variant used only when the
+// supplier-availability resolver (OPE-418) is enabled: it additionally joins
+// products for the dropship supplier link consumed by applyAvailabilityGate.
+const stockSyncListingsQueryWithSupplier = `SELECT pl.id, pl.external_id, pl.stock_override, pl.product_id, p.dropship_supplier_id,
+        GREATEST(COALESCE(SUM(ws.quantity), 0) - COALESCE(SUM(ws.reserved), 0), 0) AS available_qty
+ FROM product_listings pl
+ JOIN products p ON p.id = pl.product_id
+ LEFT JOIN warehouse_stock ws ON ws.product_id = pl.product_id AND ws.variant_id IS NULL
+ WHERE pl.integration_id = $1 AND pl.status = 'active'
+   AND pl.external_id IS NOT NULL AND pl.stock_sync_mode = 'auto'
+ GROUP BY pl.id, pl.external_id, pl.stock_override, pl.product_id, p.dropship_supplier_id
+ LIMIT 5000`
 
 // listingStock holds the data needed to sync stock for a single product listing.
 type listingStock struct {
 	ListingID  string
 	ExternalID string
 	StockQty   int
+	// OPE-418 (gated): product + supplier link and the own-warehouse-derived quantity,
+	// populated and used only when the supplier-availability resolver gate is enabled
+	// (zero values otherwise — the legacy gather query does not select them, OPE-532).
+	// WarehouseQty is the floor below which a supplier-backed listing's pushed stock may
+	// always drop (a decrease is always allowed); SupplierID is set only for
+	// supplier-backed products.
+	ProductID    uuid.UUID
+	SupplierID   *uuid.UUID
+	WarehouseQty int
 }
 
 // StockSyncWorker synchronizes product stock levels to marketplace listings.
@@ -29,6 +66,7 @@ type StockSyncWorker struct {
 	pool          *pgxpool.Pool
 	encryptionKey []byte
 	logger        *slog.Logger
+	availability  *service.SupplierAvailabilityService
 }
 
 // NewStockSyncWorker creates a new StockSyncWorker.
@@ -38,6 +76,15 @@ func NewStockSyncWorker(pool *pgxpool.Pool, encryptionKey []byte, logger *slog.L
 		encryptionKey: encryptionKey,
 		logger:        logger,
 	}
+}
+
+// WithAvailability wires the gated supplier-availability resolver (OPE-418) so that, for
+// supplier-backed listings, a channel-stock INCREASE is suppressed unless the policy gate
+// is open (a decrease always goes out). Nil-safe and a complete no-op until
+// SUPPLIER_AVAILABILITY_ENABLED is set. Returns the worker for chaining.
+func (w *StockSyncWorker) WithAvailability(svc *service.SupplierAvailabilityService) *StockSyncWorker {
+	w.availability = svc
+	return w
 }
 
 // Name returns the unique name of this worker.
@@ -60,6 +107,11 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 
 	totalSynced := 0
 
+	// OPE-532: the gather query shape is gated — the products join + supplier columns
+	// exist ONLY when the supplier-availability resolver is enabled; flag-off (default)
+	// runs the legacy query unchanged.
+	availabilityEnabled := w.availability.Enabled()
+
 	for _, ti := range tis {
 		if err := checkWorkerContext(ctx); err != nil {
 			return err
@@ -79,17 +131,11 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 		// Phase 1: Gather listings inside a short transaction.
 		var listings []listingStock
 		gatherErr := database.WithTenant(ctx, w.pool, ti.TenantID, func(tx pgx.Tx) error {
-			rows, err := tx.Query(ctx,
-				`SELECT pl.id, pl.external_id, pl.stock_override,
-				        GREATEST(COALESCE(SUM(ws.quantity), 0) - COALESCE(SUM(ws.reserved), 0), 0) AS available_qty
-				 FROM product_listings pl
-				 LEFT JOIN warehouse_stock ws ON ws.product_id = pl.product_id AND ws.variant_id IS NULL
-				 WHERE pl.integration_id = $1 AND pl.status = 'active'
-				   AND pl.external_id IS NOT NULL AND pl.stock_sync_mode = 'auto'
-				 GROUP BY pl.id, pl.external_id, pl.stock_override
-				 LIMIT 5000`,
-				ti.IntegrationID,
-			)
+			query := stockSyncListingsQueryLegacy
+			if availabilityEnabled {
+				query = stockSyncListingsQueryWithSupplier
+			}
+			rows, err := tx.Query(ctx, query, ti.IntegrationID)
 			if err != nil {
 				return err
 			}
@@ -101,9 +147,17 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 				}
 				var listingID, externalID string
 				var stockOverride *int
+				var productID uuid.UUID
+				var supplierID *uuid.UUID
 				var availableQty int
-				if err := rows.Scan(&listingID, &externalID, &stockOverride, &availableQty); err != nil {
-					w.logger.Error("stock sync: scan listing", "error", err)
+				var scanErr error
+				if availabilityEnabled {
+					scanErr = rows.Scan(&listingID, &externalID, &stockOverride, &productID, &supplierID, &availableQty)
+				} else {
+					scanErr = rows.Scan(&listingID, &externalID, &stockOverride, &availableQty)
+				}
+				if scanErr != nil {
+					w.logger.Error("stock sync: scan listing", "error", scanErr)
 					continue
 				}
 
@@ -112,11 +166,17 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 					stockQty = *stockOverride
 				}
 
-				listings = append(listings, listingStock{
+				item := listingStock{
 					ListingID:  listingID,
 					ExternalID: externalID,
 					StockQty:   stockQty,
-				})
+				}
+				if availabilityEnabled {
+					item.ProductID = productID
+					item.SupplierID = supplierID
+					item.WarehouseQty = availableQty
+				}
+				listings = append(listings, item)
 			}
 			return rows.Err()
 		})
@@ -124,6 +184,15 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 			w.logger.Error("stock sync: gather listings failed", "tenant_id", ti.TenantID, "error", gatherErr)
 			closeProvider(provider)
 			continue
+		}
+
+		// OPE-418 (gated): for supplier-backed listings, consult the supplier-availability
+		// resolver and apply the channel-increase gate. An increase above the
+		// own-warehouse-derived quantity only goes out when the policy gate is open and the
+		// availability is trusted; a decrease always goes out. Off by default -> the legacy
+		// warehouse-stock path is unchanged.
+		if availabilityEnabled {
+			w.applyAvailabilityGate(ctx, ti.TenantID, listings)
 		}
 
 		// Phase 2: Call marketplace APIs outside the transaction.
@@ -164,6 +233,36 @@ func (w *StockSyncWorker) Run(ctx context.Context) error {
 
 	w.logger.Info("stock sync completed", "tenants", len(tis), "synced", totalSynced)
 	return nil
+}
+
+// applyAvailabilityGate adjusts the to-be-pushed stock for supplier-backed listings using
+// the OPE-418 resolver (gated). For each supplier-backed listing it resolves availability
+// and: (a) when trusted, clamps the pushed quantity to available_to_sell; (b) suppresses
+// any INCREASE above the own-warehouse-derived quantity unless channel_increase_allowed is
+// open; a DECREASE always passes. On any resolver error / no decision the listing is left
+// unchanged (legacy behaviour). It mutates listings in place.
+func (w *StockSyncWorker) applyAvailabilityGate(ctx context.Context, tenantID uuid.UUID, listings []listingStock) {
+	now := time.Now()
+	for i := range listings {
+		l := &listings[i]
+		if l.SupplierID == nil {
+			continue // own-warehouse-backed listing — availability gate does not apply
+		}
+		decision, ok, err := w.availability.ResolveForProduct(ctx, tenantID, *l.SupplierID, l.ProductID, nil, nil, 0, false, now)
+		if err != nil || !ok {
+			continue
+		}
+		desired := l.StockQty
+		if decision.Status == model.AvailabilityStatusTrusted {
+			desired = min(desired, decision.AvailableToSell)
+		}
+		// Gate increases above the own-warehouse floor: only allowed when the policy opens
+		// the gate. Decreases (desired <= floor) always pass.
+		if desired > l.WarehouseQty && !decision.ChannelIncreaseAllowed {
+			desired = l.WarehouseQty
+		}
+		l.StockQty = desired
+	}
 }
 
 // syncBulk sends stock updates in batches of stockBulkBatchSize.

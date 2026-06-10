@@ -28,10 +28,15 @@ const labelOther = "other"
 // duplicated here intentionally: the metrics package stays dependency-free of the
 // domain model, and the allow-lists are what enforce cardinality at the metric edge.
 var (
-	allowedOperations = set("create_shipment", "generate_label", "download_label", "sync_tracking")
-	allowedStatuses   = set("pending", "succeeded", "failed", "ready", "running",
+	// Mirrors model.ProviderOp* (internal/model/provider_attempt.go); when a new
+	// ProviderOp* constant is added there, add its value here too (OPE-527).
+	allowedOperations = set("create_shipment", "generate_label", "download_label", "sync_tracking",
+		"sync_tracking_to_marketplace", "sync_fulfillment_status")
+	allowedStatuses = set("pending", "succeeded", "failed", "ready", "running",
 		"waiting_external", "blocked", "cancelled", "skipped")
-	allowedCategories         = set("integration", "supplier", "operator", "capability", "mapping")
+	// Mirrors the distinct values of model.blockerCategories
+	// (internal/model/fulfillment.go); keep in sync when a category is added (OPE-527).
+	allowedCategories         = set("integration", "supplier", "operator", "capability", "mapping", "automation")
 	allowedOutboxResults      = set("claimed", "processed", "failed")
 	allowedValidationVerdicts = set("pending", "passed", "failed", "error")
 	allowedPublicationStates  = set("research", "designed", "adapter_in_progress", "internal_validation",
@@ -119,6 +124,12 @@ type FulfillmentMetrics struct {
 	validationFailures atomic.Int64
 
 	outboxQueueDepth atomic.Int64
+	// stuckProcesses / blockedProcesses are GLOBAL (cross-tenant) gauges published by a
+	// periodic sweep on the privileged worker pool (OPE-422 followup). They carry NO
+	// tenant label — a single aggregate across all tenants — so they are bounded and do
+	// not flap (unlike the earlier, removed, per-tenant-read version).
+	stuckProcesses   atomic.Int64
+	blockedProcesses atomic.Int64
 }
 
 // NewFulfillmentMetrics creates an initialized collector.
@@ -210,6 +221,24 @@ func (m *FulfillmentMetrics) SetOutboxQueueDepth(n int) {
 	m.outboxQueueDepth.Store(int64(n))
 }
 
+// SetStuckProcesses sets the GLOBAL (cross-tenant) stuck-process gauge — processes in a
+// system-error/unhealthy state across all tenants. Set by the gauge sweeper (OPE-422).
+func (m *FulfillmentMetrics) SetStuckProcesses(n int) {
+	if m == nil {
+		return
+	}
+	m.stuckProcesses.Store(int64(n))
+}
+
+// SetBlockedProcesses sets the GLOBAL (cross-tenant) blocked-process gauge — processes
+// parked on an open blocker across all tenants. Set by the gauge sweeper (OPE-422).
+func (m *FulfillmentMetrics) SetBlockedProcesses(n int) {
+	if m == nil {
+		return
+	}
+	m.blockedProcesses.Store(int64(n))
+}
+
 // labelKeyToProm converts an internal "k1=v1\x00k2=v2" counter key into a Prometheus
 // label set "{k1=\"v1\",k2=\"v2\"}". An empty key yields an empty string (no braces).
 func labelKeyToProm(key string) string {
@@ -260,6 +289,10 @@ func (m *FulfillmentMetrics) Render(b *strings.Builder) {
 
 	writeGauge(b, "openoms_orchestration_outbox_queue_depth",
 		"Pending orchestration outbox events awaiting processing.", m.outboxQueueDepth.Load())
+	writeGauge(b, "openoms_fulfillment_stuck_processes",
+		"Fulfillment processes in a stuck (system-error) state, all tenants.", m.stuckProcesses.Load())
+	writeGauge(b, "openoms_fulfillment_blocked_processes",
+		"Fulfillment processes currently blocked, all tenants.", m.blockedProcesses.Load())
 }
 
 func writeCounter(b *strings.Builder, name, help string, c *counter) {

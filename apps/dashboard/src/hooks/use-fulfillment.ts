@@ -7,6 +7,7 @@ import type { ListResponse } from "@/types/api";
 import type {
   FulfillmentBlocker,
   FulfillmentExceptionsResponse,
+  FulfillmentParityReport,
   FulfillmentProcess,
   FulfillmentProcessDetail,
   FulfillmentProcessListParams,
@@ -31,6 +32,7 @@ export const fulfillmentKeys = {
   summary: () => ["operations", "summary"] as const,
   exceptions: (limit?: number) => ["operations", "exceptions", limit ?? 0] as const,
   capability: () => ["operations", "integration-capability-summary"] as const,
+  parity: () => ["operations", "parity"] as const,
 };
 
 // === Reads ===
@@ -106,6 +108,20 @@ export function useIntegrationCapabilitySummary(
       apiClient<IntegrationCapabilitySummary>(
         "/v1/operations/integration-capability-summary",
       ),
+    ...options,
+  });
+}
+
+/**
+ * Read-only legacy-vs-process parity / verification report (OPE-423b) backing
+ * the dashboard cutover readiness indicator. The endpoint is gated on
+ * orders:view; omitting coverage_threshold uses the server default (0.99). The
+ * report writes nothing — it is purely informational and never blocks a flow.
+ */
+export function useFulfillmentParity(options: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: fulfillmentKeys.parity(),
+    queryFn: () => apiClient<FulfillmentParityReport>("/v1/operations/parity"),
     ...options,
   });
 }

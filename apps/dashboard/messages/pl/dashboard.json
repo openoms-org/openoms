@@ -108,16 +108,25 @@
         "waiting_external": "Czeka na zewnętrzne"
       },
       "blockerCode": {
+        "automation_action_failed": "Automatyczna akcja realizacji zakończyła się niepowodzeniem",
         "channel_stock_stale": "Dane stanu w kanale są nieaktualne",
         "external_status_unmapped": "Status zewnętrzny nie ma mapowania",
+        "external_workflow_timeout": "Zewnętrzny workflow przekroczył limit czasu",
         "integration_capability_degraded": "Funkcja integracji działa z ograniczeniami",
         "integration_capability_missing": "Brak wymaganej funkcji integracji",
         "manual_stock_review_required": "Wymagana ręczna weryfikacja stanu",
         "stock_ack_missing": "Brak potwierdzenia stanu z kanału",
         "stock_sync_failed": "Synchronizacja stanu do kanału nie powiodła się",
         "stock_write_unsupported": "Zapis stanu nie jest wspierany przez tę integrację",
+        "supplier_availability_insufficient": "Niewystarczająca dostępność u dostawcy",
         "supplier_availability_stale": "Dane dostępności u dostawcy są nieaktualne",
         "supplier_availability_unknown": "Dostępność u dostawcy jest nieznana",
+        "supplier_manual_submission_required": "Zamówienie u dostawcy wymaga ręcznego złożenia",
+        "supplier_order_ambiguous_sku": "Niejednoznaczne dopasowanie SKU w zamówieniu u dostawcy",
+        "supplier_order_missing_data": "W zamówieniu u dostawcy brakuje wymaganych danych",
+        "supplier_order_rejected": "Dostawca odrzucił zamówienie",
+        "supplier_partial_fulfillment": "Dostawca zrealizował zamówienie tylko częściowo",
+        "supplier_payment_awaiting": "Zamówienie u dostawcy oczekuje na płatność",
         "supplier_preflight_required": "Zamówienie u dostawcy wymaga wstępnej weryfikacji"
       },
       "buckets": {
@@ -189,7 +198,9 @@
         "loadError": "Nie udało się załadować wyjątków.",
         "noBlocker": "Wymaga uwagi",
         "orderRef": "Zamówienie {orderId}",
-        "title": "Wymaga działania"
+        "shownOfTotal": "{shown} z {total}",
+        "title": "Wymaga działania",
+        "topPreview": "{count, plural, one {# najnowszy} few {# najnowsze} other {# najnowszych}}"
       },
       "healthStatus": {
         "action_required": "Wymaga działania",
@@ -197,11 +208,32 @@
         "system_error": "Błąd systemu",
         "warning": "Ostrzeżenie"
       },
+      "parity": {
+        "coverageLabel": "Pokrycie procesami",
+        "emptyDescription": "Brak aktywnych zamówień do porównania — model oparty na procesach jest formalnie zgodny.",
+        "emptyTitle": "Brak danych do porównania",
+        "legacyProblemOrders": "Problemowe zamówienia (model dotychczasowy)",
+        "loadError": "Nie udało się załadować raportu zgodności.",
+        "missingProcesses": "Zamówienia bez procesu",
+        "missingProcessesHint": "Musi osiągnąć 0 przed przełączeniem.",
+        "nonTerminalOrders": "Aktywne zamówienia",
+        "notReady": "Brak zgodności",
+        "notReadyHint": "Utrzymaj dotychczasowy pulpit heurystyczny do czasu osiągnięcia progu pokrycia.",
+        "processBackedExceptions": "Wyjątki oparte na procesach",
+        "processCount": "Zarejestrowano {count} procesów",
+        "ready": "Gotowe do przełączenia",
+        "readyHint": "Pokrycie procesami osiągnęło próg — można przełączyć pulpit na widok oparty na procesach.",
+        "subtitle": "Dotychczasowa heurystyka a pokrycie procesami przed przełączeniem pulpitu.",
+        "thresholdHint": "Próg {threshold}%",
+        "title": "Gotowość zgodności do przełączenia"
+      },
       "providerOp": {
         "create_shipment": "Utworzenie przesyłki",
         "download_label": "Pobranie etykiety",
         "generate_label": "Wygenerowanie etykiety",
-        "sync_tracking": "Synchronizacja trackingu"
+        "sync_fulfillment_status": "Synchronizacja statusu realizacji",
+        "sync_tracking": "Synchronizacja trackingu",
+        "sync_tracking_to_marketplace": "Przekazanie trackingu do marketplace"
       },
       "providerStatus": {
         "failed": "Nieudany",

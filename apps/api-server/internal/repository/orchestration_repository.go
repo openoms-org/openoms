@@ -173,6 +173,50 @@ func (r *OrchestrationRepository) GetEvent(ctx context.Context, q Querier, id uu
 	return scanOutbox(q.QueryRow(ctx, `SELECT `+orchestrationOutboxColumns+` FROM orchestration_outbox WHERE id = $1`, id))
 }
 
+// FindPendingByEventAndNonce loads a still-pending event of the given type whose payload
+// carries the correlation nonce AND integration id (tenant-scoped). Used by the callback to
+// find the one event it may resolve; not-found / already-resolved -> pgx.ErrNoRows.
+func (r *OrchestrationRepository) FindPendingByEventAndNonce(ctx context.Context, q Querier, eventType, nonce string, integrationID uuid.UUID) (*model.OrchestrationOutboxEvent, error) {
+	// FOR UPDATE locks the matched row so a concurrent worker claim (FOR UPDATE SKIP LOCKED)
+	// at the timeout boundary skips it — the callback and a deadline re-dispatch can never
+	// interleave on the same event, so a racing callback can't overwrite a just-claimed row.
+	row := q.QueryRow(ctx, `SELECT `+orchestrationOutboxColumns+`
+		FROM orchestration_outbox
+		WHERE status = 'pending' AND event_type = $1
+		  AND payload->>'correlation_nonce' = $2
+		  AND payload->>'integration_id' = $3
+		FOR UPDATE`, eventType, nonce, integrationID.String())
+	return scanOutbox(row)
+}
+
+// HasDispatchedAttempt reports whether the outbox event carries explicit dispatch evidence:
+// an attempt that finished succeeded. The orchestration worker records the succeeded attempt
+// in the SAME transaction as the pending-callback park (DeferUntil), and a plainly succeeded
+// event never re-enters dispatch — so for a still-pending event this is exactly "the outbound
+// POST succeeded earlier and the event is awaiting its callback" (OPE-514). Filters by
+// tenant_id like its siblings, so it is correct on both RLS-scoped transactions and the
+// privileged pool.
+func (r *OrchestrationRepository) HasDispatchedAttempt(ctx context.Context, q Querier, tenantID, outboxID uuid.UUID) (bool, error) {
+	var dispatched bool
+	if err := q.QueryRow(ctx,
+		`SELECT EXISTS (
+		    SELECT 1 FROM orchestration_attempts
+		     WHERE tenant_id = $1 AND outbox_id = $2 AND status = 'succeeded'
+		 )`, tenantID, outboxID).Scan(&dispatched); err != nil {
+		return false, fmt.Errorf("check dispatched attempt: %w", err)
+	}
+	return dispatched, nil
+}
+
+// SetLatestAttemptExternalExecID records the external engine's execution id on the most
+// recent attempt of an outbox event (best-effort).
+func (r *OrchestrationRepository) SetLatestAttemptExternalExecID(ctx context.Context, q Querier, outboxID uuid.UUID, execID string) error {
+	_, err := q.Exec(ctx, `UPDATE orchestration_attempts SET external_execution_id = $2
+		WHERE id = (SELECT id FROM orchestration_attempts WHERE outbox_id = $1 ORDER BY attempt_number DESC LIMIT 1)`,
+		outboxID, execID)
+	return err
+}
+
 // ListByProcess returns a process's outbox events (RLS-scoped; pass a WithTenant tx).
 func (r *OrchestrationRepository) ListByProcess(ctx context.Context, q Querier, processID uuid.UUID) ([]model.OrchestrationOutboxEvent, error) {
 	rows, err := q.Query(ctx, `SELECT `+orchestrationOutboxColumns+` FROM orchestration_outbox WHERE process_id = $1 ORDER BY created_at`, processID)

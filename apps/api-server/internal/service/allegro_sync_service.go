@@ -17,6 +17,10 @@ import (
 type AllegroSyncService struct {
 	integrationService *IntegrationService
 	logger             *slog.Logger
+	// fulfillment optionally records the outbound marketplace sync as a provider attempt
+	// + fulfillment step (OPE-417 followup). Gated/best-effort via the service itself;
+	// nil (or disabled) is a no-op. Wired by WithFulfillment.
+	fulfillment *FulfillmentService
 }
 
 // NewAllegroSyncService creates an AllegroSyncService.
@@ -25,6 +29,17 @@ func NewAllegroSyncService(integrationService *IntegrationService) *AllegroSyncS
 		integrationService: integrationService,
 		logger:             slog.Default().With("component", "allegro_sync"),
 	}
+}
+
+// WithFulfillment wires the OPE-417 fulfillment recorder so each outbound marketplace
+// status/tracking sync is recorded as a provider attempt (and a sync_tracking_to_marketplace
+// step). Returns the service for chaining. Safe to omit: recording is gated/best-effort.
+func (s *AllegroSyncService) WithFulfillment(f *FulfillmentService) *AllegroSyncService {
+	if s == nil {
+		return nil
+	}
+	s.fulfillment = f
+	return s
 }
 
 // mapStatusToAllegro maps an OpenOMS order status to the corresponding Allegro fulfillment status.
@@ -104,6 +119,8 @@ func (s *AllegroSyncService) SyncFulfillmentStatus(ctx context.Context, tenantID
 			"allegro_status", allegroStatus,
 			"error", err,
 		)
+		s.recordMarketplaceAttempt(ctx, tenantID, order, model.ProviderOpSyncFulfillmentStatus,
+			model.ProviderAttemptFailed, allegroStatus)
 		return
 	}
 
@@ -113,6 +130,8 @@ func (s *AllegroSyncService) SyncFulfillmentStatus(ctx context.Context, tenantID
 		"external_id", *order.ExternalID,
 		"allegro_status", allegroStatus,
 	)
+	s.recordMarketplaceAttempt(ctx, tenantID, order, model.ProviderOpSyncFulfillmentStatus,
+		model.ProviderAttemptSucceeded, allegroStatus)
 }
 
 // SyncTracking sends shipment tracking information to Allegro.
@@ -155,6 +174,9 @@ func (s *AllegroSyncService) SyncTracking(ctx context.Context, tenantID uuid.UUI
 			"tracking", trackingNumber,
 			"error", err,
 		)
+		s.recordMarketplaceAttempt(ctx, tenantID, order, model.ProviderOpSyncTrackingToMarketplace,
+			model.ProviderAttemptFailed, allegroCarrier)
+		s.emitTrackingSyncStep(ctx, tenantID, order, model.FulfillmentStatusFailed)
 		return
 	}
 
@@ -165,6 +187,37 @@ func (s *AllegroSyncService) SyncTracking(ctx context.Context, tenantID uuid.UUI
 		"carrier", allegroCarrier,
 		"tracking", trackingNumber,
 	)
+	s.recordMarketplaceAttempt(ctx, tenantID, order, model.ProviderOpSyncTrackingToMarketplace,
+		model.ProviderAttemptSucceeded, allegroCarrier)
+	s.emitTrackingSyncStep(ctx, tenantID, order, model.FulfillmentStatusSucceeded)
+}
+
+// recordMarketplaceAttempt records an outbound marketplace sync as a provider attempt
+// (OPE-417 followup). BEST-EFFORT + gated: when no fulfillment recorder is wired (or it is
+// disabled) it is a complete no-op, and the recorder opens its own tenant transaction and
+// swallows errors, so it can never affect the (already best-effort, async) sync itself.
+// provider is "allegro"; rawStatus carries the Allegro-side status/carrier for context.
+func (s *AllegroSyncService) recordMarketplaceAttempt(ctx context.Context, tenantID uuid.UUID, order *model.Order, operation, status, rawStatus string) {
+	if s.fulfillment == nil {
+		return
+	}
+	s.fulfillment.RecordProviderAttempt(ctx, ProviderAttemptInput{
+		TenantID:          tenantID,
+		OrderID:           order.ID,
+		Provider:          "allegro",
+		Operation:         operation,
+		Status:            status,
+		RawProviderStatus: rawStatus,
+	})
+}
+
+// emitTrackingSyncStep emits the sync_tracking_to_marketplace fulfillment step for the
+// order's process (OPE-417 followup). BEST-EFFORT + gated; no-op when no recorder is wired.
+func (s *AllegroSyncService) emitTrackingSyncStep(ctx context.Context, tenantID uuid.UUID, order *model.Order, status string) {
+	if s.fulfillment == nil {
+		return
+	}
+	s.fulfillment.EmitFulfillmentStep(ctx, tenantID, order.ID, model.StepSyncTrackingToMkt, status, "", nil)
 }
 
 // buildProvider creates an Allegro provider using decrypted integration credentials.

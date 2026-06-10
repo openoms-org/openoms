@@ -106,10 +106,26 @@ const ROUTE_READINESS_OVERRIDES: Record<string, FeatureReadiness> = {
   "/settings/webhooks": "controlled",
   "/settings/webhooks/deliveries": "controlled",
   "/audit": "ready",
-  // OPE-419: process-backed operations control tower. The read endpoints are
-  // always registered server-side (RLS-scoped) and return empty/zero while
-  // FULFILLMENT_PROCESS_ENABLED is off, so the surface is safe to expose and
-  // simply renders intentional empty states until recording is enabled.
+  // OPE-419 / OPE-423c: process-backed operations control tower. The read
+  // endpoints are always registered server-side (RLS-scoped) and return
+  // empty/zero while FULFILLMENT_PROCESS_ENABLED is off, so the surface is safe
+  // to expose and simply renders intentional empty states until recording is
+  // enabled. The page is operator-guarded (AdminGuard) regardless of readiness.
+  //
+  // ROUTE-READINESS DECISION (OPE-423c): this route stays unconditionally
+  // "ready" — i.e. directly reachable in BOTH the heuristic (default) and
+  // process-backed modes — and is NOT coupled to the cutover flag. Rationale:
+  //   1. It is the dedicated full process-backed surface (the home-page panel is
+  //      only a preview), so an operator must be able to open it to read the
+  //      parity-readiness indicator and decide whether to cut over BEFORE the
+  //      flag is flipped. Gating it behind the flag would create a chicken/egg:
+  //      you could not inspect parity until after you had already cut over.
+  //   2. ReadinessRouteGuard blocks direct navigation to non-"ready" routes in
+  //      client-ready surface mode; the existing Playwright spec
+  //      (e2e/fulfillment-operations.spec.ts) navigates straight to this route,
+  //      so demoting it would render the lock screen and break that spec.
+  // The cutover flag therefore governs only which section is PRIMARY on the
+  // home page, not whether this dedicated route exists.
   "/operations/fulfillment": "ready",
 };
 

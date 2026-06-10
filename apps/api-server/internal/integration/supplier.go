@@ -57,6 +57,37 @@ type SupplierProvider interface {
 	CreateOrder(ctx context.Context, req SupplierOrderRequest) (*SupplierOrderResult, error)
 }
 
+// SupplierPreflightResult is returned by an adapter that supports pre-submission validation.
+type SupplierPreflightResult struct {
+	Accepted       bool                `json:"accepted"`
+	AcceptedTotal  float64             `json:"accepted_total,omitempty"`
+	MissingFields  []string            `json:"missing_fields,omitempty"`  // -> supplier_order_missing_data
+	BusinessErrors []string            `json:"business_errors,omitempty"` // -> supplier_order_rejected
+	SplitLines     []SupplierOrderLine `json:"split_lines,omitempty"`     // partial/split -> supplier_partial_fulfillment
+	PaymentDue     bool                `json:"payment_due,omitempty"`     // -> supplier_payment_awaiting
+}
+
+// SupplierOrderStatus is returned by an adapter that supports order status reads. RawStatus
+// is the supplier's own status string (mapped to canonical downstream; raw is preserved).
+type SupplierOrderStatus struct {
+	RawStatus      string `json:"raw_status"`
+	TrackingNumber string `json:"tracking_number,omitempty"`
+	Carrier        string `json:"carrier,omitempty"`
+}
+
+// SupplierPreflighter is OPTIONALLY implemented by adapters that support pre-submission
+// validation. The supplier-order engine type-asserts it; absent => preflight is skipped
+// (unless the availability policy requires it, which routes to a manual step).
+type SupplierPreflighter interface {
+	Preflight(ctx context.Context, req SupplierOrderRequest) (*SupplierPreflightResult, error)
+}
+
+// SupplierStatusReader is OPTIONALLY implemented by adapters that support order status reads.
+// Absent => no automatic reconcile poll (an operator advances status via the portal).
+type SupplierStatusReader interface {
+	GetOrderStatus(ctx context.Context, externalID string) (*SupplierOrderStatus, error)
+}
+
 // SupplierProviderFactory is a constructor function for supplier providers.
 type SupplierProviderFactory func(credentials json.RawMessage, settings json.RawMessage) (SupplierProvider, error)
 

@@ -1,3 +1,7 @@
+// NOTE: There are intentionally no mutations for recording probe results or
+// completing validation runs. Run results and completion are backend/API
+// driven (probes execute server-side after POST .../validate); the Validation
+// Lab UI only starts runs and reads their outcome.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import { useAuthStore } from "@/lib/auth";
@@ -13,7 +17,6 @@ import type {
   ProviderValidationRunsResponse,
   ProviderVersion,
   PublishRequest,
-  RecordValidationResultRequest,
   StartValidationRunRequest,
 } from "@/types/platform";
 
@@ -114,51 +117,6 @@ export function useStartValidationRun(providerId: string, versionId: string) {
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: keys.runs(providerId, versionId) });
-    },
-  });
-}
-
-export function useRecordValidationResult(
-  providerId: string,
-  versionId: string,
-  runId: string,
-) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: RecordValidationResultRequest) =>
-      apiClient(
-        `${versionBase(providerId, versionId)}/validation-runs/${runId}/results`,
-        { method: "POST", body: JSON.stringify(data) },
-      ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: keys.run(providerId, versionId, runId),
-      });
-    },
-  });
-}
-
-export function useCompleteValidationRun(
-  providerId: string,
-  versionId: string,
-  runId: string,
-) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: () =>
-      apiClient<ProviderValidationRun>(
-        `${versionBase(providerId, versionId)}/validation-runs/${runId}/complete`,
-        { method: "POST" },
-      ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: keys.run(providerId, versionId, runId),
-      });
-      queryClient.invalidateQueries({ queryKey: keys.runs(providerId, versionId) });
-      // Completing a failed run can open gaps server-side.
-      queryClient.invalidateQueries({
-        queryKey: ["platform", "providers", providerId, "versions", versionId, "gaps"],
-      });
     },
   });
 }

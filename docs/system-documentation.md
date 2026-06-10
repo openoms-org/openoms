@@ -1564,6 +1564,150 @@ Retry:       sukces→succeeded; błąd retryable→pending + next_attempt_at = 
              cap 1h); permanent (PermanentError) lub wyczerpane attempts→failed + fulfillment_blocker.
 ```
 
+### Routing tworzenia zamówień przez fulfillment (OPE-416, tor B)
+
+Most między tworzeniem zamówienia a orchestracją — **addytywny, gated `FULFILLMENT_PROCESS_ENABLED`** (domyślnie OFF → zero zmian w zachowaniu).
+
+```
+Hook:        FulfillmentService.EnsureProcessForOrder(ctx, tx, tenantID, orderID) wołany W TEJ
+             SAMEJ transakcji co insert zamówienia (atomowo) w: OrderService.Create (manual/API),
+             ImportService, BaseLinkerImportService. No-op gdy flaga OFF; idempotentny
+             (GetProcessByOrder→ErrNoRows→CreateProcess), enqueue eventu order.created
+             (idempotency_key order.created:<orderID>).
+Handler:     OrderCreatedHandler (OrchestrationHandler) — proces new→validating w kontekście
+             najemcy; rejestrowany gdy ORCHESTRATION_WORKER_ENABLED. Pierwszy realny handler outboxa.
+Odroczone:   marketplace_order_poller (followup — flaga OFF, nic nie ginie).
+```
+
+### Atrybuty providerów przesyłka/etykieta/tracking (OPE-417, tor B)
+
+Efekty uboczne carrierów w modelu orchestracji jako **provider attempts** + step events + typed blockers — addytywne, gated, **best-effort** (nigdy nie przerywa operacji bazowej).
+
+```
+Migracja:    000038 fulfillment_provider_attempts (TENANT-SCOPED RLS): provider, operation,
+             status, request_id, correlation_id, raw_provider_status (surowy status carriera),
+             result_redacted (jsonb, nigdy sekretów), payload_hash (sha256), error_code.
+Hooki:       ShipmentService.Create, LabelService.GenerateLabel (carrier CreateShipment + GetLabel),
+             TrackingPoller.Run — każdy własny database.WithTenant, log-and-continue.
+Mapowanie:   carrier-error → istniejące kody blockerów (rate_limit/auth/outage/missing_data/
+             rejection); kanoniczny mapping statusu trackingu (raw zachowany); carrier bez API
+             trackingu → jawny outcome "unsupported capability" (nie błąd).
+```
+
+### Jednostki realizacji warehouse/pick-pack/dropship/backorder (OPE-418, tor B)
+
+Mieszane ścieżki realizacji jako **fulfillment units + steps** + typed supplier blockers — addytywne, gated, best-effort (reużywa tabel 000036, bez migracji).
+
+```
+Serwis:      FulfillmentService — EnsureUnit (idempotentny per process/typ/dedupe-key),
+             RecordUnitTransition, RecordStep, CreateSupplierBlocker (kody ADR-424),
+             AggregateMixedOrder + czysty AggregateProcessState (agregat stanu z jednostek),
+             ClassifySupplierCapability (api/portal/manual/unsupported z feed_format + integracji).
+Hooki:       pick_pack (pick/pack→step), dropship (jednostka per dostawca; manual/portal→waiting
+             preflight; unsupported→blocked unit + integration_capability_missing blocker),
+             warehouse_document (PZ zamknięcie backorder + wznowienie warehouse; WZ dispatch),
+             purchase_order (setter; receive = udokumentowany no-op do czasu linku PO↔order).
+```
+
+### Silnik zamówień do dostawcy — prepare/preflight/submit/reconcile (OPE-418/Phase-7, tor B)
+
+Cykl życia złożenia zamówienia dropship u dostawcy przez orchestration outbox — addytywny, gated `SUPPLIER_ORDER_ENABLED` (domyślnie OFF → brama dropship zachowuje obecne zachowanie, zero auto-submitu).
+
+```
+Adapter:     integration.SupplierProvider (ProviderName/FetchProducts/FetchInventory/CreateOrder)
+             + opcjonalne sub-interfejsy: SupplierPreflighter (Preflight) i SupplierStatusReader
+             (GetOrderStatus) — wykrywane przez type-assert, brak = krok pomijany/no-op.
+Brama:       DropshipService.recordDropshipUnit — capability api + routable → enqueue eventu
+             supplier.order.submit (idempotency key supplier.order.submit:<order>:<supplier>);
+             portal/manual → krok preflight waiting_external + blocker supplier_manual_submission_
+             _required (operatorski, nie cichy auto-submit). Best-effort: enqueue nigdy nie cofa routingu.
+Handler:     SupplierOrderHandler (OrchestrationHandler dla supplier.order.submit) — prepare
+             (resolve EAN/SKU per linia; brak identyfikacji → supplier_order_missing_data) →
+             preflight (gdy adapter wspiera) → submit (CreateOrder). Idempotentny: UPDATE
+             istniejącego pending dropship_orders supplier_reference (fallback Create); pomija gdy
+             reference już ustawiony. PermanentError (odrzucenie biznesowe) → blocker, nie retry.
+Reconcile:   SupplierOrderStatusPoller — kanoniczny mapping statusu dostawcy na status dropship
+             (pending/sent/confirmed/shipped/delivered/cancelled); raw zachowany; nieznany →
+             external_status_unmapped. Legacy auto-submit UpdateStatus pending→sent pomijany gdy
+             supplier_reference już obecny (brak podwójnego submitu).
+Blockery:    supplier_order_missing_data, supplier_order_ambiguous_sku, supplier_order_rejected,
+             supplier_payment_awaiting, supplier_partial_fulfillment, supplier_manual_submission_required.
+```
+
+### Operations + fulfillment READ API i dashboard (OPE-419, tor B)
+
+Strona READ — tenant-safe widok nad danymi 414–418 (procesy/jednostki/kroki/blockery/attempts) + sterownia operacyjna w dashboardzie.
+
+```
+Serwis:      FulfillmentReadService — KAŻDY odczyt/zapis przez database.WithTenant (RLS); brak
+             cross-tenant pool. Bucket-y operatora: ready/processing/stuck/blocked/provider_issue/
+             missing_data (classifyProcessBucket).
+Migracja:    000039 index fulfillment_processes(tenant_id, aggregate_status, health_status).
+Endpointy:   GET  /v1/fulfillment/processes (filtr status/health, paginacja),
+             GET  /v1/fulfillment/processes/{id} (detal: units+steps+blockers+attempts),
+             GET  /v1/fulfillment/orders/{orderID},
+             GET  /v1/operations/summary (liczniki bucketów),
+             GET  /v1/operations/exceptions (akcjonowalne procesy + top blocker),
+             GET  /v1/operations/integration-capability-summary,
+             POST /v1/fulfillment/blockers/{id}/resolve,  POST /v1/fulfillment/steps/{id}/retry.
+             GET-y: uprawnienie orders.view; akcje: orders.edit. Najemca z kontekstu (nie z param).
+Dashboard:   /operations/fulfillment (6 bucketów + exceptions + drilldown do detalu) +
+             FulfillmentControlTowerPanel na home (additywnie, operator-guarded). Puste stany gdy
+             flaga recording OFF — nie zastępuje legacy dashboardu (cutover = OPE-423).
+```
+
+### Automation v2 — routing set_status przez outbox (OPE-421, tor B)
+
+Akcja automatyzacji `set_status` routowana przez orchestration outbox — addytywne, gated `AUTOMATION_ORCHESTRATION_ENABLED` (OFF = bezpośredni TransitionStatus jak dotąd).
+
+```
+Enqueue:     executeSetStatus gdy flaga ON: ensure-process (idempotentny, spełnia NOT NULL
+             outbox process_id FK) + enqueue eventu automation.set_status (idempotency key
+             rule+order+target; engine stempluje action.RuleID/ActionIndex).
+Handler:     AutomationStatusTransitionHandler — idempotentny: no-op gdy zamówienie już w target
+             statusie (zrywa burzę efektów ubocznych: email/SMS/webhook/invoice/rekurencyjny
+             order.status_changed). Błędny payload/order/status → PermanentError.
+Blocker:     permanentny fail → kod automation_action_failed (widoczny w ops dashboardzie).
+Dual-flag:   enqueue wymaga AUTOMATION_ORCHESTRATION_ENABLED; przetwarzanie też ORCHESTRATION_WORKER_ENABLED.
+```
+
+### Obserwowalność orchestracji (OPE-422)
+
+Addytywna instrumentacja ścieżek 414–419 — best-effort (nigdy nie przerywa/nie spowalnia operacji).
+
+```
+Metryki:     pakiet internal/obsmetrics (ręczne atomowe liczniki + Prometheus text exposition,
+             BEZ klienta prometheus — wzorzec middleware.MetricsCollector): provider attempts,
+             blockers per kategoria, outbox events + queue depth, unit/step transitions, validation
+             runs/failures, publication transitions. DYSCYPLINA KARDYNALNOŚCI: tylko bounded-enum
+             labelki, nieznane→"other"; NIGDY id (tenant/order/process/...) jako labelka. Przez /metrics.
+Logi:        correlation_id (idempotency key) + kontekst eventu w logach workera; payloady nie logowane.
+Audit:       akcje operatora resolve/retry → wpis audit (fulfillment.blocker.resolved /
+             .step.retried) we własnej transakcji po commicie (fail audytu nie cofa akcji).
+```
+
+### Rollout / cutover (OPE-423)
+
+Bezpieczne przejście produkcji z legacy stanu na model process-backed — wszystko addytywne + gated, rollback = wyłączenie flagi.
+
+```
+Backfill:    FulfillmentBackfillService/Worker — procesy dla niefinalnych zamówień bez procesu
+             (LEFT JOIN ... fp.id IS NULL), tą samą idempotentną ścieżką co 416. PODWÓJNA brama:
+             FULFILLMENT_BACKFILL_ENABLED(false) + FULFILLMENT_BACKFILL_DRY_RUN(true) — zapis wymaga
+             OBU; default = total no-op. Resumable (bez ledgera), per-tenant WithTenant, batch.
+Parity:      GET /v1/operations/parity (orders.view) — read-only raport legacy vs process-backed:
+             non_terminal_orders, fulfillment_processes, orders_missing_process (gap→0 po backfillu),
+             process_coverage, process_coverage_met (werdykt bramki cutoveru, próg domyślny 0.99).
+Cutover:     flaga build-time NEXT_PUBLIC_OPENOMS_FULFILLMENT_DASHBOARD (heuristic[default]|
+             process-backed) — dual-read home: default = legacy, flip → control tower primary.
+             Parity-readiness indicator (konsumuje /operations/parity). Cutover = flip flagi po parity.
+Migracja:    000040 UNIQUE index fulfillment_processes(tenant_id, order_id) (addytywnie) +
+             CreateProcess INSERT ... ON CONFLICT DO NOTHING — duplikat procesu strukturalnie niemożliwy.
+```
+
+**Flagi orchestracji** (wszystkie domyślnie OFF/bezpieczne; kolejność włączania w rolloucie):
+`SEED_PROVIDERS` → `FULFILLMENT_PROCESS_ENABLED` (recording) → `FULFILLMENT_BACKFILL_ENABLED`+`FULFILLMENT_BACKFILL_DRY_RUN=false` (backfill) → `ORCHESTRATION_WORKER_ENABLED` (przetwarzanie outboxa) → próg parity → `NEXT_PUBLIC_OPENOMS_FULFILLMENT_DASHBOARD=process-backed` (cutover UI) → `AUTOMATION_ORCHESTRATION_ENABLED` (na końcu, najwrażliwsze).
+
 ### Zabezpieczenia
 
 | Zagrozenie | Mitygacja |
@@ -2016,6 +2160,16 @@ DPD uzywa dwoch powierzchni API: DPD Services REST do tworzenia przesylek i etyk
 
 Workery zarejestrowane w managerze: 21. Liczba plikow zrodlowych w `internal/worker/`: 25. `AllegroWebhookSyncer` jest podpiety do handlera webhookow Allegro (wyzwalany eventem), a nie rejestrowany w managerze workerow -- dlatego nie liczy sie do 21 cyklicznych workerow.
 
+#### Workery orchestracji (gated, rejestrowane warunkowo — tor B, OPE-415/423)
+
+Poza domyslnym zestawem 21, fulfillment orchestration (sekcja 8) dokłada workery rejestrowane tylko gdy włączone odpowiednią flagą (domyślnie OFF, więc nie liczą się do 21):
+
+| Worker | Flaga | Cel |
+|--------|-------|-----|
+| OrchestrationWorker | `ORCHESTRATION_WORKER_ENABLED` | Drenuje orchestration_outbox (FOR UPDATE SKIP LOCKED, cross-tenant privileged pool), dispatch per event_type, retry/backoff, permanent fail → fulfillment_blocker |
+| FulfillmentBackfillWorker | `FULFILLMENT_BACKFILL_ENABLED` (+ `FULFILLMENT_BACKFILL_DRY_RUN`) | Idempotentny backfill procesów dla niefinalnych zamówień bez procesu; per-tenant, dry-run domyślnie (OPE-423) |
+| SupplierOrderStatusPoller | `SUPPLIER_ORDER_ENABLED` | Reconcile statusu zamówień u dostawcy (adapter SupplierStatusReader) — per-tenant na privileged poolu, kanoniczny mapping statusu (raw zachowany), nieznany status → blocker external_status_unmapped (OPE-418/Phase-7) |
+
 ### Infrastruktura workerow
 
 | Plik | Cel |
@@ -2079,6 +2233,10 @@ Operatory: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `not_contains`, `i
 | `create_shipment` | Auto-tworzenie przesylki |
 | `webhook` | Wywolanie custom webhook |
 | `delay` | Opoznienie nastepnych akcji (np. 30m, 2h, 1d) |
+
+### Routing akcji zmieniających stan przez orchestrator (OPE-421, opcjonalne)
+
+Gdy `AUTOMATION_ORCHESTRATION_ENABLED=true`, akcja `set_status` (`transition_status` dla zamówień) nie woła bezpośrednio `TransitionStatus`, lecz **enqueue'uje** event `automation.set_status` do orchestration outboxa (sekcja 8). Transition wykonuje idempotentnie `AutomationStatusTransitionHandler` (no-op gdy zamówienie już w target statusie → zrywa burzę efektów ubocznych i rekurencję `order.status_changed`); permanentny fail → blocker `automation_action_failed` widoczny w ops dashboardzie. Domyślnie OFF → akcja działa bezpośrednio jak dotąd. Pozostałe typy akcji są niezmienione.
 
 ### Opoznione akcje (delayed actions)
 
@@ -2154,6 +2312,18 @@ NEXT_PUBLIC_API_URL=
 
 # -- Workers ----------------------
 WORKERS_ENABLED=true
+
+# -- Fulfillment orchestration (tor B, wszystkie domyslnie OFF/bezpieczne) --
+# Kolejnosc wlaczania w rolloucie (sekcja 8, OPE-423):
+SEED_PROVIDERS=false                  # seed rejestru providerow (OPE-412), idempotentny po provider_key
+FULFILLMENT_PROCESS_ENABLED=false     # recording: proces + outbox event przy tworzeniu zamowienia (OPE-416)
+FULFILLMENT_BACKFILL_ENABLED=false    # worker backfillu procesow dla istniejacych zamowien (OPE-423)
+FULFILLMENT_BACKFILL_DRY_RUN=true     # backfill tylko liczy; zapis wymaga ENABLED=true I DRY_RUN=false
+ORCHESTRATION_WORKER_ENABLED=false    # OrchestrationWorker drenuje outbox + dispatch (OPE-415)
+SUPPLIER_ORDER_ENABLED=false          # silnik zamowien do dostawcy: submit handler + status poller (OPE-418/Phase-7)
+AUTOMATION_ORCHESTRATION_ENABLED=false # set_status automatyzacji przez outbox (OPE-421, na koncu)
+# Dashboard (build-time, cutover UI po osiagnieciu parity — OPE-423):
+NEXT_PUBLIC_OPENOMS_FULFILLMENT_DASHBOARD=heuristic  # heuristic[default]|process-backed
 
 # -- Monitoring -------------------
 METRICS_TOKEN=...                    # Bearer token dla /metrics (openssl rand -base64 32)

@@ -41,3 +41,25 @@ func TestBlockerCategory(t *testing.T) {
 	assert.False(t, IsValidBlockerCode("alien_invasion"))
 	assert.Equal(t, "", BlockerCategory("alien_invasion"))
 }
+
+func TestBlockerSupplierAvailabilityInsufficient_IsValidWithCategory(t *testing.T) {
+	assert.True(t, IsValidBlockerCode(BlockerSupplierAvailabilityInsufficient))
+	assert.Equal(t, "supplier_availability_insufficient", BlockerSupplierAvailabilityInsufficient)
+	assert.Equal(t, "supplier", blockerCategories[BlockerSupplierAvailabilityInsufficient])
+}
+
+func TestBlockerExternalWorkflowTimeout(t *testing.T) {
+	assert.True(t, IsValidBlockerCode(BlockerExternalWorkflowTimeout))
+	assert.Equal(t, "external_workflow_timeout", BlockerExternalWorkflowTimeout)
+	assert.Equal(t, "integration", blockerCategories[BlockerExternalWorkflowTimeout])
+}
+
+func TestSupplierOrderBlockerCodes(t *testing.T) {
+	for _, c := range []string{
+		BlockerSupplierOrderMissingData, BlockerSupplierOrderAmbiguousSKU, BlockerSupplierOrderRejected,
+		BlockerSupplierPaymentAwaiting, BlockerSupplierPartialFulfillment, BlockerSupplierManualSubmissionRequired,
+	} {
+		assert.Truef(t, IsValidBlockerCode(c), "%q should be valid", c)
+		assert.Equalf(t, "supplier", blockerCategories[c], "%q should be category supplier", c)
+	}
+}

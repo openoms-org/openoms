@@ -88,6 +88,14 @@ type InvoiceCreator interface {
 	HandleOrderStatusChange(ctx context.Context, tenantID uuid.UUID, order *model.Order)
 }
 
+// ExternalWorkflowDispatcher hands an order event to an external workflow engine via the
+// OPE-421/Phase-13 connector (gated). Implemented by *service.ExternalWorkflowService.
+// Enabled() is nil-safe and false unless the connector is wired AND EXTERNAL_WORKFLOW_ENABLED.
+type ExternalWorkflowDispatcher interface {
+	Enabled() bool
+	DispatchForOrder(ctx context.Context, tenantID, orderID, integrationID uuid.UUID) error
+}
+
 // ListingActivatorDeps holds the dependencies needed by the activate_listing action.
 type ListingActivatorDeps struct {
 	ListingRepo     ListingActionRepo
@@ -169,6 +177,10 @@ type DefaultActionExecutor struct {
 	orchestration        OrchestrationEnqueuer
 	fulfillment          FulfillmentProcessEnsurer
 	orchestrationEnabled bool
+
+	// externalWorkflow is the OPE-421/Phase-13 connector (gated). The zero value is nil,
+	// and executeExternalWorkflow is a no-op unless it is wired AND its Enabled() is true.
+	externalWorkflow ExternalWorkflowDispatcher
 }
 
 // NewDefaultActionExecutor creates a new DefaultActionExecutor with a safe HTTP client.
@@ -225,6 +237,13 @@ func (e *DefaultActionExecutor) SetOrchestration(enabled bool, orchestration Orc
 	e.fulfillment = fulfillment
 }
 
+// SetExternalWorkflow wires the OPE-421/Phase-13 external-workflow connector. When unset (or
+// when its Enabled() is false) the external_workflow action is a no-op — the default path is
+// byte-for-byte unchanged. Mirrors the SetOrchestration gating pattern.
+func (e *DefaultActionExecutor) SetExternalWorkflow(dispatcher ExternalWorkflowDispatcher) {
+	e.externalWorkflow = dispatcher
+}
+
 // ExecuteAction dispatches an automation action based on its type.
 func (e *DefaultActionExecutor) ExecuteAction(ctx context.Context, tenantID uuid.UUID, action Action, event Event) error {
 	switch action.Type {
@@ -244,9 +263,31 @@ func (e *DefaultActionExecutor) ExecuteAction(ctx context.Context, tenantID uuid
 		return e.executeDeactivateListing(ctx, tenantID, action, event)
 	case "send_marketplace_message":
 		return e.executeSendMarketplaceMessage(ctx, tenantID, action, event)
+	case "external_workflow":
+		return e.executeExternalWorkflow(ctx, tenantID, action, event)
 	default:
 		return fmt.Errorf("unknown action type: %s", action.Type)
 	}
+}
+
+// executeExternalWorkflow hands the event to an external workflow engine via the
+// external-workflow connector (OPE-421/Phase-13). Gated/best-effort: a no-op when the
+// connector is nil/disabled, so the default build is byte-for-byte unchanged.
+func (e *DefaultActionExecutor) executeExternalWorkflow(_ context.Context, tenantID uuid.UUID, action Action, event Event) error {
+	if e.externalWorkflow == nil || !e.externalWorkflow.Enabled() {
+		return nil
+	}
+	if event.EntityType != "order" {
+		return fmt.Errorf("external_workflow action only supports order entities, got %q", event.EntityType)
+	}
+	integrationIDStr, _ := action.Params["integration_id"].(string)
+	integrationID, err := uuid.Parse(integrationIDStr)
+	if err != nil {
+		return fmt.Errorf("external_workflow: invalid integration_id: %w", err)
+	}
+	// Use a fresh context: the dispatch enqueue must complete regardless of the original
+	// request timeout/cancellation (mirrors the other external-effect actions).
+	return e.externalWorkflow.DispatchForOrder(context.Background(), tenantID, event.EntityID, integrationID)
 }
 
 // executeSetStatus transitions an order to the target status specified in action params.

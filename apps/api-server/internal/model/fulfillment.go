@@ -77,23 +77,40 @@ const (
 
 // Blocker codes (ADR-424).
 const (
-	BlockerStockSyncFailed               = "stock_sync_failed"
-	BlockerChannelStockStale             = "channel_stock_stale"
-	BlockerSupplierAvailabilityStale     = "supplier_availability_stale"
-	BlockerSupplierAvailabilityUnknown   = "supplier_availability_unknown"
-	BlockerSupplierPreflightRequired     = "supplier_preflight_required"
-	BlockerManualStockReviewRequired     = "manual_stock_review_required"
-	BlockerStockWriteUnsupported         = "stock_write_unsupported"
-	BlockerStockAckMissing               = "stock_ack_missing"
-	BlockerExternalStatusUnmapped        = "external_status_unmapped"
-	BlockerIntegrationCapabilityMissing  = "integration_capability_missing"
-	BlockerIntegrationCapabilityDegraded = "integration_capability_degraded"
+	BlockerStockSyncFailed                  = "stock_sync_failed"
+	BlockerChannelStockStale                = "channel_stock_stale"
+	BlockerSupplierAvailabilityStale        = "supplier_availability_stale"
+	BlockerSupplierAvailabilityUnknown      = "supplier_availability_unknown"
+	BlockerSupplierPreflightRequired        = "supplier_preflight_required"
+	BlockerSupplierAvailabilityInsufficient = "supplier_availability_insufficient"
+	BlockerManualStockReviewRequired        = "manual_stock_review_required"
+	BlockerStockWriteUnsupported            = "stock_write_unsupported"
+	BlockerStockAckMissing                  = "stock_ack_missing"
+	BlockerExternalStatusUnmapped           = "external_status_unmapped"
+	BlockerIntegrationCapabilityMissing     = "integration_capability_missing"
+	BlockerIntegrationCapabilityDegraded    = "integration_capability_degraded"
 	// BlockerAutomationActionFailed marks a permanently failed orchestrated
 	// automation action (e.g. set_status with an unknown target status). Opened by
 	// the orchestration worker so operators see why an automation never applied
 	// (OPE-421). fulfillment_blockers.code has no DB CHECK constraint — codes are
 	// app-validated via IsValidBlockerCode — so no migration is required.
 	BlockerAutomationActionFailed = "automation_action_failed"
+	// BlockerExternalWorkflowTimeout marks an external-workflow dispatch whose
+	// correlated callback never arrived within the integration's timeout
+	// (OPE-421/Phase-13). Opened by the orchestration worker when the dispatch
+	// handler permanently fails the timed-out event. Category "integration".
+	BlockerExternalWorkflowTimeout = "external_workflow_timeout"
+	// OPE-418/Phase-7 supplier-order engine blocker codes (all category "supplier").
+	// Opened by the SupplierOrderHandler / dropship gate when a phase cannot proceed,
+	// so each failure class surfaces as a typed, actionable operator blocker instead
+	// of a silent adapter-log error. fulfillment_blockers.code has no DB CHECK — codes
+	// are app-validated via IsValidBlockerCode — so no migration is required.
+	BlockerSupplierOrderMissingData         = "supplier_order_missing_data"
+	BlockerSupplierOrderAmbiguousSKU        = "supplier_order_ambiguous_sku"
+	BlockerSupplierOrderRejected            = "supplier_order_rejected"
+	BlockerSupplierPaymentAwaiting          = "supplier_payment_awaiting"
+	BlockerSupplierPartialFulfillment       = "supplier_partial_fulfillment"
+	BlockerSupplierManualSubmissionRequired = "supplier_manual_submission_required"
 )
 
 // Blocker lifecycle status.
@@ -124,18 +141,26 @@ var validBlockerStatuses = []string{BlockerStatusOpen, BlockerStatusAcknowledged
 
 // blockerCategories maps each blocker code to its category.
 var blockerCategories = map[string]string{
-	BlockerStockSyncFailed:               "integration",
-	BlockerChannelStockStale:             "integration",
-	BlockerSupplierAvailabilityStale:     "supplier",
-	BlockerSupplierAvailabilityUnknown:   "supplier",
-	BlockerSupplierPreflightRequired:     "supplier",
-	BlockerManualStockReviewRequired:     "operator",
-	BlockerStockWriteUnsupported:         "capability",
-	BlockerStockAckMissing:               "capability",
-	BlockerExternalStatusUnmapped:        "mapping",
-	BlockerIntegrationCapabilityMissing:  "capability",
-	BlockerIntegrationCapabilityDegraded: "capability",
-	BlockerAutomationActionFailed:        "automation",
+	BlockerStockSyncFailed:                  "integration",
+	BlockerChannelStockStale:                "integration",
+	BlockerSupplierAvailabilityStale:        "supplier",
+	BlockerSupplierAvailabilityUnknown:      "supplier",
+	BlockerSupplierPreflightRequired:        "supplier",
+	BlockerSupplierAvailabilityInsufficient: "supplier",
+	BlockerManualStockReviewRequired:        "operator",
+	BlockerStockWriteUnsupported:            "capability",
+	BlockerStockAckMissing:                  "capability",
+	BlockerExternalStatusUnmapped:           "mapping",
+	BlockerIntegrationCapabilityMissing:     "capability",
+	BlockerIntegrationCapabilityDegraded:    "capability",
+	BlockerAutomationActionFailed:           "automation",
+	BlockerExternalWorkflowTimeout:          "integration",
+	BlockerSupplierOrderMissingData:         "supplier",
+	BlockerSupplierOrderAmbiguousSKU:        "supplier",
+	BlockerSupplierOrderRejected:            "supplier",
+	BlockerSupplierPaymentAwaiting:          "supplier",
+	BlockerSupplierPartialFulfillment:       "supplier",
+	BlockerSupplierManualSubmissionRequired: "supplier",
 }
 
 // IsValidAggregateStatus reports whether s is a known process aggregate status.

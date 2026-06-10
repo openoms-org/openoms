@@ -109,6 +109,11 @@ func (r *CreateAutomationRuleRequest) Validate() error {
 	if r.Actions == nil || string(r.Actions) == "" {
 		r.Actions = json.RawMessage("[]")
 	}
+	// Reject rules whose actions the executor could not run (OPE-421 followup): unknown
+	// action type or a missing required param, caught at save instead of at execution.
+	if err := ValidateAutomationActions(r.Actions); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -147,6 +152,11 @@ func (r *UpdateAutomationRuleRequest) Validate() error {
 		if !ValidTriggerEvents[*r.TriggerEvent] {
 			return errors.New("invalid trigger_event")
 		}
+	}
+	// When actions are being updated, reject any the executor could not run (OPE-421
+	// followup). A nil Actions means "leave unchanged" and is skipped by the empty guard.
+	if err := ValidateAutomationActions(r.Actions); err != nil {
+		return err
 	}
 	return nil
 }
