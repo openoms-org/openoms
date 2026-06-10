@@ -229,7 +229,9 @@
         "create_shipment": "Utworzenie przesyłki",
         "download_label": "Pobranie etykiety",
         "generate_label": "Wygenerowanie etykiety",
-        "sync_tracking": "Synchronizacja trackingu"
+        "sync_fulfillment_status": "Synchronizacja statusu realizacji",
+        "sync_tracking": "Synchronizacja trackingu",
+        "sync_tracking_to_marketplace": "Przekazanie trackingu do marketplace"
       },
       "providerStatus": {
         "failed": "Nieudany",

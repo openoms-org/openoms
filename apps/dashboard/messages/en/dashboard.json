@@ -229,7 +229,9 @@
         "create_shipment": "Create shipment",
         "download_label": "Download label",
         "generate_label": "Generate label",
-        "sync_tracking": "Sync tracking"
+        "sync_fulfillment_status": "Sync fulfillment status",
+        "sync_tracking": "Sync tracking",
+        "sync_tracking_to_marketplace": "Sync tracking to marketplace"
       },
       "providerStatus": {
         "failed": "Failed",

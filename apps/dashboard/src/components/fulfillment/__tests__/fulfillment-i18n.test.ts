@@ -30,6 +30,17 @@ const BLOCKER_CODES = [
   "supplier_manual_submission_required",
 ] as const;
 
+// Same guard for provider-attempt operations (OPE-520). Source of truth:
+//   apps/api-server/internal/model/provider_attempt.go (ProviderOp* constants)
+const PROVIDER_OPERATIONS = [
+  "create_shipment",
+  "generate_label",
+  "download_label",
+  "sync_tracking",
+  "sync_tracking_to_marketplace",
+  "sync_fulfillment_status",
+] as const;
+
 const LOCALES = [
   ["en", enDashboard],
   ["pl", plDashboard],
@@ -53,5 +64,27 @@ describe("fulfillment blocker-code i18n coverage", () => {
     expect(
       Object.keys(enDashboard.dashboard.fulfillment.blockerCode).sort(),
     ).toEqual(Object.keys(plDashboard.dashboard.fulfillment.blockerCode).sort());
+  });
+});
+
+describe("fulfillment provider-operation i18n coverage", () => {
+  it.each(LOCALES)(
+    "%s catalog labels every backend provider operation",
+    (_locale, catalog) => {
+      const labels: Record<string, string> =
+        catalog.dashboard.fulfillment.providerOp;
+      for (const operation of PROVIDER_OPERATIONS) {
+        expect(labels[operation], `missing providerOp.${operation}`).toBeTruthy();
+      }
+      expect(Object.keys(labels).sort()).toEqual(
+        [...PROVIDER_OPERATIONS].sort(),
+      );
+    },
+  );
+
+  it("en and pl provider-operation key sets are identical", () => {
+    expect(
+      Object.keys(enDashboard.dashboard.fulfillment.providerOp).sort(),
+    ).toEqual(Object.keys(plDashboard.dashboard.fulfillment.providerOp).sort());
   });
 });
