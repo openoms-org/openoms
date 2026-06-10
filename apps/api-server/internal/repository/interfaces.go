@@ -418,6 +418,7 @@ type DropshipOrderRepo interface {
 	Create(ctx context.Context, tx pgx.Tx, d *model.DropshipOrder) error
 	UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string) error
 	UpdateFields(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateDropshipStatusRequest) error
+	MarkSubmitAttempted(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 }
 
