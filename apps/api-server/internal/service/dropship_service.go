@@ -596,7 +596,10 @@ func (s *DropshipService) UpdateStatus(ctx context.Context, tenantID, id uuid.UU
 
 	var d *model.DropshipOrder
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		existing, err := s.dropshipRepo.FindByID(ctx, tx, id)
+		// OPE-518: lock the row FOR UPDATE before reading supplier_reference so this manual
+		// transition serializes against the supplier-order engine's submit handler — the
+		// second submitter sees the first one's committed outcome instead of racing it.
+		existing, err := s.dropshipRepo.FindByIDForUpdate(ctx, tx, id)
 		if err != nil {
 			return err
 		}

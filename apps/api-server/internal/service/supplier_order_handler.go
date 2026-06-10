@@ -21,6 +21,7 @@ const EventSupplierOrderSubmit = "supplier.order.submit"
 // dropshipOrderWriter is the narrow dropship-order repo surface the handler needs.
 type dropshipOrderWriter interface {
 	FindByOrderID(ctx context.Context, tx pgx.Tx, orderID uuid.UUID) ([]model.DropshipOrder, error)
+	FindByIDForUpdate(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.DropshipOrder, error)
 	Create(ctx context.Context, tx pgx.Tx, d *model.DropshipOrder) error
 	UpdateFields(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateDropshipStatusRequest) error
 }
@@ -114,6 +115,20 @@ func (h *SupplierOrderHandler) Handle(ctx context.Context, event model.Orchestra
 				return nil // already placed — idempotent no-op
 			}
 			existingID = existing[i].ID // pending row to update on success
+		}
+		// OPE-518: lock the pending row FOR UPDATE before trusting supplier_reference, so a
+		// concurrent submitter (manual pending→sent transition) serializes against this tx
+		// and the re-read below observes its committed outcome.
+		if existingID != uuid.Nil {
+			locked, lkerr := h.dropshipRepo.FindByIDForUpdate(ctx, tx, existingID)
+			if lkerr != nil {
+				return fmt.Errorf("lock dropship order: %w", lkerr) // retryable
+			}
+			if locked == nil {
+				existingID = uuid.Nil // row vanished concurrently — fall back to defensive create
+			} else if locked.SupplierReference != nil && strings.TrimSpace(*locked.SupplierReference) != "" {
+				return nil // placed by a concurrent submitter — idempotent no-op
+			}
 		}
 
 		// PREPARE

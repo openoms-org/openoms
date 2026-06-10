@@ -413,6 +413,7 @@ type PriceListRepo interface {
 type DropshipOrderRepo interface {
 	List(ctx context.Context, tx pgx.Tx, filter model.DropshipOrderListFilter) ([]model.DropshipOrder, int, error)
 	FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.DropshipOrder, error)
+	FindByIDForUpdate(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.DropshipOrder, error)
 	FindByOrderID(ctx context.Context, tx pgx.Tx, orderID uuid.UUID) ([]model.DropshipOrder, error)
 	Create(ctx context.Context, tx pgx.Tx, d *model.DropshipOrder) error
 	UpdateStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID, status string) error

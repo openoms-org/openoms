@@ -104,6 +104,34 @@ func (r *DropshipOrderRepository) FindByID(ctx context.Context, tx pgx.Tx, id uu
 	return &d, nil
 }
 
+// FindByIDForUpdate returns a dropship order by its ID, locking the row (SELECT ... FOR
+// UPDATE) for the duration of the transaction. Both supplier-submit paths (the orchestration
+// handler and the manual status transition) must lock the row BEFORE checking
+// supplier_reference so concurrent submitters serialize and the second one observes the
+// first one's outcome (OPE-518).
+func (r *DropshipOrderRepository) FindByIDForUpdate(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.DropshipOrder, error) {
+	var d model.DropshipOrder
+	err := tx.QueryRow(ctx,
+		`SELECT id, tenant_id, order_id, supplier_id, supplier_name, status,
+		        supplier_reference, tracking_number, carrier, notes,
+		        total_cost, currency, sent_at, confirmed_at, shipped_at, delivered_at,
+		        created_at, updated_at
+		 FROM dropship_orders WHERE id = $1 FOR UPDATE`, id,
+	).Scan(
+		&d.ID, &d.TenantID, &d.OrderID, &d.SupplierID, &d.SupplierName, &d.Status,
+		&d.SupplierReference, &d.TrackingNumber, &d.Carrier, &d.Notes,
+		&d.TotalCost, &d.Currency, &d.SentAt, &d.ConfirmedAt, &d.ShippedAt, &d.DeliveredAt,
+		&d.CreatedAt, &d.UpdatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("find dropship order by id for update: %w", err)
+	}
+	return &d, nil
+}
+
 // FindByOrderID returns all dropship orders for the given order.
 func (r *DropshipOrderRepository) FindByOrderID(ctx context.Context, tx pgx.Tx, orderID uuid.UUID) ([]model.DropshipOrder, error) {
 	rows, err := tx.Query(ctx,
