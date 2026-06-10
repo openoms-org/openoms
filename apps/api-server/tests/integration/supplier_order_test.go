@@ -497,6 +497,81 @@ func TestSupplierOrder_SubmittedOnceBackstop(t *testing.T) {
 	assert.Contains(t, err.Error(), "uq_dropship_orders_submitted_once")
 }
 
+// TestSupplierOrder_ItemsLoaderIdentity exercises the production items loader (OPE-516,
+// service.NewSupplierOrderItemsLoader with the real repositories): a line mapped in
+// supplier_products resolves ItemID to the SUPPLIER's catalogue external id; a line without
+// a mapping is sent EAN-only (never the tenant's internal SKU); a line with neither lands in
+// the builder's missing-identity list.
+func TestSupplierOrder_ItemsLoaderIdentity(t *testing.T) {
+	ctx := context.Background()
+	tenantA := seedTenant(t, ctx)
+	orderID, _ := seedFulfillmentOrder(t, ctx, tenantA, "Loader Identity Customer")
+	supplierID := seedSupplier(t, ctx, tenantA)
+
+	seedProduct := func(name, sku, ean string) uuid.UUID {
+		var id uuid.UUID
+		require.NoError(t, superPool.QueryRow(ctx,
+			`INSERT INTO products (tenant_id, name, price, sku, ean) VALUES ($1,$2,10,NULLIF($3,''),NULLIF($4,'')) RETURNING id`,
+			tenantA, name, sku, ean).Scan(&id))
+		t.Cleanup(func() { _, _ = superPool.Exec(context.Background(), "DELETE FROM products WHERE id = $1", id) })
+		return id
+	}
+	mappedProduct := seedProduct("Mapped", "TENANT-SKU-M", "5901234567001")
+	eanOnlyProduct := seedProduct("EAN Only", "TENANT-SKU-E", "5901234567002")
+	noIdentityProduct := seedProduct("No Identity", "TENANT-SKU-N", "")
+
+	// supplier_products mapping ONLY for mappedProduct: the supplier's catalogue id.
+	spID := uuid.New()
+	_, err := superPool.Exec(ctx,
+		`INSERT INTO supplier_products (id, tenant_id, supplier_id, product_id, external_id, name, sku)
+		 VALUES ($1,$2,$3,$4,'EXT-BTP-42','Supplier Catalogue Item','MFG-CODE-42')`,
+		spID, tenantA, supplierID, mappedProduct)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_, _ = superPool.Exec(context.Background(), "DELETE FROM supplier_products WHERE id = $1", spID)
+	})
+
+	seedPendingDropshipOrder(t, ctx, tenantA, orderID, supplierID, []model.DropshipOrderItem{
+		{ProductID: &mappedProduct, SKU: "TENANT-SKU-M", ProductName: "Mapped", Quantity: 2},
+		{ProductID: &eanOnlyProduct, SKU: "TENANT-SKU-E", ProductName: "EAN Only", Quantity: 1},
+		{ProductID: &noIdentityProduct, SKU: "TENANT-SKU-N", ProductName: "No Identity", Quantity: 1},
+	})
+
+	loader := service.NewSupplierOrderItemsLoader(
+		repository.NewDropshipOrderRepository(), repository.NewDropshipOrderItemRepository(),
+		repository.NewProductRepository(), repository.NewSupplierProductRepository())
+
+	require.NoError(t, database.WithTenant(ctx, appPool, tenantA, func(tx pgx.Tx) error {
+		lines, missing, lerr := loader(ctx, tx, orderID, supplierID)
+		if lerr != nil {
+			return lerr
+		}
+		require.Empty(t, missing)
+		require.Len(t, lines, 3)
+		byEAN := map[string]service.SupplierOrderInputLine{}
+		var noIDLine *service.SupplierOrderInputLine
+		for i := range lines {
+			if lines[i].EAN == "" {
+				noIDLine = &lines[i]
+				continue
+			}
+			byEAN[lines[i].EAN] = lines[i]
+		}
+		// Mapped: supplier catalogue external id, never the tenant SKU.
+		mapped := byEAN["5901234567001"]
+		assert.Equal(t, "EXT-BTP-42", mapped.SupplierSKU)
+		// No mapping: EAN-only, ItemID empty.
+		eanOnly := byEAN["5901234567002"]
+		assert.Equal(t, "", eanOnly.SupplierSKU, "unmapped line must be EAN-only, never the tenant SKU")
+		// Neither: no identity -> builder classifies it as missing.
+		require.NotNil(t, noIDLine)
+		assert.Equal(t, "", noIDLine.SupplierSKU)
+		_, builderMissing, _ := service.BuildSupplierOrderRequest(orderID.String(), lines)
+		assert.Len(t, builderMissing, 1, "identity-less line lands in the missing list")
+		return nil
+	}))
+}
+
 // TestSupplierOrder_ManualMarkerSkip: an operator pending→sent transition on a row whose
 // submit-intent marker is set must NOT auto-submit to the supplier API even when the
 // supplier is API-capable — it proceeds as a pure status update (the operator resolution

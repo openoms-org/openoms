@@ -437,47 +437,10 @@ func run() error {
 		return provider, nil
 	}
 	// dropshipItemsLoader resolves the dropship lines for an (order, supplier) into the
-	// supplier-order builder's input shape: it finds the pending dropship_orders row for the
-	// supplier, loads its items, and resolves each item's identity (its product's EAN + the
-	// supplier SKU). Returns the resolved lines + the ids of any line whose product lookup
-	// failed (so the handler can surface a missing-data blocker). Runs inside the handler's tx.
-	dropshipItemsLoader := func(ctx context.Context, tx pgx.Tx, orderID, supplierID uuid.UUID) ([]service.SupplierOrderInputLine, []string, error) {
-		dsOrders, err := dropshipRepo.FindByOrderID(ctx, tx, orderID)
-		if err != nil {
-			return nil, nil, fmt.Errorf("find dropship orders: %w", err)
-		}
-		var lines []service.SupplierOrderInputLine
-		var missing []string
-		for di := range dsOrders {
-			if dsOrders[di].SupplierID != supplierID {
-				continue
-			}
-			items, ierr := dropshipItemRepo.ListByDropshipOrderID(ctx, tx, dsOrders[di].ID)
-			if ierr != nil {
-				return nil, nil, fmt.Errorf("list dropship items: %w", ierr)
-			}
-			for ii := range items {
-				line := service.SupplierOrderInputLine{
-					LineID:      items[ii].ID,
-					SupplierSKU: items[ii].SKU,
-					Quantity:    items[ii].Quantity,
-				}
-				// Prefer the product's canonical EAN/SKU when the line is mapped to a product.
-				if items[ii].ProductID != nil {
-					if product, perr := productRepo.FindByID(ctx, tx, *items[ii].ProductID); perr == nil && product != nil {
-						if product.EAN != nil && *product.EAN != "" {
-							line.EAN = *product.EAN
-						}
-						if product.SKU != nil && *product.SKU != "" {
-							line.SupplierSKU = *product.SKU
-						}
-					}
-				}
-				lines = append(lines, line)
-			}
-		}
-		return lines, missing, nil
-	}
+	// supplier-order builder's input shape (OPE-516): the line's ItemID is the SUPPLIER's
+	// catalogue identity from the supplier_products mapping, the EAN comes from the tenant
+	// product, and the tenant's internal SKU is never sent. Runs inside the handler's tx.
+	dropshipItemsLoader := service.NewSupplierOrderItemsLoader(dropshipRepo, dropshipItemRepo, productRepo, supplierProductRepo)
 	recurringOrderService := service.NewRecurringOrderService(recurringOrderRepo, orderRepo, auditRepo, pool, webhookDispatchService, slog.Default())
 
 	// Product listing repo (needed by both stock sync and allegro listings)

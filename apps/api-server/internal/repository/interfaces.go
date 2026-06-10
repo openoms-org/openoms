@@ -263,6 +263,7 @@ type SupplierProductRepo interface {
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 	FindByEAN(ctx context.Context, tx pgx.Tx, ean string) (*model.SupplierProduct, error)
 	FindBySupplierAndExternalID(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID, externalID string) (*model.SupplierProduct, error)
+	FindBySupplierAndProductID(ctx context.Context, tx pgx.Tx, supplierID, productID uuid.UUID) (*model.SupplierProduct, error)
 	UpsertByExternalID(ctx context.Context, tx pgx.Tx, sp *model.SupplierProduct) error
 	FindByIDs(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]model.SupplierProduct, error)
 	LinkToProduct(ctx context.Context, tx pgx.Tx, id uuid.UUID, productID uuid.UUID) error
