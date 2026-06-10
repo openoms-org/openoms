@@ -1,8 +1,6 @@
 module github.com/openoms-org/openoms/apps/api-server
 
-go 1.25.0
-
-toolchain go1.25.7
+go 1.25.7
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.41.9
@@ -19,6 +17,7 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/openoms-org/openoms/packages/allegro-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/amazon-sp-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/apaczka-go-sdk v0.0.0-00010101000000-000000000000
 	github.com/openoms-org/openoms/packages/btp-go-sdk v0.0.0-00010101000000-000000000000
 	github.com/openoms-org/openoms/packages/dhl-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/dpd-go-sdk v0.0.0-20260213093925-f69d292073cb
@@ -96,3 +95,5 @@ replace github.com/openoms-org/openoms/packages/prestashop-go-sdk => ../../packa
 replace github.com/openoms-org/openoms/packages/shopify-go-sdk => ../../packages/shopify-go-sdk
 
 replace github.com/openoms-org/openoms/packages/btp-go-sdk => ../../packages/btp-go-sdk
+
+replace github.com/openoms-org/openoms/packages/apaczka-go-sdk => ../../packages/apaczka-go-sdk
