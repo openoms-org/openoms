@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
@@ -104,6 +105,12 @@ func (r *ProviderValidationRepository) GetRun(ctx context.Context, runID uuid.UU
 	return scanRun(r.pool.QueryRow(ctx, `SELECT `+providerRunColumns+` FROM provider_validation_runs WHERE id = $1`, runID))
 }
 
+// GetRunForUpdate locks the run row in the caller's transaction and returns the
+// run header, or pgx.ErrNoRows. Serializes finalization against result writes.
+func (r *ProviderValidationRepository) GetRunForUpdate(ctx context.Context, q Querier, runID uuid.UUID) (*model.ProviderValidationRun, error) {
+	return scanRun(q.QueryRow(ctx, `SELECT `+providerRunColumns+` FROM provider_validation_runs WHERE id = $1 FOR UPDATE`, runID))
+}
+
 // ListRuns returns a version's runs, newest first.
 func (r *ProviderValidationRepository) ListRuns(ctx context.Context, versionID uuid.UUID) ([]model.ProviderValidationRun, error) {
 	rows, err := r.pool.Query(ctx, `SELECT `+providerRunColumns+` FROM provider_validation_runs WHERE provider_version_id = $1 ORDER BY started_at DESC`, versionID)
@@ -122,25 +129,38 @@ func (r *ProviderValidationRepository) ListRuns(ctx context.Context, versionID u
 	return result, rows.Err()
 }
 
-// FinalizeRun sets a run's verdict and finished_at (caller's tx).
+// FinalizeRun sets a run's verdict and finished_at (caller's tx). The update is
+// guarded in SQL: only a still-pending run matches, so a run finalized by a
+// concurrent transaction can never be overwritten. Returns pgx.ErrNoRows when
+// no pending run matched (missing or already finalized).
 func (r *ProviderValidationRepository) FinalizeRun(ctx context.Context, q Querier, runID uuid.UUID, verdict string, finishedAt time.Time) error {
-	_, err := q.Exec(ctx,
-		`UPDATE provider_validation_runs SET verdict = $2, finished_at = $3::timestamptz WHERE id = $1`,
+	tag, err := q.Exec(ctx,
+		`UPDATE provider_validation_runs SET verdict = $2, finished_at = $3::timestamptz
+		  WHERE id = $1 AND verdict = 'pending'`,
 		runID, verdict, finishedAt)
 	if err != nil {
 		return fmt.Errorf("finalize run: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("finalize run: %w", pgx.ErrNoRows)
 	}
 	return nil
 }
 
 const providerResultColumns = `id, run_id, probe_type, label, status, observation, payload_hash, findings, created_at`
 
-// UpsertResult records (or replaces) a probe result within a run.
-func (r *ProviderValidationRepository) UpsertResult(ctx context.Context, result model.ProviderValidationResult) (*model.ProviderValidationResult, error) {
+// UpsertResult records (or replaces) a probe result within a run, using the
+// given querier (the pool, or a caller's transaction so the write can be atomic
+// with the finalized-run check). The insert source is guarded in SQL: it only
+// selects a still-pending run, so a result can never land on (or replace one
+// within) a finalized run. Returns pgx.ErrNoRows when no pending run matched.
+func (r *ProviderValidationRepository) UpsertResult(ctx context.Context, q Querier, result model.ProviderValidationResult) (*model.ProviderValidationResult, error) {
 	var out model.ProviderValidationResult
-	err := r.pool.QueryRow(ctx,
+	err := q.QueryRow(ctx,
 		`INSERT INTO provider_validation_results (run_id, probe_type, label, status, observation, payload_hash, findings)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7)
+		 SELECT r.id, $2, $3, $4, $5, $6, $7
+		   FROM provider_validation_runs r
+		  WHERE r.id = $1 AND r.verdict = 'pending'
 		 ON CONFLICT (run_id, label) DO UPDATE
 		   SET probe_type = EXCLUDED.probe_type, status = EXCLUDED.status, observation = EXCLUDED.observation,
 		       payload_hash = EXCLUDED.payload_hash, findings = EXCLUDED.findings
@@ -153,9 +173,10 @@ func (r *ProviderValidationRepository) UpsertResult(ctx context.Context, result 
 	return &out, nil
 }
 
-// ListResults returns a run's probe results.
-func (r *ProviderValidationRepository) ListResults(ctx context.Context, runID uuid.UUID) ([]model.ProviderValidationResult, error) {
-	rows, err := r.pool.Query(ctx, `SELECT `+providerResultColumns+` FROM provider_validation_results WHERE run_id = $1 ORDER BY label`, runID)
+// ListResults returns a run's probe results, using the given querier (the
+// pool, or a caller's transaction holding the run-row lock).
+func (r *ProviderValidationRepository) ListResults(ctx context.Context, q Querier, runID uuid.UUID) ([]model.ProviderValidationResult, error) {
+	rows, err := q.Query(ctx, `SELECT `+providerResultColumns+` FROM provider_validation_results WHERE run_id = $1 ORDER BY label`, runID)
 	if err != nil {
 		return nil, fmt.Errorf("list results: %w", err)
 	}
