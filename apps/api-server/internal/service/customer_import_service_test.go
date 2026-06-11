@@ -16,15 +16,21 @@ import (
 
 // mockCustomerRepo implements repository.CustomerRepo for unit tests.
 type mockCustomerRepo struct {
-	customers    map[string]*model.Customer // keyed by email
-	created      []*model.Customer
-	updated      []mockUpdateCall
-	findByIDFunc func(id uuid.UUID) (*model.Customer, error)
+	customers      map[string]*model.Customer // keyed by email
+	created        []*model.Customer
+	updated        []mockUpdateCall
+	incrementCalls []mockIncrementCall
+	findByIDFunc   func(id uuid.UUID) (*model.Customer, error)
 }
 
 type mockUpdateCall struct {
 	ID  uuid.UUID
 	Req model.UpdateCustomerRequest
+}
+
+type mockIncrementCall struct {
+	ID     uuid.UUID
+	Amount float64
 }
 
 func newMockCustomerRepo() *mockCustomerRepo {
@@ -65,7 +71,8 @@ func (m *mockCustomerRepo) Delete(_ context.Context, _ pgx.Tx, _ uuid.UUID) erro
 	return nil
 }
 
-func (m *mockCustomerRepo) IncrementOrderStats(_ context.Context, _ pgx.Tx, _ uuid.UUID, _ float64) error {
+func (m *mockCustomerRepo) IncrementOrderStats(_ context.Context, _ pgx.Tx, id uuid.UUID, amount float64) error {
+	m.incrementCalls = append(m.incrementCalls, mockIncrementCall{ID: id, Amount: amount})
 	return nil
 }
 

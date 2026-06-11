@@ -176,8 +176,8 @@ func (r *OrderRepository) insert(ctx context.Context, tx pgx.Tx, order *model.Or
 			total_amount, currency, notes, metadata, tags, ordered_at,
 			delivery_method, pickup_point_id,
 			payment_status, payment_method,
-			internal_notes, priority
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+			internal_notes, priority, customer_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
 		` + conflictClause + `
 		RETURNING created_at, updated_at`
 
@@ -188,7 +188,7 @@ func (r *OrderRepository) insert(ctx context.Context, tx pgx.Tx, order *model.Or
 		order.TotalAmount, order.Currency, order.Notes, order.Metadata, tags, order.OrderedAt,
 		order.DeliveryMethod, order.PickupPointID,
 		order.PaymentStatus, order.PaymentMethod,
-		order.InternalNotes, order.Priority,
+		order.InternalNotes, order.Priority, order.CustomerID,
 	).Scan(&order.CreatedAt, &order.UpdatedAt)
 	if err != nil {
 		if conflictClause != "" && err == pgx.ErrNoRows {
