@@ -381,6 +381,38 @@ func TestAuthService_ConsumeStoredRefreshTokenInvalidatesNonCurrentSibling(t *te
 	assert.Nil(t, family, "non-current sibling use should revoke the entire family")
 }
 
+// TestAuthService_Verify2FALogin_AccountLockedRejectedBeforeDB proves the per-account
+// 2FA lockout is wired into the login 2FA path and short-circuits BEFORE any database
+// access. The pool is nil, so if the lockout gate did not fire, Verify2FALogin would hit
+// a nil-pool dereference instead of returning ErrAccountLocked. The lockout is keyed on
+// the immutable tenant+user IDs from the 2fa_pending token, so it throttles brute force
+// regardless of source IP (the per-IP rate limit alone is bypassable with distributed IPs).
+func TestAuthService_Verify2FALogin_AccountLockedRejectedBeforeDB(t *testing.T) {
+	tokenSvc, err := NewTokenService("test-secret-key-for-unit-tests-32chars!")
+	require.NoError(t, err)
+
+	svc := NewAuthService(nil, nil, nil, tokenSvc, nil, nil)
+	store := NewMemoryLoginLockoutStore()
+	defer store.Close()
+	svc.SetLoginLockout(NewLoginLockout(store))
+
+	userID := uuid.New()
+	tenantID := uuid.New()
+	user := model.User{ID: userID, TenantID: tenantID, Email: "user@example.com", Role: "owner"}
+	tempToken, err := tokenSvc.Generate2FAPendingToken(user)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	// Drive the account into lockout via repeated wrong-code failures (IP-independent).
+	for range 5 {
+		require.NoError(t, svc.lockout.Record2FAFailure(ctx, tenantID.String(), userID.String()))
+	}
+
+	_, _, err = svc.Verify2FALogin(ctx, tempToken, "000000")
+	require.ErrorIs(t, err, ErrAccountLocked,
+		"a locked account must be rejected by the 2FA path before any DB access")
+}
+
 func TestAuthService_LoginFailedAuditOmitsPlaintextEmail(t *testing.T) {
 	req := model.LoginRequest{
 		TenantSlug: "tenant",
