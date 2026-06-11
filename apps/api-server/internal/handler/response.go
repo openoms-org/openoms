@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"strconv"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/go-chi/chi/v5"
@@ -69,6 +70,26 @@ func parseIDParam(w http.ResponseWriter, r *http.Request, param, resource string
 		return uuid.Nil, false
 	}
 	return id, true
+}
+
+// queryInt parses an integer query parameter, returning def when absent or invalid.
+func queryInt(r *http.Request, key string, def int) int {
+	if v := r.URL.Query().Get(key); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return def
+}
+
+// queryFloat parses a float query parameter, returning def when absent or invalid.
+func queryFloat(r *http.Request, key string, def float64) float64 {
+	if v := r.URL.Query().Get(key); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil {
+			return f
+		}
+	}
+	return def
 }
 
 func isValidationError(err error) bool {
