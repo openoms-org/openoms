@@ -37,6 +37,7 @@ jobs:
       packages: write
       contents: read
       security-events: write
+      id-token: write # keyless cosign signing (OIDC)
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
@@ -101,6 +102,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push API SHA image
+        id: push
         run: |
           docker push "${API_IMAGE}:${GITHUB_SHA}"
           digest="$(docker inspect --format='{{if .RepoDigests}}{{index .RepoDigests 0}}{{end}}' "${API_IMAGE}:${GITHUB_SHA}")"
@@ -109,6 +111,17 @@ jobs:
             exit 1
           fi
           printf '%s\n' "${digest}" > "sbom/openoms-api-${GITHUB_SHA}.digest.txt"
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.0.6
+
+      - name: Sign API image (keyless)
+        env:
+          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
+        run: cosign sign --yes "${IMAGE_DIGEST}"
 
       - name: Upload API SBOM artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -127,6 +140,7 @@ jobs:
       packages: write
       contents: read
       security-events: write
+      id-token: write # keyless cosign signing (OIDC)
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
@@ -212,6 +226,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push Dashboard SHA image
+        id: push
         run: |
           docker push "${DASHBOARD_IMAGE}:${GITHUB_SHA}"
           digest="$(docker inspect --format='{{if .RepoDigests}}{{index .RepoDigests 0}}{{end}}' "${DASHBOARD_IMAGE}:${GITHUB_SHA}")"
@@ -220,6 +235,17 @@ jobs:
             exit 1
           fi
           printf '%s\n' "${digest}" > "sbom/openoms-dashboard-${GITHUB_SHA}.digest.txt"
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.0.6
+
+      - name: Sign Dashboard image (keyless)
+        env:
+          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
+        run: cosign sign --yes "${IMAGE_DIGEST}"
 
       - name: Upload Dashboard SBOM artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -238,6 +264,7 @@ jobs:
       packages: write
       contents: read
       security-events: write
+      id-token: write # keyless cosign signing (OIDC)
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
@@ -302,6 +329,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push Migrate SHA image
+        id: push
         run: |
           docker push "${MIGRATE_IMAGE}:${GITHUB_SHA}"
           digest="$(docker inspect --format='{{if .RepoDigests}}{{index .RepoDigests 0}}{{end}}' "${MIGRATE_IMAGE}:${GITHUB_SHA}")"
@@ -310,6 +338,17 @@ jobs:
             exit 1
           fi
           printf '%s\n' "${digest}" > "sbom/openoms-migrate-${GITHUB_SHA}.digest.txt"
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.0.6
+
+      - name: Sign Migrate image (keyless)
+        env:
+          IMAGE_DIGEST: ${{ steps.push.outputs.digest }}
+        run: cosign sign --yes "${IMAGE_DIGEST}"
 
       - name: Upload Migrate SBOM artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -423,25 +462,41 @@ jobs:
       - name: Get commit info
         id: info
         run: |
-          echo "message=$(git log -1 --pretty=%s)" >> "$GITHUB_OUTPUT"
-          echo "author=$(git log -1 --pretty=%an)" >> "$GITHUB_OUTPUT"
-          echo "short_sha=$(echo ${{ github.sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
+          {
+            echo "message=$(git log -1 --pretty=%s)"
+            echo "author=$(git log -1 --pretty=%an)"
+            echo "short_sha=${GITHUB_SHA:0:7}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Send Discord notification
         if: ${{ env.WEBHOOK_URL != '' }}
         env:
+          # All attacker-controllable values (commit subject, author name) are passed
+          # through env and never interpolated into the shell or JSON directly.
           WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          MSG: ${{ steps.info.outputs.message }}
+          AUTHOR: ${{ steps.info.outputs.author }}
+          SHORT_SHA: ${{ steps.info.outputs.short_sha }}
+          COMMIT_SHA: ${{ github.sha }}
         run: |
-          curl -s -H "Content-Type: application/json" -d "{
-            \"embeds\": [{
-              \"title\": \"New Release Deployed\",
-              \"description\": \"**${{ steps.info.outputs.message }}**\",
-              \"color\": 3066993,
-              \"fields\": [
-                {\"name\": \"Commit\", \"value\": \"[\`${{ steps.info.outputs.short_sha }}\`](https://github.com/openoms-org/openoms/commit/${{ github.sha }})\", \"inline\": true},
-                {\"name\": \"Author\", \"value\": \"${{ steps.info.outputs.author }}\", \"inline\": true}
-              ],
-              \"footer\": {\"text\": \"OpenOMS Release Pipeline\"},
-              \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
-            }]
-          }" "$WEBHOOK_URL"
+          commit_url="https://github.com/openoms-org/openoms/commit/${COMMIT_SHA}"
+          # jq --arg safely JSON-escapes every value; no string interpolation.
+          payload="$(jq -n \
+            --arg msg "$MSG" \
+            --arg short_sha "$SHORT_SHA" \
+            --arg commit_url "$commit_url" \
+            --arg author "$AUTHOR" \
+            '{
+              embeds: [{
+                title: "New Release Deployed",
+                description: ("**" + $msg + "**"),
+                color: 3066993,
+                fields: [
+                  {name: "Commit", value: ("[`" + $short_sha + "`](" + $commit_url + ")"), inline: true},
+                  {name: "Author", value: $author, inline: true}
+                ],
+                footer: {text: "OpenOMS Release Pipeline"},
+                timestamp: (now | todateiso8601)
+              }]
+            }')"
+          curl -s -H "Content-Type: application/json" --data-raw "$payload" "$WEBHOOK_URL"

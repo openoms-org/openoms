@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -102,7 +101,5 @@ func HashToken(token string) string {
 }
 
 func writeAuthError(w http.ResponseWriter, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusUnauthorized)
-	_ = json.NewEncoder(w).Encode(map[string]string{"error": message})
+	writeJSONError(w, http.StatusUnauthorized, message)
 }

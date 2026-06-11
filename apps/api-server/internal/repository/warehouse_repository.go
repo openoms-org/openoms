@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -18,26 +17,30 @@ func NewWarehouseRepository() *WarehouseRepository {
 	return &WarehouseRepository{}
 }
 
+// warehouseColumns is the canonical column list for SELECTing a warehouse row.
+const warehouseColumns = "id, tenant_id, name, code, address, is_default, active, created_at, updated_at"
+
+// scanWarehouse scans a single warehouse row in warehouseColumns order.
+func scanWarehouse(row pgx.Row) (model.Warehouse, error) {
+	var w model.Warehouse
+	err := row.Scan(
+		&w.ID, &w.TenantID, &w.Name, &w.Code, &w.Address,
+		&w.IsDefault, &w.Active, &w.CreatedAt, &w.UpdatedAt,
+	)
+	return w, err
+}
+
 // List returns a paginated list of warehouses matching the filter.
 func (r *WarehouseRepository) List(ctx context.Context, tx pgx.Tx, filter model.WarehouseListFilter) ([]model.Warehouse, int, error) {
-	var conditions []string
-	var args []any
-	argIdx := 1
-
+	qb := NewQueryBuilder()
 	if filter.Active != nil {
-		conditions = append(conditions, fmt.Sprintf("active = $%d", argIdx))
-		args = append(args, *filter.Active)
-		argIdx++
+		qb.Add("active = $%d", *filter.Active)
 	}
-
-	where := ""
-	if len(conditions) > 0 {
-		where = "WHERE " + strings.Join(conditions, " AND ")
-	}
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM warehouses %s", where)
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count warehouses: %w", err)
 	}
 
@@ -47,14 +50,13 @@ func (r *WarehouseRepository) List(ctx context.Context, tx pgx.Tx, filter model.
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
+	limitIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
-		`SELECT id, tenant_id, name, code, address, is_default, active, created_at, updated_at
-		 FROM warehouses %s %s LIMIT $%d OFFSET $%d`,
-		where, orderByClause, argIdx, argIdx+1,
+		"SELECT "+warehouseColumns+" FROM warehouses %s %s LIMIT $%d OFFSET $%d",
+		where, orderByClause, limitIdx, limitIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list warehouses: %w", err)
 	}
@@ -62,11 +64,8 @@ func (r *WarehouseRepository) List(ctx context.Context, tx pgx.Tx, filter model.
 
 	var warehouses []model.Warehouse
 	for rows.Next() {
-		var w model.Warehouse
-		if err := rows.Scan(
-			&w.ID, &w.TenantID, &w.Name, &w.Code, &w.Address,
-			&w.IsDefault, &w.Active, &w.CreatedAt, &w.UpdatedAt,
-		); err != nil {
+		w, err := scanWarehouse(rows)
+		if err != nil {
 			return nil, 0, fmt.Errorf("scan warehouse: %w", err)
 		}
 		warehouses = append(warehouses, w)
@@ -76,14 +75,9 @@ func (r *WarehouseRepository) List(ctx context.Context, tx pgx.Tx, filter model.
 
 // FindByID returns a warehouse by its ID.
 func (r *WarehouseRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Warehouse, error) {
-	var w model.Warehouse
-	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, name, code, address, is_default, active, created_at, updated_at
-		 FROM warehouses WHERE id = $1`, id,
-	).Scan(
-		&w.ID, &w.TenantID, &w.Name, &w.Code, &w.Address,
-		&w.IsDefault, &w.Active, &w.CreatedAt, &w.UpdatedAt,
-	)
+	w, err := scanWarehouse(tx.QueryRow(ctx,
+		"SELECT "+warehouseColumns+" FROM warehouses WHERE id = $1", id,
+	))
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -95,14 +89,9 @@ func (r *WarehouseRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.U
 
 // FindDefault returns the default active warehouse for the current tenant.
 func (r *WarehouseRepository) FindDefault(ctx context.Context, tx pgx.Tx) (*model.Warehouse, error) {
-	var w model.Warehouse
-	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, name, code, address, is_default, active, created_at, updated_at
-		 FROM warehouses WHERE is_default = true AND active = true ORDER BY created_at ASC, id ASC LIMIT 1`,
-	).Scan(
-		&w.ID, &w.TenantID, &w.Name, &w.Code, &w.Address,
-		&w.IsDefault, &w.Active, &w.CreatedAt, &w.UpdatedAt,
-	)
+	w, err := scanWarehouse(tx.QueryRow(ctx,
+		"SELECT "+warehouseColumns+" FROM warehouses WHERE is_default = true AND active = true ORDER BY created_at ASC, id ASC LIMIT 1",
+	))
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -125,44 +114,21 @@ func (r *WarehouseRepository) Create(ctx context.Context, tx pgx.Tx, warehouse *
 
 // Update applies partial updates to a warehouse.
 func (r *WarehouseRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateWarehouseRequest) error {
-	var setClauses []string
-	var args []any
-	argIdx := 1
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "name", req.Name)
+	SetPtr(ub, "code", req.Code)
+	SetPtr(ub, "address", req.Address)
+	SetPtr(ub, "is_default", req.IsDefault)
+	SetPtr(ub, "active", req.Active)
 
-	if req.Name != nil {
-		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argIdx))
-		args = append(args, *req.Name)
-		argIdx++
-	}
-	if req.Code != nil {
-		setClauses = append(setClauses, fmt.Sprintf("code = $%d", argIdx))
-		args = append(args, *req.Code)
-		argIdx++
-	}
-	if req.Address != nil {
-		setClauses = append(setClauses, fmt.Sprintf("address = $%d", argIdx))
-		args = append(args, *req.Address)
-		argIdx++
-	}
-	if req.IsDefault != nil {
-		setClauses = append(setClauses, fmt.Sprintf("is_default = $%d", argIdx))
-		args = append(args, *req.IsDefault)
-		argIdx++
-	}
-	if req.Active != nil {
-		setClauses = append(setClauses, fmt.Sprintf("active = $%d", argIdx))
-		args = append(args, *req.Active)
-		argIdx++
-	}
-
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
+	ub.SetRaw("updated_at = NOW()")
 	query := fmt.Sprintf("UPDATE warehouses SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
-	args = append(args, id)
+		ub.SetClause(), ub.NextArgIdx())
+	args := append(ub.Args(), id)
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {
@@ -194,6 +160,19 @@ func NewWarehouseStockRepository() *WarehouseStockRepository {
 	return &WarehouseStockRepository{}
 }
 
+// warehouseStockColumns is the canonical column list for SELECTing a warehouse stock row.
+const warehouseStockColumns = "id, tenant_id, warehouse_id, product_id, variant_id, quantity, reserved, min_stock, created_at, updated_at"
+
+// scanWarehouseStock scans a single warehouse stock row in warehouseStockColumns order.
+func scanWarehouseStock(row pgx.Row) (model.WarehouseStock, error) {
+	var s model.WarehouseStock
+	err := row.Scan(
+		&s.ID, &s.TenantID, &s.WarehouseID, &s.ProductID, &s.VariantID,
+		&s.Quantity, &s.Reserved, &s.MinStock, &s.CreatedAt, &s.UpdatedAt,
+	)
+	return s, err
+}
+
 // ListByWarehouse returns paginated stock records for the given warehouse.
 func (r *WarehouseStockRepository) ListByWarehouse(ctx context.Context, tx pgx.Tx, warehouseID uuid.UUID, filter model.WarehouseStockListFilter) ([]model.WarehouseStock, int, error) {
 	var total int
@@ -204,9 +183,7 @@ func (r *WarehouseStockRepository) ListByWarehouse(ctx context.Context, tx pgx.T
 	}
 
 	rows, err := tx.Query(ctx,
-		`SELECT id, tenant_id, warehouse_id, product_id, variant_id, quantity, reserved, min_stock, created_at, updated_at
-		 FROM warehouse_stock WHERE warehouse_id = $1
-		 ORDER BY created_at DESC LIMIT $2 OFFSET $3`,
+		"SELECT "+warehouseStockColumns+" FROM warehouse_stock WHERE warehouse_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3",
 		warehouseID, filter.Limit, filter.Offset,
 	)
 	if err != nil {
@@ -216,11 +193,8 @@ func (r *WarehouseStockRepository) ListByWarehouse(ctx context.Context, tx pgx.T
 
 	var stocks []model.WarehouseStock
 	for rows.Next() {
-		var s model.WarehouseStock
-		if err := rows.Scan(
-			&s.ID, &s.TenantID, &s.WarehouseID, &s.ProductID, &s.VariantID,
-			&s.Quantity, &s.Reserved, &s.MinStock, &s.CreatedAt, &s.UpdatedAt,
-		); err != nil {
+		s, err := scanWarehouseStock(rows)
+		if err != nil {
 			return nil, 0, fmt.Errorf("scan warehouse stock: %w", err)
 		}
 		stocks = append(stocks, s)
@@ -231,9 +205,7 @@ func (r *WarehouseStockRepository) ListByWarehouse(ctx context.Context, tx pgx.T
 // ListByProduct returns all stock records for the given product.
 func (r *WarehouseStockRepository) ListByProduct(ctx context.Context, tx pgx.Tx, productID uuid.UUID) ([]model.WarehouseStock, error) {
 	rows, err := tx.Query(ctx,
-		`SELECT id, tenant_id, warehouse_id, product_id, variant_id, quantity, reserved, min_stock, created_at, updated_at
-		 FROM warehouse_stock WHERE product_id = $1
-		 ORDER BY created_at DESC`,
+		"SELECT "+warehouseStockColumns+" FROM warehouse_stock WHERE product_id = $1 ORDER BY created_at DESC",
 		productID,
 	)
 	if err != nil {
@@ -243,11 +215,8 @@ func (r *WarehouseStockRepository) ListByProduct(ctx context.Context, tx pgx.Tx,
 
 	var stocks []model.WarehouseStock
 	for rows.Next() {
-		var s model.WarehouseStock
-		if err := rows.Scan(
-			&s.ID, &s.TenantID, &s.WarehouseID, &s.ProductID, &s.VariantID,
-			&s.Quantity, &s.Reserved, &s.MinStock, &s.CreatedAt, &s.UpdatedAt,
-		); err != nil {
+		s, err := scanWarehouseStock(rows)
+		if err != nil {
 			return nil, fmt.Errorf("scan warehouse stock: %w", err)
 		}
 		stocks = append(stocks, s)

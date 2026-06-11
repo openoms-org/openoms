@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -18,26 +17,33 @@ func NewExchangeRateRepository() *ExchangeRateRepository {
 	return &ExchangeRateRepository{}
 }
 
+// exchangeRateColumns is the canonical column list for SELECTing an exchange rate row.
+const exchangeRateColumns = "id, tenant_id, base_currency, target_currency, rate, source, fetched_at, created_at"
+
+// scanExchangeRate scans a single exchange rate row in exchangeRateColumns order.
+func scanExchangeRate(row pgx.Row) (model.ExchangeRate, error) {
+	var rate model.ExchangeRate
+	err := row.Scan(
+		&rate.ID, &rate.TenantID, &rate.BaseCurrency, &rate.TargetCurrency,
+		&rate.Rate, &rate.Source, &rate.FetchedAt, &rate.CreatedAt,
+	)
+	return rate, err
+}
+
 // List returns a paginated list of exchange rates matching the filter.
 func (r *ExchangeRateRepository) List(ctx context.Context, tx pgx.Tx, filter model.ExchangeRateListFilter) ([]model.ExchangeRate, int, error) {
-	where := "WHERE 1=1"
-	args := []any{}
-	argIdx := 1
-
+	qb := NewQueryBuilder()
 	if filter.BaseCurrency != nil {
-		where += fmt.Sprintf(" AND base_currency = $%d", argIdx)
-		args = append(args, *filter.BaseCurrency)
-		argIdx++
+		qb.Add("base_currency = $%d", *filter.BaseCurrency)
 	}
 	if filter.TargetCurrency != nil {
-		where += fmt.Sprintf(" AND target_currency = $%d", argIdx)
-		args = append(args, *filter.TargetCurrency)
-		argIdx++
+		qb.Add("target_currency = $%d", *filter.TargetCurrency)
 	}
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := "SELECT COUNT(*) FROM exchange_rates " + where
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count exchange_rates: %w", err)
 	}
 
@@ -49,16 +55,13 @@ func (r *ExchangeRateRepository) List(ctx context.Context, tx pgx.Tx, filter mod
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
+	limitIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
-		`SELECT id, tenant_id, base_currency, target_currency, rate, source, fetched_at, created_at
-		 FROM exchange_rates %s
-		 %s
-		 LIMIT $%d OFFSET $%d`,
-		where, orderByClause, argIdx, argIdx+1,
+		"SELECT "+exchangeRateColumns+" FROM exchange_rates %s %s LIMIT $%d OFFSET $%d",
+		where, orderByClause, limitIdx, limitIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list exchange_rates: %w", err)
 	}
@@ -66,11 +69,8 @@ func (r *ExchangeRateRepository) List(ctx context.Context, tx pgx.Tx, filter mod
 
 	var rates []model.ExchangeRate
 	for rows.Next() {
-		var rate model.ExchangeRate
-		if err := rows.Scan(
-			&rate.ID, &rate.TenantID, &rate.BaseCurrency, &rate.TargetCurrency,
-			&rate.Rate, &rate.Source, &rate.FetchedAt, &rate.CreatedAt,
-		); err != nil {
+		rate, err := scanExchangeRate(rows)
+		if err != nil {
 			return nil, 0, fmt.Errorf("scan exchange_rate: %w", err)
 		}
 		rates = append(rates, rate)
@@ -80,14 +80,9 @@ func (r *ExchangeRateRepository) List(ctx context.Context, tx pgx.Tx, filter mod
 
 // FindByID returns an exchange rate by its ID.
 func (r *ExchangeRateRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.ExchangeRate, error) {
-	var rate model.ExchangeRate
-	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, base_currency, target_currency, rate, source, fetched_at, created_at
-		 FROM exchange_rates WHERE id = $1`, id,
-	).Scan(
-		&rate.ID, &rate.TenantID, &rate.BaseCurrency, &rate.TargetCurrency,
-		&rate.Rate, &rate.Source, &rate.FetchedAt, &rate.CreatedAt,
-	)
+	rate, err := scanExchangeRate(tx.QueryRow(ctx,
+		"SELECT "+exchangeRateColumns+" FROM exchange_rates WHERE id = $1", id,
+	))
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -99,14 +94,9 @@ func (r *ExchangeRateRepository) FindByID(ctx context.Context, tx pgx.Tx, id uui
 
 // GetRate returns the exchange rate for a given currency pair.
 func (r *ExchangeRateRepository) GetRate(ctx context.Context, tx pgx.Tx, baseCurrency, targetCurrency string) (*model.ExchangeRate, error) {
-	var rate model.ExchangeRate
-	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, base_currency, target_currency, rate, source, fetched_at, created_at
-		 FROM exchange_rates WHERE base_currency = $1 AND target_currency = $2`, baseCurrency, targetCurrency,
-	).Scan(
-		&rate.ID, &rate.TenantID, &rate.BaseCurrency, &rate.TargetCurrency,
-		&rate.Rate, &rate.Source, &rate.FetchedAt, &rate.CreatedAt,
-	)
+	rate, err := scanExchangeRate(tx.QueryRow(ctx,
+		"SELECT "+exchangeRateColumns+" FROM exchange_rates WHERE base_currency = $1 AND target_currency = $2", baseCurrency, targetCurrency,
+	))
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -142,30 +132,19 @@ func (r *ExchangeRateRepository) Upsert(ctx context.Context, tx pgx.Tx, rate *mo
 
 // Update applies partial updates to an exchange rate record.
 func (r *ExchangeRateRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateExchangeRateRequest) error {
-	setClauses := []string{}
-	args := []any{}
-	argIdx := 1
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "rate", req.Rate)
+	SetPtr(ub, "source", req.Source)
 
-	if req.Rate != nil {
-		setClauses = append(setClauses, fmt.Sprintf("rate = $%d", argIdx))
-		args = append(args, *req.Rate)
-		argIdx++
-	}
-	if req.Source != nil {
-		setClauses = append(setClauses, fmt.Sprintf("source = $%d", argIdx))
-		args = append(args, *req.Source)
-		argIdx++
-	}
-
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "fetched_at = NOW()")
-	args = append(args, id)
+	ub.SetRaw("fetched_at = NOW()")
 
 	query := fmt.Sprintf("UPDATE exchange_rates SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
+		ub.SetClause(), ub.NextArgIdx())
+	args := append(ub.Args(), id)
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {
