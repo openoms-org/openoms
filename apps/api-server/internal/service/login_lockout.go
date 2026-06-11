@@ -21,6 +21,15 @@ const (
 	maxLoginAttempts = 5
 	lockoutPrefix    = "login_lockout:"
 	failurePrefix    = "login_failures:"
+	// 2FA brute-force tracking uses a SEPARATE key namespace from password login.
+	// This is deliberate: the password-login counter is reset on a successful
+	// password check (ResetOnSuccess in Login), so if 2FA shared that namespace an
+	// attacker who knows the password could reset the 2FA failure counter at will by
+	// re-authenticating, defeating the per-account lockout. The 2FA counter is keyed
+	// on the immutable tenant+user IDs carried by the 2fa_pending token and is only
+	// reset by a successful TOTP verification.
+	lockout2FAPrefix = "2fa_lockout:"
+	failure2FAPrefix = "2fa_failures:"
 )
 
 // lockoutDuration returns exponential backoff: 1m, 5m, 15m, 30m.
@@ -83,4 +92,44 @@ func (l *LoginLockout) ResetOnSuccess(ctx context.Context, tenantSlug, email str
 	lockKey := lockoutPrefix + tenantSlug + ":" + email
 	_ = l.store.ResetFailures(ctx, failKey)
 	_ = l.store.ResetFailures(ctx, lockKey)
+}
+
+// twofaKey builds the lockout/failure key suffix for a 2FA attempt. tenantID and
+// userID are the immutable identifiers carried by the 2fa_pending token.
+func twofaKey(tenantID, userID string) string {
+	return tenantID + ":" + userID
+}
+
+// Check2FALocked returns the remaining 2FA lockout duration for an account, or 0 if not locked.
+// Mirrors CheckLocked but uses the dedicated 2FA key namespace.
+func (l *LoginLockout) Check2FALocked(ctx context.Context, tenantID, userID string) (time.Duration, error) {
+	if l == nil || l.store == nil {
+		return 0, nil // fail open if no store configured
+	}
+	return l.store.GetLockoutRemaining(ctx, lockout2FAPrefix+twofaKey(tenantID, userID))
+}
+
+// Record2FAFailure increments the 2FA failure counter and sets a lockout once the
+// threshold is exceeded. Uses the same threshold and exponential backoff as password login.
+func (l *LoginLockout) Record2FAFailure(ctx context.Context, tenantID, userID string) error {
+	if l == nil || l.store == nil {
+		return nil
+	}
+	count, err := l.store.IncrFailures(ctx, failure2FAPrefix+twofaKey(tenantID, userID), 30*time.Minute)
+	if err != nil {
+		return nil //nolint:nilerr // fail open on store error — lockout is best-effort
+	}
+	if count >= maxLoginAttempts {
+		return l.store.SetLockout(ctx, lockout2FAPrefix+twofaKey(tenantID, userID), lockoutDuration(count))
+	}
+	return nil
+}
+
+// Reset2FAOnSuccess clears 2FA failure tracking after a successful TOTP verification.
+func (l *LoginLockout) Reset2FAOnSuccess(ctx context.Context, tenantID, userID string) {
+	if l == nil || l.store == nil {
+		return
+	}
+	_ = l.store.ResetFailures(ctx, failure2FAPrefix+twofaKey(tenantID, userID))
+	_ = l.store.ResetFailures(ctx, lockout2FAPrefix+twofaKey(tenantID, userID))
 }

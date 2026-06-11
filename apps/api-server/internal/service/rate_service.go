@@ -65,6 +65,7 @@ func (s *RateService) GetRates(ctx context.Context, tenantID uuid.UUID, req inte
 			"poczta_polska": true,
 			"orlen_paczka":  true,
 			"fedex":         true,
+			"apaczka":       true,
 		}
 
 		for _, intg := range all {

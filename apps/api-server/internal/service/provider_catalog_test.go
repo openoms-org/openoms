@@ -9,6 +9,22 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
+func TestProviderCatalogIncludesApaczka(t *testing.T) {
+	catalog := ProviderRegistryCatalog()
+
+	var found *ProviderCatalogEntry
+	for i := range catalog {
+		if catalog[i].ProviderKey == "apaczka" {
+			found = &catalog[i]
+			break
+		}
+	}
+	require.NotNilf(t, found, "apaczka entry not found in ProviderRegistryCatalog")
+	assert.Equal(t, model.ProviderTypeCarrier, found.ProviderType)
+	assert.Greater(t, len(found.Schema), 0, "Schema must not be empty")
+	assert.Greater(t, len(found.Capabilities), 0, "Capabilities must not be empty")
+}
+
 func TestProviderRegistryCatalog_Valid(t *testing.T) {
 	catalog := ProviderRegistryCatalog()
 	require.NotEmpty(t, catalog)

@@ -327,6 +327,128 @@ func TestLoginLockout_TenantIsolation(t *testing.T) {
 	assert.Equal(t, time.Duration(0), remaining, "tenant2 should not be affected by tenant1 lockout")
 }
 
+// ===========================================================================
+// 2FA per-account lockout — keyed on tenantID:userID, separate namespace
+// ===========================================================================
+
+func TestLoginLockout_2FA_RecordFailure_TriggersLockout(t *testing.T) {
+	store := NewMemoryLoginLockoutStore()
+	lockout := NewLoginLockout(store)
+	ctx := context.Background()
+	tenantID := "11111111-1111-1111-1111-111111111111"
+	userID := "22222222-2222-2222-2222-222222222222"
+
+	// 4 wrong codes — below threshold, not locked yet.
+	for range 4 {
+		require.NoError(t, lockout.Record2FAFailure(ctx, tenantID, userID))
+	}
+	remaining, err := lockout.Check2FALocked(ctx, tenantID, userID)
+	require.NoError(t, err)
+	assert.Equal(t, time.Duration(0), remaining, "4 wrong codes should not lock the account")
+
+	// 5th wrong code locks the account regardless of source IP.
+	require.NoError(t, lockout.Record2FAFailure(ctx, tenantID, userID))
+	remaining, err = lockout.Check2FALocked(ctx, tenantID, userID)
+	require.NoError(t, err)
+	assert.True(t, remaining > 0, "5th wrong code must lock the account, got remaining=%v", remaining)
+}
+
+func TestLoginLockout_2FA_Reset_ClearsLockout(t *testing.T) {
+	store := NewMemoryLoginLockoutStore()
+	lockout := NewLoginLockout(store)
+	ctx := context.Background()
+	tenantID := "11111111-1111-1111-1111-111111111111"
+	userID := "22222222-2222-2222-2222-222222222222"
+
+	for range 5 {
+		require.NoError(t, lockout.Record2FAFailure(ctx, tenantID, userID))
+	}
+	remaining, err := lockout.Check2FALocked(ctx, tenantID, userID)
+	require.NoError(t, err)
+	require.True(t, remaining > 0, "should be locked after 5 wrong codes")
+
+	// A successful TOTP verification clears the counter and the lockout.
+	lockout.Reset2FAOnSuccess(ctx, tenantID, userID)
+	remaining, err = lockout.Check2FALocked(ctx, tenantID, userID)
+	require.NoError(t, err)
+	assert.Equal(t, time.Duration(0), remaining, "successful 2FA must clear the lockout")
+}
+
+// TestLoginLockout_2FA_SeparateNamespaceFromPassword proves the 2FA counter does not
+// share state with the password-login counter. This is the security property that stops
+// an attacker who knows the password from resetting the 2FA brute-force counter by
+// re-authenticating (password success calls ResetOnSuccess on the password namespace only).
+func TestLoginLockout_2FA_SeparateNamespaceFromPassword(t *testing.T) {
+	store := NewMemoryLoginLockoutStore()
+	lockout := NewLoginLockout(store)
+	ctx := context.Background()
+	tenantSlug := "acme"
+	email := "user@example.com"
+	tenantID := "11111111-1111-1111-1111-111111111111"
+	userID := "22222222-2222-2222-2222-222222222222"
+
+	// Lock the 2FA namespace.
+	for range 5 {
+		require.NoError(t, lockout.Record2FAFailure(ctx, tenantID, userID))
+	}
+	twofa, err := lockout.Check2FALocked(ctx, tenantID, userID)
+	require.NoError(t, err)
+	require.True(t, twofa > 0, "2FA should be locked")
+
+	// A successful password login resets only the password namespace; the 2FA lockout stands.
+	lockout.ResetOnSuccess(ctx, tenantSlug, email)
+	twofa, err = lockout.Check2FALocked(ctx, tenantID, userID)
+	require.NoError(t, err)
+	assert.True(t, twofa > 0, "password-login success must NOT clear the 2FA lockout")
+
+	// Conversely, password-login failures must not lock the 2FA flow.
+	store2 := NewMemoryLoginLockoutStore()
+	lockout2 := NewLoginLockout(store2)
+	for range 5 {
+		require.NoError(t, lockout2.RecordFailure(ctx, tenantSlug, email))
+	}
+	pwLock, err := lockout2.CheckLocked(ctx, tenantSlug, email)
+	require.NoError(t, err)
+	require.True(t, pwLock > 0, "password login should be locked")
+	twofa2, err := lockout2.Check2FALocked(ctx, tenantID, userID)
+	require.NoError(t, err)
+	assert.Equal(t, time.Duration(0), twofa2, "password-login failures must NOT lock the 2FA flow")
+}
+
+func TestLoginLockout_2FA_UserIsolation(t *testing.T) {
+	store := NewMemoryLoginLockoutStore()
+	lockout := NewLoginLockout(store)
+	ctx := context.Background()
+	tenantID := "11111111-1111-1111-1111-111111111111"
+	userA := "22222222-2222-2222-2222-222222222222"
+	userB := "33333333-3333-3333-3333-333333333333"
+
+	for range 5 {
+		require.NoError(t, lockout.Record2FAFailure(ctx, tenantID, userA))
+	}
+	remaining, err := lockout.Check2FALocked(ctx, tenantID, userB)
+	require.NoError(t, err)
+	assert.Equal(t, time.Duration(0), remaining, "userA lockout must not affect userB")
+}
+
+func TestLoginLockout_2FA_NilStoreAndReceiver_FailOpen(t *testing.T) {
+	ctx := context.Background()
+
+	nilStore := NewLoginLockout(nil)
+	remaining, err := nilStore.Check2FALocked(ctx, "t", "u")
+	require.NoError(t, err)
+	assert.Equal(t, time.Duration(0), remaining)
+	assert.NoError(t, nilStore.Record2FAFailure(ctx, "t", "u"))
+	assert.NotPanics(t, func() { nilStore.Reset2FAOnSuccess(ctx, "t", "u") })
+
+	var nilReceiver *LoginLockout
+	remaining, err = nilReceiver.Check2FALocked(ctx, "t", "u")
+	require.NoError(t, err)
+	assert.Equal(t, time.Duration(0), remaining)
+	assert.NoError(t, nilReceiver.Record2FAFailure(ctx, "t", "u"))
+	assert.NotPanics(t, func() { nilReceiver.Reset2FAOnSuccess(ctx, "t", "u") })
+}
+
 func TestLoginLockout_LockoutDuration(t *testing.T) {
 	// Unit test for the lockoutDuration function directly
 	tests := []struct {
