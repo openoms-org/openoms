@@ -15,21 +15,12 @@ import (
 
 // AllegroPromotionsHandler handles Allegro promotion/campaign management endpoints.
 type AllegroPromotionsHandler struct {
-	integrationService *service.IntegrationService
-	encryptionKey      []byte
+	allegroClientBase
 }
 
 // NewAllegroPromotionsHandler creates a new AllegroPromotionsHandler.
 func NewAllegroPromotionsHandler(integrationService *service.IntegrationService, encryptionKey []byte) *AllegroPromotionsHandler {
-	return &AllegroPromotionsHandler{
-		integrationService: integrationService,
-		encryptionKey:      encryptionKey,
-	}
-}
-
-// newAllegroClient creates an authenticated Allegro SDK client from the integration credentials.
-func (h *AllegroPromotionsHandler) newAllegroClient(r *http.Request) (*allegrosdk.Client, error) {
-	return buildAllegroClient(r, h.integrationService, h.encryptionKey)
+	return &AllegroPromotionsHandler{allegroClientBase{integrationService: integrationService, encryptionKey: encryptionKey}}
 }
 
 // ListPromotions retrieves the seller's promotions.

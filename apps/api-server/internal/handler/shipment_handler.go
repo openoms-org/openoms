@@ -2,7 +2,6 @@ package handler
 
 import (
 	"archive/zip"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -65,8 +64,7 @@ func (h *ShipmentHandler) CreateForOrder(w http.ResponseWriter, r *http.Request)
 	}
 
 	var req model.CreateShipmentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	req.OrderID = orderID
@@ -169,8 +167,7 @@ func (h *ShipmentHandler) Create(w http.ResponseWriter, r *http.Request) {
 	actorID := middleware.UserIDFromContext(r.Context())
 
 	var req model.CreateShipmentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -211,8 +208,7 @@ func (h *ShipmentHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req model.UpdateShipmentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -269,8 +265,7 @@ func (h *ShipmentHandler) TransitionStatus(w http.ResponseWriter, r *http.Reques
 	}
 
 	var req model.ShipmentStatusTransitionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -307,8 +302,7 @@ func (h *ShipmentHandler) GenerateLabel(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var req model.GenerateLabelRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -379,8 +373,7 @@ func (h *ShipmentHandler) CreateDispatchOrder(w http.ResponseWriter, r *http.Req
 	actorID := middleware.UserIDFromContext(r.Context())
 
 	var req model.CreateDispatchOrderRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -413,8 +406,7 @@ func (h *ShipmentHandler) BatchLabels(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
 	var req model.BatchLabelsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 

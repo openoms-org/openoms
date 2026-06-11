@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -241,10 +240,7 @@ func (h *LoyaltyHandler) GetLeaderboard(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	limit := 20
-	if l, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && l > 0 && l <= 100 {
-		limit = l
-	}
+	limit := model.ParsePagination(r).Limit
 
 	entries, err := h.loyaltyService.GetLeaderboard(r.Context(), tenantID, programID, limit)
 	if err != nil {
