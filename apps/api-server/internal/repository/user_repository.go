@@ -240,3 +240,33 @@ func (r *UserRepository) GetTOTPSecret(ctx context.Context, tx pgx.Tx, id uuid.U
 	}
 	return secret, nil
 }
+
+// GetTOTPLastUsedStep returns the highest TOTP time-step accepted for the user,
+// or nil if no successful 2FA login has been recorded yet. Used for replay protection.
+func (r *UserRepository) GetTOTPLastUsedStep(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*int64, error) {
+	var step *int64
+	err := tx.QueryRow(ctx, "SELECT totp_last_used_step FROM users WHERE id = $1", id).Scan(&step)
+	if err != nil {
+		return nil, fmt.Errorf("get totp last used step: %w", err)
+	}
+	return step, nil
+}
+
+// SetTOTPLastUsedStep records the most recently accepted TOTP time-step for the user and
+// reports whether the row was actually advanced. The write is monotonic (the conditional
+// WHERE only matches when the new step is strictly greater than the stored value, or the
+// stored value is NULL), so the stored value can never regress under concurrent 2FA
+// verifications. Because a single conditional UPDATE is atomic under row locks, exactly one
+// of two concurrent verifications of the SAME code advances the row; the other observes the
+// already-advanced value and affects zero rows. The caller gates token issuance on the
+// returned bool, which makes a given code single-use even under a sub-second race — closing
+// the concurrent double-use window a stale service-layer read cannot catch.
+func (r *UserRepository) SetTOTPLastUsedStep(ctx context.Context, tx pgx.Tx, id uuid.UUID, step int64) (bool, error) {
+	tag, err := tx.Exec(ctx,
+		"UPDATE users SET totp_last_used_step = $1 WHERE id = $2 AND (totp_last_used_step IS NULL OR totp_last_used_step < $1)",
+		step, id)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() == 1, nil
+}
