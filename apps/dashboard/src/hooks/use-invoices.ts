@@ -24,6 +24,28 @@ export const useCreateInvoice = invoiceHooks.useCreate;
 // NOTE: no useUpdateInvoice — there is no PATCH/PUT /v1/invoices/{id} route.
 // Polish invoices are legally immutable; corrections are separate documents.
 
+/**
+ * Lists every invoice linked to a given order (GET /v1/orders/{id}/invoices).
+ * Used to gate manual invoice issuance: the order already has an active
+ * (non-cancelled, non-error) invoice ⇒ do not offer "issue invoice" again,
+ * mirroring the auto-create dedup in invoice_service.HandleOrderStatusChange.
+ */
+export function useOrderInvoices(
+  orderId: string,
+  options: { enabled?: boolean } = {},
+) {
+  return useQuery({
+    queryKey: ["invoices", "by-order", orderId],
+    queryFn: () => apiClient<Invoice[]>(`/v1/orders/${orderId}/invoices`),
+    enabled: !!orderId && (options.enabled ?? true),
+  });
+}
+
+/** An invoice blocks re-issuance unless it has been cancelled or errored. */
+export function isActiveInvoice(invoice: Invoice): boolean {
+  return invoice.status !== "cancelled" && invoice.status !== "error";
+}
+
 export function useCancelInvoice() {
   const queryClient = useQueryClient();
 

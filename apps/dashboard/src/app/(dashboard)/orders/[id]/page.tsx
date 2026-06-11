@@ -29,6 +29,7 @@ import { OrderTimeline } from "@/components/orders/order-timeline";
 import { OrderForm } from "@/components/orders/order-form";
 import { mapCreateOrderRequestToUpdateOrderRequest } from "@/components/orders/order-request-mappers";
 import { OrderStatusActions } from "@/components/orders/order-status-actions";
+import { OrderInvoicesSection } from "@/components/orders/order-invoices-section";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -151,6 +152,9 @@ export default function OrderDetailPage() {
     { enabled: dropshipVisible }
   );
   const autoRouteDropship = useAutoRouteDropship();
+  // Invoicing is a controlled feature; only mount the invoice section (which
+  // fetches /orders/{id}/invoices) when visible in the active surface.
+  const invoicingVisible = isFeatureVisible("invoicing");
 
   // Calculate total order weight from items for rate shopping
   const items = order?.items;
@@ -891,6 +895,9 @@ export default function OrderDetailPage() {
             )}
           </CollapsibleSection>
           )}
+
+          {/* Invoices — manual issuance, guarded against duplicating auto-created invoices */}
+          {invoicingVisible && <OrderInvoicesSection order={order} />}
 
           {/* Helpdesk Tickets */}
           <CollapsibleSection
