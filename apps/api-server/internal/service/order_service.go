@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -42,6 +43,10 @@ type OrderService struct {
 	allegroSync        *AllegroSyncService
 	stockSyncService   *StockSyncService
 	fulfillment        *FulfillmentService
+	customerRepo       repository.CustomerRepo
+	priceListService   *PriceListService
+	loyaltyService     *LoyaltyService
+	bundleService      *BundleService
 }
 
 // NewOrderService creates a new OrderService. fulfillment may be nil (or a
@@ -152,6 +157,12 @@ func (s *OrderService) SetWarehouseStockRepo(repo repository.WarehouseStockRepo)
 	s.warehouseStockRepo = repo
 }
 
+// SetCustomerRepo sets the customer repository so order creation can link orders to
+// CRM customers (resolve-or-create by email) and keep customer order statistics.
+func (s *OrderService) SetCustomerRepo(repo repository.CustomerRepo) {
+	s.customerRepo = repo
+}
+
 func (s *OrderService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (*model.OrderStatusConfig, error) {
 	settings, err := s.tenantRepo.GetSettings(ctx, tx, tenantID)
 	if err != nil {
@@ -174,6 +185,61 @@ func (s *OrderService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID
 
 	cfg := model.DefaultOrderStatusConfig()
 	return &cfg, nil
+}
+
+// findCustomerByOrderEmail resolves an existing CRM customer for the order by email,
+// in a short read-only tenant transaction. Returns nil when customerRepo is unwired,
+// the order carries no email, or no customer matches. Used to link orders to customers
+// and to resolve a B2B price list before the order-create transaction.
+func (s *OrderService) findCustomerByOrderEmail(ctx context.Context, tenantID uuid.UUID, req model.CreateOrderRequest) (*model.Customer, error) {
+	if s.customerRepo == nil || req.CustomerEmail == nil {
+		return nil, nil
+	}
+	email := strings.TrimSpace(*req.CustomerEmail)
+	if email == "" {
+		return nil, nil
+	}
+	var customer *model.Customer
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		var e error
+		customer, e = s.customerRepo.FindByEmail(ctx, tx, email)
+		return e
+	})
+	return customer, err
+}
+
+// ensureOrderCustomer returns the CRM customer to link to a new order: the pre-resolved
+// existing match when present, otherwise a freshly created minimal customer (email + name
+// from the order). Returns nil when customerRepo is unwired or the order has no usable
+// email. Runs inside the caller's order-create transaction so the customer and order rows
+// commit atomically. Dedup is best-effort by email (mirrors the BaseLinker import); there
+// is no unique email constraint, matching existing behavior.
+func (s *OrderService) ensureOrderCustomer(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, req model.CreateOrderRequest, existing *model.Customer) (*model.Customer, error) {
+	if s.customerRepo == nil {
+		return nil, nil
+	}
+	if existing != nil {
+		return existing, nil
+	}
+	if req.CustomerEmail == nil {
+		return nil, nil
+	}
+	email := strings.TrimSpace(*req.CustomerEmail)
+	if email == "" {
+		return nil, nil
+	}
+	newCustomer := &model.Customer{
+		ID:       uuid.New(),
+		TenantID: tenantID,
+		Name:     req.CustomerName,
+		Email:    &email,
+		Phone:    req.CustomerPhone,
+		Tags:     []string{},
+	}
+	if err := s.customerRepo.Create(ctx, tx, newCustomer); err != nil {
+		return nil, fmt.Errorf("link order to customer: %w", err)
+	}
+	return newCustomer, nil
 }
 
 // List returns a paginated list of orders for a tenant.
@@ -218,6 +284,15 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 	if req.Notes != nil {
 		sanitized := model.StripHTMLTags(*req.Notes)
 		req.Notes = &sanitized
+	}
+
+	// Resolve an existing CRM customer by email (read-only) before the order tx. The
+	// match (when any) links the order to the customer and carries the B2B price list.
+	// A read failure is non-fatal: the order is still created, just unlinked.
+	linkedCustomer, custErr := s.findCustomerByOrderEmail(ctx, tenantID, req)
+	if custErr != nil {
+		slog.Warn("failed to resolve order customer by email", "error", custErr, "tenant_id", tenantID)
+		linkedCustomer = nil
 	}
 
 	// Default NOT NULL jsonb fields to avoid inserting NULL
@@ -281,6 +356,16 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		if err := EnforceMonthlyOrderLimit(ctx, tx, s.orderRepo, tenantID, req.MaxOrdersMonthly, 0); err != nil {
 			return err
+		}
+
+		// Link the order to a CRM customer (resolve-or-create by email) so downstream
+		// per-customer features (stats, loyalty) have a customer to act on.
+		customer, err := s.ensureOrderCustomer(ctx, tx, tenantID, req, linkedCustomer)
+		if err != nil {
+			return err
+		}
+		if customer != nil {
+			order.CustomerID = &customer.ID
 		}
 
 		if err := s.orderRepo.Create(ctx, tx, order); err != nil {
