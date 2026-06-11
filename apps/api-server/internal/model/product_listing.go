@@ -29,33 +29,6 @@ type ProductListing struct {
 	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
-// CreateProductListingRequest is the payload for creating a new product listing.
-type CreateProductListingRequest struct {
-	ProductID     uuid.UUID       `json:"product_id"`
-	IntegrationID uuid.UUID       `json:"integration_id"`
-	ExternalID    *string         `json:"external_id,omitempty"`
-	Status        string          `json:"status,omitempty"`
-	URL           *string         `json:"url,omitempty"`
-	PriceOverride *float64        `json:"price_override,omitempty"`
-	StockOverride *int            `json:"stock_override,omitempty"`
-	StockSyncMode *string         `json:"stock_sync_mode,omitempty"`
-	Metadata      json.RawMessage `json:"metadata,omitempty"`
-}
-
-// Validate validates the create product listing request.
-func (r *CreateProductListingRequest) Validate() error {
-	if r.ProductID == uuid.Nil {
-		return errors.New("product_id is required")
-	}
-	if r.IntegrationID == uuid.Nil {
-		return errors.New("integration_id is required")
-	}
-	if r.Status == "" {
-		r.Status = "pending"
-	}
-	return nil
-}
-
 // UpdateProductListingRequest is the payload for updating an existing product listing.
 type UpdateProductListingRequest struct {
 	ExternalID      *string          `json:"external_id,omitempty"`
