@@ -451,10 +451,10 @@ func TestRateLimitByAuthenticatedUserWith_FallsBackToIPWithoutUser(t *testing.T)
 	assert.Equal(t, http.StatusTooManyRequests, rr.Code)
 }
 
-// --- RateLimit (legacy constructor) ---
+// --- RateLimitWith with in-memory limiter (end-to-end) ---
 
-func TestRateLimit_LegacyConstructorWorks(t *testing.T) {
-	handler := middleware.RateLimit(2, time.Minute)(testOKHandler())
+func TestRateLimitWith_MemoryLimiterEndToEnd(t *testing.T) {
+	handler := middleware.RateLimitWith(middleware.NewMemoryRateLimiter(), 2, time.Minute)(testOKHandler())
 
 	ip := "203.0.113.99:9999"
 

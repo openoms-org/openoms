@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -131,69 +130,30 @@ func (r *CustomerRepository) Create(ctx context.Context, tx pgx.Tx, customer *mo
 
 // Update applies partial updates to a customer.
 func (r *CustomerRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateCustomerRequest) error {
-	var setClauses []string
-	var args []any
-	argIdx := 1
-
-	if req.Email != nil {
-		setClauses = append(setClauses, fmt.Sprintf("email = $%d", argIdx))
-		args = append(args, *req.Email)
-		argIdx++
-	}
-	if req.Phone != nil {
-		setClauses = append(setClauses, fmt.Sprintf("phone = $%d", argIdx))
-		args = append(args, *req.Phone)
-		argIdx++
-	}
-	if req.Name != nil {
-		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argIdx))
-		args = append(args, *req.Name)
-		argIdx++
-	}
-	if req.CompanyName != nil {
-		setClauses = append(setClauses, fmt.Sprintf("company_name = $%d", argIdx))
-		args = append(args, *req.CompanyName)
-		argIdx++
-	}
-	if req.NIP != nil {
-		setClauses = append(setClauses, fmt.Sprintf("nip = $%d", argIdx))
-		args = append(args, *req.NIP)
-		argIdx++
-	}
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "email", req.Email)
+	SetPtr(ub, "phone", req.Phone)
+	SetPtr(ub, "name", req.Name)
+	SetPtr(ub, "company_name", req.CompanyName)
+	SetPtr(ub, "nip", req.NIP)
 	if req.DefaultShippingAddress != nil {
-		setClauses = append(setClauses, fmt.Sprintf("default_shipping_address = $%d", argIdx))
-		args = append(args, req.DefaultShippingAddress)
-		argIdx++
+		ub.Set("default_shipping_address", req.DefaultShippingAddress)
 	}
 	if req.DefaultBillingAddress != nil {
-		setClauses = append(setClauses, fmt.Sprintf("default_billing_address = $%d", argIdx))
-		args = append(args, req.DefaultBillingAddress)
-		argIdx++
+		ub.Set("default_billing_address", req.DefaultBillingAddress)
 	}
-	if req.Tags != nil {
-		setClauses = append(setClauses, fmt.Sprintf("tags = $%d", argIdx))
-		args = append(args, *req.Tags)
-		argIdx++
-	}
-	if req.Notes != nil {
-		setClauses = append(setClauses, fmt.Sprintf("notes = $%d", argIdx))
-		args = append(args, *req.Notes)
-		argIdx++
-	}
-	if req.PriceListID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("price_list_id = $%d", argIdx))
-		args = append(args, *req.PriceListID)
-		argIdx++
-	}
+	SetPtr(ub, "tags", req.Tags)
+	SetPtr(ub, "notes", req.Notes)
+	SetPtr(ub, "price_list_id", req.PriceListID)
 
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
+	ub.SetRaw("updated_at = NOW()")
 	query := fmt.Sprintf("UPDATE customers SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
-	args = append(args, id)
+		ub.SetClause(), ub.NextArgIdx())
+	args := append(ub.Args(), id)
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {

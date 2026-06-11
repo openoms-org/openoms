@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -140,40 +139,21 @@ func (r *ReturnRepository) Create(ctx context.Context, tx pgx.Tx, ret *model.Ret
 
 // Update applies partial updates to a return.
 func (r *ReturnRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateReturnRequest) error {
-	setClauses := []string{}
-	args := []any{}
-	argIdx := 1
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "reason", req.Reason)
+	SetPtr(ub, "items", req.Items)
+	SetPtr(ub, "refund_amount", req.RefundAmount)
+	SetPtr(ub, "notes", req.Notes)
 
-	if req.Reason != nil {
-		setClauses = append(setClauses, fmt.Sprintf("reason = $%d", argIdx))
-		args = append(args, *req.Reason)
-		argIdx++
-	}
-	if req.Items != nil {
-		setClauses = append(setClauses, fmt.Sprintf("items = $%d", argIdx))
-		args = append(args, *req.Items)
-		argIdx++
-	}
-	if req.RefundAmount != nil {
-		setClauses = append(setClauses, fmt.Sprintf("refund_amount = $%d", argIdx))
-		args = append(args, *req.RefundAmount)
-		argIdx++
-	}
-	if req.Notes != nil {
-		setClauses = append(setClauses, fmt.Sprintf("notes = $%d", argIdx))
-		args = append(args, *req.Notes)
-		argIdx++
-	}
-
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
-	args = append(args, id)
+	ub.SetRaw("updated_at = NOW()")
+	args := append(ub.Args(), id)
 
 	query := fmt.Sprintf("UPDATE returns SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
+		ub.SetClause(), ub.NextArgIdx())
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {

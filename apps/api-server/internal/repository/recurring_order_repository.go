@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -119,68 +118,30 @@ func (r *RecurringOrderRepository) Create(ctx context.Context, tx pgx.Tx, ro *mo
 
 // Update applies partial updates to a recurring order.
 func (r *RecurringOrderRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateRecurringOrderRequest) error {
-	var setClauses []string
-	var args []any
-	argIdx := 1
-
-	if req.CustomerID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("customer_id = $%d", argIdx))
-		args = append(args, *req.CustomerID)
-		argIdx++
-	}
-	if req.CustomerName != nil {
-		setClauses = append(setClauses, fmt.Sprintf("customer_name = $%d", argIdx))
-		args = append(args, *req.CustomerName)
-		argIdx++
-	}
-	if req.CustomerEmail != nil {
-		setClauses = append(setClauses, fmt.Sprintf("customer_email = $%d", argIdx))
-		args = append(args, *req.CustomerEmail)
-		argIdx++
-	}
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "customer_id", req.CustomerID)
+	SetPtr(ub, "customer_name", req.CustomerName)
+	SetPtr(ub, "customer_email", req.CustomerEmail)
 	if req.Frequency != nil {
-		setClauses = append(setClauses, fmt.Sprintf("frequency = $%d", argIdx))
-		args = append(args, *req.Frequency)
-		argIdx++
-		intervalDays := model.FrequencyToIntervalDays(*req.Frequency)
-		setClauses = append(setClauses, fmt.Sprintf("interval_days = $%d", argIdx))
-		args = append(args, intervalDays)
-		argIdx++
+		ub.Set("frequency", *req.Frequency)
+		ub.Set("interval_days", model.FrequencyToIntervalDays(*req.Frequency))
 	}
-	if req.NextOrderDate != nil {
-		setClauses = append(setClauses, fmt.Sprintf("next_order_date = $%d", argIdx))
-		args = append(args, *req.NextOrderDate)
-		argIdx++
-	}
-	if req.EndDate != nil {
-		setClauses = append(setClauses, fmt.Sprintf("end_date = $%d", argIdx))
-		args = append(args, *req.EndDate)
-		argIdx++
-	}
-	if req.MaxOrders != nil {
-		setClauses = append(setClauses, fmt.Sprintf("max_orders = $%d", argIdx))
-		args = append(args, *req.MaxOrders)
-		argIdx++
-	}
+	SetPtr(ub, "next_order_date", req.NextOrderDate)
+	SetPtr(ub, "end_date", req.EndDate)
+	SetPtr(ub, "max_orders", req.MaxOrders)
 	if req.ShippingAddress != nil {
-		setClauses = append(setClauses, fmt.Sprintf("shipping_address = $%d", argIdx))
-		args = append(args, req.ShippingAddress)
-		argIdx++
+		ub.Set("shipping_address", req.ShippingAddress)
 	}
-	if req.Notes != nil {
-		setClauses = append(setClauses, fmt.Sprintf("notes = $%d", argIdx))
-		args = append(args, *req.Notes)
-		argIdx++
-	}
+	SetPtr(ub, "notes", req.Notes)
 
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
+	ub.SetRaw("updated_at = NOW()")
 	query := fmt.Sprintf("UPDATE recurring_orders SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
-	args = append(args, id)
+		ub.SetClause(), ub.NextArgIdx())
+	args := append(ub.Args(), id)
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {

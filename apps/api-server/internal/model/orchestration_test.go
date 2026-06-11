@@ -8,13 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestOrchestrationValidators(t *testing.T) {
-	assert.True(t, IsValidOutboxStatus(OutboxStatusClaimed))
-	assert.False(t, IsValidOutboxStatus("lost"))
-	assert.True(t, IsValidAttemptStatus(AttemptStatusRunning))
-	assert.False(t, IsValidAttemptStatus("maybe"))
-}
-
 func TestNextOutboxBackoff(t *testing.T) {
 	assert.Equal(t, 30*time.Second, NextOutboxBackoff(0))
 	assert.Equal(t, 60*time.Second, NextOutboxBackoff(1))

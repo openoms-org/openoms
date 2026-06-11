@@ -2,7 +2,6 @@ package model
 
 import (
 	"errors"
-	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,15 +21,6 @@ const (
 	AttemptStatusSucceeded = "succeeded"
 	AttemptStatusFailed    = "failed"
 )
-
-var validOutboxStatuses = []string{OutboxStatusPending, OutboxStatusClaimed, OutboxStatusSucceeded, OutboxStatusFailed}
-var validAttemptStatuses = []string{AttemptStatusRunning, AttemptStatusSucceeded, AttemptStatusFailed}
-
-// IsValidOutboxStatus reports whether s is a known outbox status.
-func IsValidOutboxStatus(s string) bool { return slices.Contains(validOutboxStatuses, s) }
-
-// IsValidAttemptStatus reports whether s is a known attempt status.
-func IsValidAttemptStatus(s string) bool { return slices.Contains(validAttemptStatuses, s) }
 
 const (
 	outboxBackoffBase = 30 * time.Second

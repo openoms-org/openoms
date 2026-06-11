@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -76,25 +75,8 @@ func (w *FulfillmentBackfillWorker) Run(ctx context.Context) error {
 
 	// Tenant list read cross-tenant on the privileged pool (bypasses RLS), mirroring
 	// the other cross-tenant workers.
-	rows, err := w.pool.Query(ctx, "SELECT id FROM tenants")
+	tenantIDs, err := listAllTenantIDs(ctx, w.pool, w.logger)
 	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	var tenantIDs []uuid.UUID
-	for rows.Next() {
-		if err := checkWorkerContext(ctx); err != nil {
-			return err
-		}
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			w.logger.Error("fulfillment backfill: scan tenant", "error", err)
-			continue
-		}
-		tenantIDs = append(tenantIDs, id)
-	}
-	if err := rows.Err(); err != nil {
 		return err
 	}
 

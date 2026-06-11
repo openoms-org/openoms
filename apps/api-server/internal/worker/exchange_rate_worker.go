@@ -39,26 +39,9 @@ func (w *ExchangeRateWorker) Interval() time.Duration {
 
 // Run fetches latest exchange rates for all tenants.
 func (w *ExchangeRateWorker) Run(ctx context.Context) error {
-	// Get all tenant IDs
-	rows, err := w.pool.Query(ctx, "SELECT id FROM tenants")
+	// Get all tenant IDs (bypasses RLS — runs on workerPool)
+	tenantIDs, err := listAllTenantIDs(ctx, w.pool, w.logger)
 	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	var tenantIDs []uuid.UUID
-	for rows.Next() {
-		if err := checkWorkerContext(ctx); err != nil {
-			return err
-		}
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			w.logger.Error("exchange rate worker: scan tenant", "error", err)
-			continue
-		}
-		tenantIDs = append(tenantIDs, id)
-	}
-	if err := rows.Err(); err != nil {
 		return err
 	}
 
