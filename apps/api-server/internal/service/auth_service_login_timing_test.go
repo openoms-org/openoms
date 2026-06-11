@@ -88,8 +88,8 @@ func (r loginTimingUserRepo) GetTOTPSecret(context.Context, pgx.Tx, uuid.UUID) (
 func (r loginTimingUserRepo) GetTOTPLastUsedStep(context.Context, pgx.Tx, uuid.UUID) (*int64, error) {
 	return nil, nil
 }
-func (r loginTimingUserRepo) SetTOTPLastUsedStep(context.Context, pgx.Tx, uuid.UUID, int64) error {
-	return nil
+func (r loginTimingUserRepo) SetTOTPLastUsedStep(context.Context, pgx.Tx, uuid.UUID, int64) (bool, error) {
+	return true, nil
 }
 
 func TestAuthService_Login_MissingTenantBurnsBcryptCompare(t *testing.T) {

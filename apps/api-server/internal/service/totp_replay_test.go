@@ -111,3 +111,31 @@ func mustCode(t *testing.T, secret string, at time.Time) string {
 	require.NoError(t, err)
 	return code
 }
+
+// TestIsTOTPReplay covers the exact predicate Verify2FALogin uses to reject a reused code
+// (the rejection path that was previously exercised only indirectly). A step is a replay
+// when it is not strictly newer than the stored last-used step; the first-ever login (nil
+// lastStep) is never a replay.
+func TestIsTOTPReplay(t *testing.T) {
+	step := func(v int64) *int64 { return &v }
+
+	tests := []struct {
+		name     string
+		step     int64
+		lastStep *int64
+		want     bool
+	}{
+		{"first login (no prior step) is not a replay", 100, nil, false},
+		{"same step as last is a replay", 100, step(100), true},
+		{"older step than last is a replay", 99, step(100), true},
+		{"strictly newer step is not a replay", 101, step(100), false},
+		{"newer step after a NULL-equivalent zero baseline is not a replay", 1, step(0), false},
+		{"equal zero baseline is a replay", 0, step(0), true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, isTOTPReplay(tc.step, tc.lastStep))
+		})
+	}
+}

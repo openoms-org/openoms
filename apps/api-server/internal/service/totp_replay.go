@@ -37,3 +37,14 @@ func acceptedTOTPStep(code, secret string, now time.Time) (int64, bool) {
 	}
 	return 0, false
 }
+
+// isTOTPReplay reports whether an accepted TOTP step has already been consumed, i.e. it
+// is not strictly newer than the last accepted step recorded for the user. lastStep is
+// nil when no successful 2FA login has been recorded yet (first login is never a replay).
+// This is the exact predicate Verify2FALogin uses to reject a reused code; it is the
+// fast, in-process pre-check. The authoritative single-use guarantee is enforced by the
+// monotonic conditional UPDATE in SetTOTPLastUsedStep (which also closes the concurrent
+// double-use race that a stale lastStep read cannot catch).
+func isTOTPReplay(step int64, lastStep *int64) bool {
+	return lastStep != nil && step <= *lastStep
+}

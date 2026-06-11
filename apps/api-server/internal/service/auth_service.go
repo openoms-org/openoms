@@ -595,21 +595,39 @@ func (s *AuthService) Verify2FALogin(ctx context.Context, tempTokenStr, code str
 		}
 		return nil, "", ErrInvalid2FACode
 	}
-	// Replay protection: a code whose time-step is not strictly newer than the last
-	// accepted step has already been used (TOTP codes are single-use within their window).
-	if lastStep != nil && step <= *lastStep {
+	// Replay protection (fast pre-check): a code whose time-step is not strictly newer than
+	// the last accepted step has already been used (TOTP codes are single-use within their
+	// window). This rejects the sequential-replay case without a write round-trip.
+	if isTOTPReplay(step, lastStep) {
 		if s.lockout != nil {
 			_ = s.lockout.Record2FAFailure(ctx, lockTenant, lockUser)
 		}
 		return nil, "", ErrInvalid2FACode
 	}
-	// Record the accepted step before issuing tokens so a concurrent/subsequent replay
-	// of the same code is rejected. Best-effort: a write failure degrades replay
-	// protection (the lockout still throttles brute force) but must not block a valid login.
+	// Authoritative single-use enforcement: the monotonic conditional UPDATE advances the
+	// stored step only when this code's step is strictly newer. Under a sub-second race
+	// between two requests presenting the SAME valid code, exactly one advances the row; the
+	// loser observes the already-advanced value (advanced=false) and is rejected below, so a
+	// single code can never mint two sessions. Token issuance is gated on this result.
+	advanced := true
 	if perr := database.WithTenant(ctx, s.pool, claims.TenantID, func(tx pgx.Tx) error {
-		return s.userRepo.SetTOTPLastUsedStep(ctx, tx, userID, step)
+		var serr error
+		advanced, serr = s.userRepo.SetTOTPLastUsedStep(ctx, tx, userID, step)
+		return serr
 	}); perr != nil {
-		slog.Warn("failed to persist TOTP last-used step (replay protection degraded)", "error", perr, "user_id", userID)
+		// Persisting the step failed (transient DB error). Preserve availability — a valid
+		// login must not be blocked by a write error — at the cost of degrading single-use
+		// protection for this one request (the sequential replay is still blocked above).
+		slog.Warn("failed to persist TOTP last-used step (single-use protection degraded)", "error", perr, "user_id", userID)
+		advanced = true
+	}
+	if !advanced {
+		// The accepted step was already consumed (a concurrent request won the race, or a
+		// replay that slipped past the stale pre-check read). The code is spent; reject it.
+		if s.lockout != nil {
+			_ = s.lockout.Record2FAFailure(ctx, lockTenant, lockUser)
+		}
+		return nil, "", ErrInvalid2FACode
 	}
 	// Successful 2FA: clear the failure counter.
 	if s.lockout != nil {
