@@ -26,6 +26,7 @@ import {
   useVATRates,
   useDownloadOSSReportCSV,
 } from "@/hooks/use-vat-oss";
+import { VatCalculatorCard } from "@/components/reports/vat-calculator-card";
 
 const QUARTER_KEYS: Record<string, string> = {
   "1": "vatOss.q1",
@@ -398,6 +399,9 @@ export default function VATOSSReportPage() {
             </CardContent>
           )}
         </Card>
+
+        {/* Standalone OSS VAT calculator */}
+        <VatCalculatorCard />
 
         {/* Disclaimer */}
         <p className="text-xs text-muted-foreground text-center">

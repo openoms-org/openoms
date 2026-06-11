@@ -3,6 +3,22 @@
     "editPurchaseOrder": "Edytuj zamówienie zakupu",
     "purchaseOrderUpdated": "Zamówienie zakupu zaktualizowane",
     "editRecurringOrder": "Edytuj zamówienie cykliczne",
-    "recurringOrderUpdated": "Zamówienie cykliczne zaktualizowane"
+    "recurringOrderUpdated": "Zamówienie cykliczne zaktualizowane",
+    "vatCalcTitle": "Kalkulator VAT",
+    "vatCalcDescription": "Oblicz VAT OSS dla kwoty netto sprzedanej do kraju UE.",
+    "vatCalcAmount": "Kwota netto (EUR)",
+    "vatCalcCountry": "Kraj",
+    "vatCalcSelectCountry": "Wybierz kraj",
+    "vatCalcRateType": "Typ stawki",
+    "vatCalcCalculate": "Oblicz",
+    "vatCalcInvalid": "Podaj dodatnią kwotę i wybierz kraj",
+    "vatCalcNet": "Netto",
+    "vatCalcVat": "VAT",
+    "vatCalcGross": "Brutto",
+    "vatCalcRate": "Stawka",
+    "rateStandard": "Podstawowa",
+    "rateReduced1": "Obniżona 1",
+    "rateReduced2": "Obniżona 2",
+    "rateSuperReduced": "Super obniżona"
   }
 }
