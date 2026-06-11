@@ -478,83 +478,115 @@ func (s *SegmentService) RefreshRuleBasedSegments(ctx context.Context, tenantID 
 			if seg.SegmentType != "rule_based" || seg.Rules == nil {
 				continue
 			}
-
-			var rules model.SegmentRules
-			if err := json.Unmarshal(seg.Rules, &rules); err != nil {
-				s.logger.Warn("invalid segment rules", "segment_id", seg.ID, "error", err)
-				continue
-			}
-
-			// Build query based on rules
-			query := `SELECT c.id FROM customers c
-				 LEFT JOIN (
-					SELECT customer_id, COUNT(*) AS order_count,
-						   MAX(created_at) AS last_order_at,
-						   COALESCE(SUM(total_amount), 0) AS total_spent
-					FROM orders GROUP BY customer_id
-				 ) o ON o.customer_id = c.id
-				 WHERE 1=1`
-			var args []any
-			argIdx := 1
-
-			if rules.MinOrders != nil {
-				query += " AND COALESCE(o.order_count, 0) >= $" + itoa(argIdx)
-				args = append(args, *rules.MinOrders)
-				argIdx++
-			}
-			if rules.MaxOrders != nil {
-				query += " AND COALESCE(o.order_count, 0) <= $" + itoa(argIdx)
-				args = append(args, *rules.MaxOrders)
-				argIdx++
-			}
-			if rules.MinTotalSpent != nil {
-				query += " AND COALESCE(o.total_spent, 0) >= $" + itoa(argIdx)
-				args = append(args, *rules.MinTotalSpent)
-				argIdx++
-			}
-			if rules.MaxTotalSpent != nil {
-				query += " AND COALESCE(o.total_spent, 0) <= $" + itoa(argIdx)
-				args = append(args, *rules.MaxTotalSpent)
-				argIdx++
-			}
-			if rules.LastOrderWithinDay != nil {
-				query += " AND o.last_order_at >= NOW() - INTERVAL '1 day' * $" + itoa(argIdx)
-				args = append(args, *rules.LastOrderWithinDay)
-			}
-
-			rows, err := tx.Query(ctx, query, args...)
-			if err != nil {
-				s.logger.Error("rule-based segment query failed", "segment_id", seg.ID, "error", err)
-				continue
-			}
-
-			var customerIDs []uuid.UUID
-			for rows.Next() {
-				var id uuid.UUID
-				if err := rows.Scan(&id); err != nil {
-					rows.Close()
-					return err
-				}
-				customerIDs = append(customerIDs, id)
-			}
-			rows.Close()
-
-			// Clear and re-populate
-			if err := s.segmentRepo.ClearSegmentMembers(ctx, tx, seg.ID); err != nil {
-				return err
-			}
-			for _, cid := range customerIDs {
-				if err := s.segmentRepo.AddMember(ctx, tx, tenantID, seg.ID, cid); err != nil {
-					return err
-				}
-			}
-			if err := s.segmentRepo.UpdateCustomerCount(ctx, tx, seg.ID); err != nil {
+			if err := s.refreshSegmentMembers(ctx, tx, tenantID, seg); err != nil {
 				return err
 			}
 		}
 
 		return nil
 	})
+}
+
+// RefreshSegment recomputes membership for a single rule-based segment. It is the
+// per-segment counterpart to RefreshRuleBasedSegments used by the manual
+// POST /v1/segments/{id}/refresh endpoint. It returns ErrSegmentNotFound when the
+// segment does not exist and a ValidationError when the segment is not rule-based.
+func (s *SegmentService) RefreshSegment(ctx context.Context, tenantID, segmentID uuid.UUID) error {
+	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		seg, err := s.segmentRepo.FindByID(ctx, tx, segmentID)
+		if err != nil {
+			return err
+		}
+		if seg == nil {
+			return ErrSegmentNotFound
+		}
+		if seg.SegmentType != "rule_based" {
+			return NewValidationError(errors.New("segment is not rule-based"))
+		}
+		return s.refreshSegmentMembers(ctx, tx, tenantID, *seg)
+	})
+}
+
+// refreshSegmentMembers recomputes and replaces the membership of a single
+// rule-based segment within an existing tenant-scoped transaction. It is a full
+// recompute — ClearSegmentMembers, then re-AddMember + UpdateCustomerCount — so it
+// is idempotent: re-running yields identical membership and customer_count, with no
+// double-apply. A malformed rules JSON or a failed rule query is logged and treated
+// as a no-op (returns nil) so one bad segment never aborts a multi-segment pass.
+func (s *SegmentService) refreshSegmentMembers(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, seg model.CustomerSegment) error {
+	var rules model.SegmentRules
+	if err := json.Unmarshal(seg.Rules, &rules); err != nil {
+		s.logger.Warn("invalid segment rules", "segment_id", seg.ID, "error", err)
+		return nil
+	}
+
+	// Build query based on rules
+	query := `SELECT c.id FROM customers c
+		 LEFT JOIN (
+			SELECT customer_id, COUNT(*) AS order_count,
+				   MAX(created_at) AS last_order_at,
+				   COALESCE(SUM(total_amount), 0) AS total_spent
+			FROM orders GROUP BY customer_id
+		 ) o ON o.customer_id = c.id
+		 WHERE 1=1`
+	var args []any
+	argIdx := 1
+
+	if rules.MinOrders != nil {
+		query += " AND COALESCE(o.order_count, 0) >= $" + itoa(argIdx)
+		args = append(args, *rules.MinOrders)
+		argIdx++
+	}
+	if rules.MaxOrders != nil {
+		query += " AND COALESCE(o.order_count, 0) <= $" + itoa(argIdx)
+		args = append(args, *rules.MaxOrders)
+		argIdx++
+	}
+	if rules.MinTotalSpent != nil {
+		query += " AND COALESCE(o.total_spent, 0) >= $" + itoa(argIdx)
+		args = append(args, *rules.MinTotalSpent)
+		argIdx++
+	}
+	if rules.MaxTotalSpent != nil {
+		query += " AND COALESCE(o.total_spent, 0) <= $" + itoa(argIdx)
+		args = append(args, *rules.MaxTotalSpent)
+		argIdx++
+	}
+	if rules.LastOrderWithinDay != nil {
+		query += " AND o.last_order_at >= NOW() - INTERVAL '1 day' * $" + itoa(argIdx)
+		args = append(args, *rules.LastOrderWithinDay)
+	}
+
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		s.logger.Error("rule-based segment query failed", "segment_id", seg.ID, "error", err)
+		return nil
+	}
+
+	var customerIDs []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return err
+		}
+		customerIDs = append(customerIDs, id)
+	}
+	rows.Close()
+
+	// Clear and re-populate
+	if err := s.segmentRepo.ClearSegmentMembers(ctx, tx, seg.ID); err != nil {
+		return err
+	}
+	for _, cid := range customerIDs {
+		if err := s.segmentRepo.AddMember(ctx, tx, tenantID, seg.ID, cid); err != nil {
+			return err
+		}
+	}
+	if err := s.segmentRepo.UpdateCustomerCount(ctx, tx, seg.ID); err != nil {
+		return err
+	}
+	return nil
 }
 
 func itoa(n int) string {
