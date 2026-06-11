@@ -290,29 +290,6 @@ func (r *PaymentRepository) FindTransactionsBySettlement(ctx context.Context, tx
 	return transactions, rows.Err()
 }
 
-// FindUnmatchedTransactions returns all unmatched payment transactions.
-func (r *PaymentRepository) FindUnmatchedTransactions(ctx context.Context, tx pgx.Tx) ([]model.PaymentTransaction, error) {
-	query := fmt.Sprintf(
-		"SELECT %s FROM payment_transactions WHERE match_status = 'unmatched' ORDER BY transaction_date ASC",
-		transactionSelectColumns,
-	)
-	rows, err := tx.Query(ctx, query)
-	if err != nil {
-		return nil, fmt.Errorf("find unmatched transactions: %w", err)
-	}
-	defer rows.Close()
-
-	var transactions []model.PaymentTransaction
-	for rows.Next() {
-		t, err := scanTransaction(rows)
-		if err != nil {
-			return nil, fmt.Errorf("scan transaction: %w", err)
-		}
-		transactions = append(transactions, t)
-	}
-	return transactions, rows.Err()
-}
-
 // CreateTransaction inserts a new payment transaction.
 func (r *PaymentRepository) CreateTransaction(ctx context.Context, tx pgx.Tx, t *model.PaymentTransaction) error {
 	query := `INSERT INTO payment_transactions

@@ -215,15 +215,6 @@ func (r *CustomerSegmentRepository) ListMembers(ctx context.Context, tx pgx.Tx, 
 	return members, total, rows.Err()
 }
 
-// CountMembers returns the number of members in a segment.
-func (r *CustomerSegmentRepository) CountMembers(ctx context.Context, tx pgx.Tx, segmentID uuid.UUID) (int, error) {
-	var count int
-	err := tx.QueryRow(ctx,
-		"SELECT COUNT(*) FROM customer_segment_members WHERE segment_id = $1", segmentID,
-	).Scan(&count)
-	return count, err
-}
-
 // UpdateCustomerCount updates the cached customer_count on a segment.
 func (r *CustomerSegmentRepository) UpdateCustomerCount(ctx context.Context, tx pgx.Tx, segmentID uuid.UUID) error {
 	_, err := tx.Exec(ctx,

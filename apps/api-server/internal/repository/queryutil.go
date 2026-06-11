@@ -55,11 +55,6 @@ func (qb *QueryBuilder) Args() []any {
 	return qb.args
 }
 
-// NextArgIdx returns the next available parameter index.
-func (qb *QueryBuilder) NextArgIdx() int {
-	return qb.argIdx
-}
-
 // AddArgs appends additional args (e.g., for LIMIT/OFFSET) and returns their starting index.
 func (qb *QueryBuilder) AddArgs(values ...any) int {
 	startIdx := qb.argIdx

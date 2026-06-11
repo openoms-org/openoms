@@ -80,35 +80,6 @@ func (r *BundleRepository) ListByBundleProduct(ctx context.Context, tx pgx.Tx, b
 	return bundles, rows.Err()
 }
 
-// ListByComponentProduct returns all bundles that use the given component product.
-func (r *BundleRepository) ListByComponentProduct(ctx context.Context, tx pgx.Tx, componentProductID uuid.UUID) ([]model.ProductBundle, error) {
-	rows, err := tx.Query(ctx,
-		`SELECT pb.id, pb.tenant_id, pb.bundle_product_id, pb.component_product_id,
-		        pb.component_variant_id, pb.quantity, pb.position, pb.created_at, pb.updated_at,
-		        p.name, p.sku, p.stock_quantity
-		 FROM product_bundles pb
-		 JOIN products p ON p.id = pb.component_product_id
-		 WHERE pb.component_product_id = $1
-		 ORDER BY pb.position ASC`, componentProductID,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("list bundles by component: %w", err)
-	}
-	defer rows.Close()
-
-	var bundles []model.ProductBundle
-	for rows.Next() {
-		var b model.ProductBundle
-		if err := rows.Scan(&b.ID, &b.TenantID, &b.BundleProductID, &b.ComponentProductID,
-			&b.ComponentVariantID, &b.Quantity, &b.Position, &b.CreatedAt, &b.UpdatedAt,
-			&b.ComponentName, &b.ComponentSKU, &b.ComponentStock); err != nil {
-			return nil, fmt.Errorf("scan bundle: %w", err)
-		}
-		bundles = append(bundles, b)
-	}
-	return bundles, rows.Err()
-}
-
 // Update applies partial updates to a bundle component.
 func (r *BundleRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateBundleComponentRequest) error {
 	var setClauses []string

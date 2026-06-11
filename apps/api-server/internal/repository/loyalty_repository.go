@@ -290,12 +290,3 @@ func (r *LoyaltyRepository) GetCustomerLoyaltyStatus(ctx context.Context, tx pgx
 	}
 	return results, rows.Err()
 }
-
-// CountActiveMembers returns how many customers are enrolled in a program.
-func (r *LoyaltyRepository) CountActiveMembers(ctx context.Context, tx pgx.Tx, programID uuid.UUID) (int, error) {
-	var count int
-	err := tx.QueryRow(ctx,
-		"SELECT COUNT(*) FROM customer_loyalty WHERE program_id = $1", programID,
-	).Scan(&count)
-	return count, err
-}

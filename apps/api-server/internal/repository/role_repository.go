@@ -135,7 +135,7 @@ func (r *RoleRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, re
 	setClauses = append(setClauses, "updated_at = NOW()")
 
 	query := fmt.Sprintf("UPDATE roles SET %s WHERE id = $%d",
-		joinStrings(setClauses, ", "), argIdx)
+		strings.Join(setClauses, ", "), argIdx)
 	args = append(args, id)
 
 	ct, err := tx.Exec(ctx, query, args...)
@@ -158,16 +158,4 @@ func (r *RoleRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) er
 		return fmt.Errorf("role not found")
 	}
 	return nil
-}
-
-// joinStrings joins string slices — avoids importing strings package in this file.
-func joinStrings(parts []string, sep string) string {
-	var result strings.Builder
-	for i, p := range parts {
-		if i > 0 {
-			result.WriteString(sep)
-		}
-		result.WriteString(p)
-	}
-	return result.String()
 }
