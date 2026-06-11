@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"strings"
 	"time"
 
@@ -148,6 +149,13 @@ func (s *OrderService) SetCustomerRepo(repo repository.CustomerRepo) {
 	s.customerRepo = repo
 }
 
+// SetPriceListService sets the price list service so order creation can apply a linked
+// B2B customer's price list to the order line items. Called after construction to avoid
+// a circular dependency.
+func (s *OrderService) SetPriceListService(priceListSvc *PriceListService) {
+	s.priceListService = priceListSvc
+}
+
 func (s *OrderService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (*model.OrderStatusConfig, error) {
 	settings, err := s.tenantRepo.GetSettings(ctx, tx, tenantID)
 	if err != nil {
@@ -227,6 +235,117 @@ func (s *OrderService) ensureOrderCustomer(ctx context.Context, tx pgx.Tx, tenan
 	return newCustomer, nil
 }
 
+// applyCustomerPriceList re-prices the order's line items from the linked B2B
+// customer's price list and recomputes the order total. It is a no-op unless the price
+// list service is wired, the customer has a price list, and that list is active and in
+// the order's currency. Each line with a product_id is repriced via CalculatePrice
+// (which derives the effective price from the product's base price, never from the
+// inbound line price — so the transform is idempotent and never compounds discounts);
+// lines whose price cannot be resolved keep their original price (fail-soft). The order
+// total is recomputed only when at least one line was actually repriced. Unknown line
+// keys (name, sku, weight, custom fields) are preserved via a map round-trip.
+func (s *OrderService) applyCustomerPriceList(ctx context.Context, tenantID uuid.UUID, customer *model.Customer, req *model.CreateOrderRequest) {
+	if s.priceListService == nil || customer == nil || customer.PriceListID == nil {
+		return
+	}
+	priceListID := *customer.PriceListID
+
+	pl, err := s.priceListService.Get(ctx, tenantID, priceListID)
+	if err != nil || pl == nil {
+		slog.Warn("B2B pricing: price list lookup failed", "error", err, "price_list_id", priceListID, "tenant_id", tenantID)
+		return
+	}
+	if !pl.Active {
+		return
+	}
+	// Currency guard: never price an order's lines with a price list in another currency.
+	if pl.Currency != "" && req.Currency != "" && !strings.EqualFold(pl.Currency, req.Currency) {
+		slog.Warn("B2B pricing: skipped, price list currency differs from order currency",
+			"price_list_currency", pl.Currency, "order_currency", req.Currency, "tenant_id", tenantID)
+		return
+	}
+
+	var lines []map[string]json.RawMessage
+	if err := json.Unmarshal(req.Items, &lines); err != nil || len(lines) == 0 {
+		return
+	}
+
+	var total float64
+	var anyPriced bool
+	for _, line := range lines {
+		qty := rawMessageInt(line["quantity"])
+		price, hasPrice := rawMessageFloat(line["price"])
+		productID := rawMessageUUID(line["product_id"])
+
+		if productID != nil && *productID != uuid.Nil && qty > 0 {
+			resp, perr := s.priceListService.CalculatePrice(ctx, tenantID, *productID, nil, qty, priceListID)
+			if perr == nil {
+				if pj, mErr := json.Marshal(resp.EffectivePrice); mErr == nil {
+					line["price"] = pj
+					price = resp.EffectivePrice
+					hasPrice = true
+					anyPriced = true
+				}
+			} else {
+				slog.Warn("B2B pricing: CalculatePrice failed, keeping original line price",
+					"error", perr, "product_id", *productID, "tenant_id", tenantID)
+			}
+		}
+		if hasPrice && qty > 0 {
+			total += price * float64(qty)
+		}
+	}
+
+	if !anyPriced {
+		return
+	}
+	repacked, err := json.Marshal(lines)
+	if err != nil {
+		return
+	}
+	req.Items = repacked
+	req.TotalAmount = math.Round(total*100) / 100
+}
+
+// rawMessageInt parses a JSON number RawMessage into an int (truncating), returning 0
+// when absent or not a number.
+func rawMessageInt(raw json.RawMessage) int {
+	if len(raw) == 0 {
+		return 0
+	}
+	var f float64
+	if err := json.Unmarshal(raw, &f); err != nil {
+		return 0
+	}
+	return int(f)
+}
+
+// rawMessageFloat parses a JSON number RawMessage into a float64; the bool reports
+// whether a number was present.
+func rawMessageFloat(raw json.RawMessage) (float64, bool) {
+	if len(raw) == 0 {
+		return 0, false
+	}
+	var f float64
+	if err := json.Unmarshal(raw, &f); err != nil {
+		return 0, false
+	}
+	return f, true
+}
+
+// rawMessageUUID parses a JSON string RawMessage into a *uuid.UUID, returning nil when
+// absent, null, the nil UUID, or not a valid UUID.
+func rawMessageUUID(raw json.RawMessage) *uuid.UUID {
+	if len(raw) == 0 {
+		return nil
+	}
+	var id uuid.UUID
+	if err := json.Unmarshal(raw, &id); err != nil || id == uuid.Nil {
+		return nil
+	}
+	return &id
+}
+
 // List returns a paginated list of orders for a tenant.
 func (s *OrderService) List(ctx context.Context, tenantID uuid.UUID, filter model.OrderListFilter) (model.ListResponse[model.Order], error) {
 	var resp model.ListResponse[model.Order]
@@ -279,6 +398,11 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 		slog.Warn("failed to resolve order customer by email", "error", custErr, "tenant_id", tenantID)
 		linkedCustomer = nil
 	}
+
+	// Apply the linked B2B customer's price list to the line items + total (no-op when
+	// the customer has no price list). Runs before the order is built so the adjusted
+	// items/total are what gets persisted.
+	s.applyCustomerPriceList(ctx, tenantID, linkedCustomer, &req)
 
 	// Default NOT NULL jsonb fields to avoid inserting NULL
 	shippingAddr := req.ShippingAddress

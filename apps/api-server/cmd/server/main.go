@@ -469,6 +469,7 @@ func run() error {
 	// OPE-538: order-lifecycle dependencies wired into the order service via setters
 	// (customer link/stats, B2B pricing, loyalty accrual, bundle stock).
 	orderService.SetCustomerRepo(customerRepo)
+	orderService.SetPriceListService(priceListService)
 
 	// Automation engine
 	automationRuleRepo := repository.NewAutomationRuleRepository()

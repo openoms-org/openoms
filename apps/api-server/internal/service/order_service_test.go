@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -223,4 +224,68 @@ func TestStringOrEmpty(t *testing.T) {
 	assert.Equal(t, "", stringOrEmpty(nil))
 	s := "hello"
 	assert.Equal(t, "hello", stringOrEmpty(&s))
+}
+
+func TestRawMessageInt(t *testing.T) {
+	assert.Equal(t, 0, rawMessageInt(nil))
+	assert.Equal(t, 2, rawMessageInt(json.RawMessage(`2`)))
+	assert.Equal(t, 3, rawMessageInt(json.RawMessage(`3.9`)))
+	assert.Equal(t, 0, rawMessageInt(json.RawMessage(`"x"`)))
+}
+
+func TestRawMessageFloat(t *testing.T) {
+	v, ok := rawMessageFloat(json.RawMessage(`19.99`))
+	assert.True(t, ok)
+	assert.InDelta(t, 19.99, v, 0.0001)
+
+	_, ok = rawMessageFloat(nil)
+	assert.False(t, ok)
+
+	_, ok = rawMessageFloat(json.RawMessage(`"nope"`))
+	assert.False(t, ok)
+}
+
+func TestRawMessageUUID(t *testing.T) {
+	id := uuid.New()
+	got := rawMessageUUID(json.RawMessage(`"` + id.String() + `"`))
+	require.NotNil(t, got)
+	assert.Equal(t, id, *got)
+
+	assert.Nil(t, rawMessageUUID(nil))
+	assert.Nil(t, rawMessageUUID(json.RawMessage(`null`)))
+	assert.Nil(t, rawMessageUUID(json.RawMessage(`"not-a-uuid"`)))
+}
+
+// TestApplyCustomerPriceList_Noop covers the early-return gates that require no DB:
+// unwired price list service, nil customer, and a customer without a price list. In all
+// three the order items and total must be left exactly as provided.
+func TestApplyCustomerPriceList_Noop(t *testing.T) {
+	items := json.RawMessage(`[{"product_id":"` + uuid.New().String() + `","quantity":2,"price":50}]`)
+
+	t.Run("unwired price list service", func(t *testing.T) {
+		svc := NewOrderService(nil, nil, nil, nil, nil, nil, nil)
+		plID := uuid.New()
+		req := model.CreateOrderRequest{Items: items, TotalAmount: 100, Currency: "PLN"}
+		svc.applyCustomerPriceList(context.Background(), uuid.New(), &model.Customer{PriceListID: &plID}, &req)
+		assert.JSONEq(t, string(items), string(req.Items))
+		assert.Equal(t, 100.0, req.TotalAmount)
+	})
+
+	t.Run("nil customer", func(t *testing.T) {
+		svc := NewOrderService(nil, nil, nil, nil, nil, nil, nil)
+		svc.SetPriceListService(&PriceListService{})
+		req := model.CreateOrderRequest{Items: items, TotalAmount: 100, Currency: "PLN"}
+		svc.applyCustomerPriceList(context.Background(), uuid.New(), nil, &req)
+		assert.JSONEq(t, string(items), string(req.Items))
+		assert.Equal(t, 100.0, req.TotalAmount)
+	})
+
+	t.Run("customer without price list", func(t *testing.T) {
+		svc := NewOrderService(nil, nil, nil, nil, nil, nil, nil)
+		svc.SetPriceListService(&PriceListService{})
+		req := model.CreateOrderRequest{Items: items, TotalAmount: 100, Currency: "PLN"}
+		svc.applyCustomerPriceList(context.Background(), uuid.New(), &model.Customer{}, &req)
+		assert.JSONEq(t, string(items), string(req.Items))
+		assert.Equal(t, 100.0, req.TotalAmount)
+	})
 }
