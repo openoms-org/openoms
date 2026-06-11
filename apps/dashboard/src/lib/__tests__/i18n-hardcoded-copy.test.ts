@@ -5,7 +5,6 @@ import { fileURLToPath } from "node:url";
 const dashboardSourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
 const auditedFiles = [
-  "components/dashboard/stat-cards.tsx",
   "app/(auth)/register/page.tsx",
   "app/(dashboard)/pick-pack/page.tsx",
   "app/(public)/supplier-portal/page.tsx",

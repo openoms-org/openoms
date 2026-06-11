@@ -10,15 +10,6 @@ import type {
   ForecastConfig,
 } from "@/types/api";
 
-export function useProductForecasts(days?: number) {
-  const params = days ? `?days=${days}` : "";
-  return useQuery({
-    queryKey: ["forecast", "products", days],
-    queryFn: () =>
-      apiClient<ProductForecast[]>(`/v1/forecast/products${params}`),
-  });
-}
-
 export function useProductForecast(productId: string, days?: number) {
   const params = days ? `?days=${days}` : "";
   return useQuery({

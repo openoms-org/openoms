@@ -106,13 +106,6 @@ export function getErrorMessage(error: unknown): string {
 }
 
 /**
- * Returns true if the error is a 401 Unauthorized error.
- */
-export function isAuthError(error: unknown): boolean {
-  return error instanceof ApiClientError && error.status === 401;
-}
-
-/**
  * Handles 402 Payment Required responses by refreshing tenant data
  * in the Zustand store and throwing an ApiClientError.
  */

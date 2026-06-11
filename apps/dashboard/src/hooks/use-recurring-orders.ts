@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { buildSearchParams } from "@/lib/search-params";
 import type {
   RecurringOrder,
   ListResponse,
@@ -9,16 +10,7 @@ import type {
 } from "@/types/api";
 
 export function useRecurringOrders(params: RecurringOrderListParams = {}) {
-  const query = new URLSearchParams();
-  if (params.limit != null) query.set("limit", String(params.limit));
-  if (params.offset != null) query.set("offset", String(params.offset));
-  if (params.status) query.set("status", params.status);
-  if (params.customer_id) query.set("customer_id", params.customer_id);
-  if (params.next_date_before) query.set("next_date_before", params.next_date_before);
-  if (params.sort_by) query.set("sort_by", params.sort_by);
-  if (params.sort_order) query.set("sort_order", params.sort_order);
-
-  const qs = query.toString();
+  const qs = buildSearchParams(params).toString();
 
   return useQuery({
     queryKey: ["recurring-orders", params],

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import { server } from "@/test/server";
 import { http, HttpResponse } from "msw";
-import { API_URL, absoluteAPIURL, apiClient, ApiClientError, getErrorMessage, isAuthError } from "@/lib/api-client";
+import { API_URL, absoluteAPIURL, apiClient, ApiClientError, getErrorMessage } from "@/lib/api-client";
 import { useAuthStore } from "@/lib/auth";
 
 const API_BASE = "*/v1";
@@ -213,21 +213,5 @@ describe("getErrorMessage", () => {
   it("returns fallback key for non-Error objects", () => {
     expect(getErrorMessage("random string")).toBe("errors.unexpected");
     expect(getErrorMessage(null)).toBe("errors.unexpected");
-  });
-});
-
-describe("isAuthError", () => {
-  it("returns true for 401 ApiClientError", () => {
-    expect(isAuthError(new ApiClientError(401, "Unauthorized"))).toBe(true);
-  });
-
-  it("returns false for other status codes", () => {
-    expect(isAuthError(new ApiClientError(403, "Forbidden"))).toBe(false);
-    expect(isAuthError(new ApiClientError(500, "Server Error"))).toBe(false);
-  });
-
-  it("returns false for non-ApiClientError", () => {
-    expect(isAuthError(new Error("test"))).toBe(false);
-    expect(isAuthError(null)).toBe(false);
   });
 });

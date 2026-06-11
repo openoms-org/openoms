@@ -183,8 +183,6 @@ export const INVOICE_TYPE_LABELS: Record<string, string> = {
   receipt: "receipt",
 };
 
-export const INVOICING_PROVIDERS = ["fakturownia", "wfirma", "infakt"] as const;
-
 export const INVOICING_PROVIDER_LABELS: Record<string, string> = {
   fakturownia: "fakturownia",
   wfirma: "wfirma",
@@ -198,11 +196,6 @@ export const KSEF_STATUS_MAP: Record<string, { label: string; color: string }> =
   accepted: { label: "accepted", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
   rejected: { label: "rejected", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
 };
-
-export const KSEF_ENVIRONMENTS = [
-  { value: "test", label: "test" },
-  { value: "production", label: "production" },
-] as const;
 
 // === Automation ===
 export const AUTOMATION_TRIGGER_EVENTS = [

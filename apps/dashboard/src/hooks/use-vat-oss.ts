@@ -20,15 +20,6 @@ export function useVATRates() {
   });
 }
 
-export function useVATCountryRates(country: string) {
-  return useQuery({
-    queryKey: ["vat-oss", "rates", country],
-    queryFn: () =>
-      apiClient<VATRateSet>(`/v1/vat-oss/rates/${country}`),
-    enabled: !!country,
-  });
-}
-
 export function useCalculateVAT() {
   return useMutation({
     mutationFn: (data: VATCalculateRequest) =>

@@ -4,7 +4,6 @@ import type {
   StockSyncChannel,
   StockSyncEvent,
   StockSyncDashboard,
-  StockAllocation,
   ListResponse,
   StockSyncChannelListParams,
   StockSyncEventListParams,
@@ -31,15 +30,6 @@ export function useStockSyncChannels(params: StockSyncChannelListParams = {}) {
       apiClient<ListResponse<StockSyncChannel>>(
         `/v1/stock-sync/channels${qs ? `?${qs}` : ""}`
       ),
-  });
-}
-
-export function useStockSyncChannel(id: string) {
-  return useQuery({
-    queryKey: ["stock-sync-channels", id],
-    queryFn: () =>
-      apiClient<StockSyncChannel>(`/v1/stock-sync/channels/${id}`),
-    enabled: !!id,
   });
 }
 
@@ -176,18 +166,5 @@ export function useStockSyncDashboard() {
     queryFn: () =>
       apiClient<StockSyncDashboard>("/v1/stock-sync/dashboard"),
     refetchInterval: 30000, // auto-refresh every 30s
-  });
-}
-
-// --- Allocations ---
-
-export function useStockAllocations(productId: string) {
-  return useQuery({
-    queryKey: ["stock-sync-allocations", productId],
-    queryFn: () =>
-      apiClient<StockAllocation[]>(
-        `/v1/stock-sync/allocations/${productId}`
-      ),
-    enabled: !!productId,
   });
 }

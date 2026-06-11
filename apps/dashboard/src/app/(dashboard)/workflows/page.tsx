@@ -9,6 +9,7 @@ import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { QueryError } from "@/components/shared/query-error";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -78,14 +79,7 @@ export default function WorkflowsPage() {
         </div>
 
         {isError && (
-          <div className="rounded-md border border-destructive bg-destructive/10 p-4">
-            <p className="text-sm text-destructive">
-              {t("errorLoading")}
-            </p>
-            <Button variant="outline" size="sm" className="mt-2" onClick={() => refetch()}>
-              {t("retry")}
-            </Button>
-          </div>
+          <QueryError onRetry={() => refetch()} messageOverride={t("errorLoading")} />
         )}
 
         {isLoading ? (

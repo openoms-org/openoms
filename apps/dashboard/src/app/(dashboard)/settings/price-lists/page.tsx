@@ -16,6 +16,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { getErrorMessage } from "@/lib/api-client";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { QueryError } from "@/components/shared/query-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -198,19 +199,7 @@ export default function PriceListsPage() {
       </div>
 
       {isError && (
-        <div className="rounded-md border border-destructive bg-destructive/10 p-4">
-          <p className="text-sm text-destructive">
-            {tc("loadError")}
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-2"
-            onClick={() => refetch()}
-          >
-            {tc("retry")}
-          </Button>
-        </div>
+        <QueryError onRetry={() => refetch()} />
       )}
 
       {priceLists.length === 0 ? (

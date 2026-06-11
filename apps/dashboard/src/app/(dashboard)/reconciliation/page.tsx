@@ -10,6 +10,7 @@ import {
 } from "@/hooks/use-reconciliation";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { Button } from "@/components/ui/button";
+import { QueryError } from "@/components/shared/query-error";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -317,19 +318,7 @@ export default function ReconciliationPage() {
 
       {/* Error state */}
       {isError && (
-        <div className="rounded-md border border-destructive bg-destructive/10 p-4">
-          <p className="text-sm text-destructive">
-            {t("loadError")}
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-2"
-            onClick={() => refetch()}
-          >
-            {t("retry")}
-          </Button>
-        </div>
+        <QueryError onRetry={() => refetch()} messageOverride={t("loadError")} />
       )}
 
       {/* Settlements table */}

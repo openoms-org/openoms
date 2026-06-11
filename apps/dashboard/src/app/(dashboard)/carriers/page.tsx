@@ -19,6 +19,7 @@ import { getErrorMessage } from "@/lib/api-client";
 import { getVisibleProviderKeys } from "@/lib/readiness";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { QueryError } from "@/components/shared/query-error";
 import {
   Table,
   TableBody,
@@ -69,19 +70,7 @@ export default function CarriersPage() {
       />
 
       {isError && (
-        <div className="rounded-md border border-destructive bg-destructive/10 p-4">
-          <p className="text-sm text-destructive">
-            Wystąpił błąd podczas ładowania danych. Spróbuj odświeżyć stronę.
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-2"
-            onClick={() => refetch()}
-          >
-            Spróbuj ponownie
-          </Button>
-        </div>
+        <QueryError onRetry={() => refetch()} />
       )}
 
       {!visibleCarriers || visibleCarriers.length === 0 ? (

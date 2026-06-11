@@ -192,17 +192,6 @@ export function useAllegroReturns(params?: { limit?: number; offset?: number; st
   });
 }
 
-export function useAllegroReturn(returnId: string | null) {
-  return useQuery({
-    queryKey: ["allegro", "returns", returnId],
-    queryFn: () =>
-      apiClient<AllegroCustomerReturn>(
-        `/v1/integrations/allegro/returns/${returnId}`
-      ),
-    enabled: !!returnId,
-  });
-}
-
 export function useRejectAllegroReturn(returnId: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -234,21 +223,6 @@ export function useCreateAllegroRefund() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["allegro", "refunds"] });
     },
-  });
-}
-
-export function useAllegroRefunds(params?: { limit?: number; offset?: number }) {
-  const searchParams = new URLSearchParams();
-  if (params?.limit != null) searchParams.set("limit", String(params.limit));
-  if (params?.offset != null) searchParams.set("offset", String(params.offset));
-  const query = searchParams.toString();
-
-  return useQuery({
-    queryKey: ["allegro", "refunds", params],
-    queryFn: () =>
-      apiClient<AllegroRefundList>(
-        `/v1/integrations/allegro/refunds${query ? `?${query}` : ""}`
-      ),
   });
 }
 

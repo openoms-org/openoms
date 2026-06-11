@@ -10,6 +10,7 @@ import {
   useUnmatchTransaction,
 } from "@/hooks/use-reconciliation";
 import { Button } from "@/components/ui/button";
+import { QueryError } from "@/components/shared/query-error";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -152,19 +153,7 @@ export default function SettlementDetailPage() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           {t("detail.backToReconciliation")}
         </Button>
-        <div className="rounded-md border border-destructive bg-destructive/10 p-4">
-          <p className="text-sm text-destructive">
-            {t("detail.loadError")}
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-2"
-            onClick={() => refetch()}
-          >
-            {t("retry")}
-          </Button>
-        </div>
+        <QueryError onRetry={() => refetch()} messageOverride={t("detail.loadError")} />
       </div>
     );
   }

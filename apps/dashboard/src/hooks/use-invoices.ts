@@ -37,14 +37,6 @@ export function useCancelInvoice() {
   });
 }
 
-export function useOrderInvoices(orderId: string) {
-  return useQuery({
-    queryKey: ["invoices", "order", orderId],
-    queryFn: () => apiClient<Invoice[]>(`/v1/orders/${orderId}/invoices`),
-    enabled: !!orderId,
-  });
-}
-
 export function useInvoicingSettings() {
   return useQuery({
     queryKey: ["settings", "invoicing"],

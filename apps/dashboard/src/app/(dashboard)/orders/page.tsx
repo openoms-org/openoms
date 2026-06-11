@@ -12,6 +12,7 @@ import { OrderFilters } from "@/components/orders/order-filters";
 import { BulkActions } from "@/components/orders/bulk-actions";
 import { KanbanBoard } from "@/components/orders/kanban-board";
 import { Button } from "@/components/ui/button";
+import { QueryError } from "@/components/shared/query-error";
 import { ORDER_STATUSES, PAYMENT_STATUSES, ORDER_SOURCE_LABELS, ORDER_PRIORITIES } from "@/lib/constants";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { formatDate, formatCurrency, shortId, cn } from "@/lib/utils";
@@ -298,19 +299,7 @@ export default function OrdersPage() {
       <OrderFilters filters={filters} onFilterChange={handleFilterChange} />
 
       {isError && viewMode === "table" && (
-        <div className="rounded-md border border-destructive bg-destructive/10 p-4">
-          <p className="text-sm text-destructive">
-            {tc("loadError")}
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-2"
-            onClick={() => refetch()}
-          >
-            {tc("retry")}
-          </Button>
-        </div>
+        <QueryError onRetry={() => refetch()} />
       )}
 
       {viewMode === "table" && selectedIds.size > 0 && (

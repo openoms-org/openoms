@@ -12,6 +12,7 @@ import { OperationsSummaryStrip } from "@/components/dashboard/operations-summar
 import { OrchestrationMap } from "@/components/dashboard/orchestration-map";
 import { ParityReadinessIndicator } from "@/components/dashboard/parity-readiness-indicator";
 import { Button } from "@/components/ui/button";
+import { QueryError } from "@/components/shared/query-error";
 import { Card, CardContent } from "@/components/ui/card";
 import { OnboardingWizard } from "@/components/onboarding/onboarding-wizard";
 import Link from "next/link";
@@ -95,7 +96,6 @@ function QuickStartCard() {
 
 export default function DashboardPage() {
   const t = useTranslations("dashboard");
-  const tc = useTranslations("common");
   // OPE-423c: build-time cutover flag. Default/unset → "heuristic", i.e. the
   // current production behavior (legacy heuristic section primary). Flip to
   // "process-backed" once the parity gate (OPE-423b) is met to make the
@@ -168,17 +168,7 @@ export default function DashboardPage() {
         </div>
 
         {!processBacked && isError && (
-          <div className="rounded-md border border-destructive bg-destructive/10 p-4">
-            <p className="text-sm text-destructive">{tc("loadError")}</p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2"
-              onClick={() => refetch()}
-            >
-              {tc("retry")}
-            </Button>
-          </div>
+          <QueryError onRetry={() => refetch()} />
         )}
 
         {processBacked ? (

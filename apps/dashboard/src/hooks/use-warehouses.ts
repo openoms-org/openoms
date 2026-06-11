@@ -71,12 +71,3 @@ export function useUpsertWarehouseStock(warehouseId: string) {
     },
   });
 }
-
-export function useProductStock(productId: string) {
-  return useQuery({
-    queryKey: ["product-stock", productId],
-    queryFn: () =>
-      apiClient<WarehouseStock[]>(`/v1/products/${productId}/stock`),
-    enabled: !!productId,
-  });
-}

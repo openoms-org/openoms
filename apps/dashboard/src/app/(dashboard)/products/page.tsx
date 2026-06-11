@@ -9,6 +9,7 @@ import { useBulkCategorize } from "@/hooks/use-ai";
 import { apiFetch } from "@/lib/api-client";
 import { downloadBlob } from "@/lib/download";
 import { Button } from "@/components/ui/button";
+import { QueryError } from "@/components/shared/query-error";
 import { Input } from "@/components/ui/input";
 import { DataTable, type EditableColumnConfig } from "@/components/shared/data-table";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
@@ -554,19 +555,7 @@ function MyProductsTab() {
       />
 
       {isError && (
-        <div className="rounded-md border border-destructive bg-destructive/10 p-4">
-          <p className="text-sm text-destructive">
-            {t("loadError")}
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-2"
-            onClick={() => refetch()}
-          >
-            {t("tryAgain")}
-          </Button>
-        </div>
+        <QueryError onRetry={() => refetch()} messageOverride={t("loadError")} />
       )}
 
       <DataTable
