@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -79,8 +78,7 @@ func (h *ReturnHandler) Create(w http.ResponseWriter, r *http.Request) {
 	actorID := middleware.UserIDFromContext(r.Context())
 
 	var req model.CreateReturnRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -108,8 +106,7 @@ func (h *ReturnHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req model.UpdateReturnRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -142,8 +139,7 @@ func (h *ReturnHandler) TransitionStatus(w http.ResponseWriter, r *http.Request)
 	}
 
 	var req model.ReturnStatusRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 

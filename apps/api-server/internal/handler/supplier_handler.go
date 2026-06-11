@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -75,8 +74,7 @@ func (h *SupplierHandler) Create(w http.ResponseWriter, r *http.Request) {
 	actorID := middleware.UserIDFromContext(r.Context())
 
 	var req model.CreateSupplierRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -104,8 +102,7 @@ func (h *SupplierHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req model.UpdateSupplierRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -289,8 +286,7 @@ func (h *SupplierHandler) BulkDeleteProducts(w http.ResponseWriter, r *http.Requ
 	}
 
 	var req model.BulkDeleteSupplierProductsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -346,8 +342,7 @@ func (h *SupplierHandler) LinkProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req model.LinkProductRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -402,8 +397,7 @@ func (h *SupplierHandler) UpsertCategoryMapping(w http.ResponseWriter, r *http.R
 	}
 
 	var req model.UpsertCategoryMappingRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -436,8 +430,7 @@ func (h *SupplierHandler) ImportProducts(w http.ResponseWriter, r *http.Request)
 	}
 
 	var req model.ImportSupplierProductsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -526,8 +519,7 @@ func (h *SupplierHandler) BulkUpsertAllegroMappings(w http.ResponseWriter, r *ht
 	}
 
 	var req model.BulkUpsertAllegroMappingsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -653,8 +645,7 @@ func (h *SupplierHandler) BTPWizardStartImport(w http.ResponseWriter, r *http.Re
 	actorID := middleware.UserIDFromContext(r.Context())
 
 	var req model.BTPWizardStartImportRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -704,8 +695,7 @@ func (h *SupplierHandler) BTPWizardSetAPIKeys(w http.ResponseWriter, r *http.Req
 	}
 
 	var req model.BTPWizardSetAPIKeysRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -738,8 +728,7 @@ func (h *SupplierHandler) BTPWizardCompleteSyncSettings(w http.ResponseWriter, r
 	}
 
 	var req model.BTPWizardSyncSettingsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
