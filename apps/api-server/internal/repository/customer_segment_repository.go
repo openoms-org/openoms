@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -93,39 +92,22 @@ func (r *CustomerSegmentRepository) Create(ctx context.Context, tx pgx.Tx, segme
 
 // Update applies partial updates to a customer segment.
 func (r *CustomerSegmentRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateSegmentRequest) error {
-	var setClauses []string
-	var args []any
-	argIdx := 1
-
-	if req.Name != nil {
-		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argIdx))
-		args = append(args, *req.Name)
-		argIdx++
-	}
-	if req.Description != nil {
-		setClauses = append(setClauses, fmt.Sprintf("description = $%d", argIdx))
-		args = append(args, *req.Description)
-		argIdx++
-	}
-	if req.Color != nil {
-		setClauses = append(setClauses, fmt.Sprintf("color = $%d", argIdx))
-		args = append(args, *req.Color)
-		argIdx++
-	}
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "name", req.Name)
+	SetPtr(ub, "description", req.Description)
+	SetPtr(ub, "color", req.Color)
 	if req.Rules != nil {
-		setClauses = append(setClauses, fmt.Sprintf("rules = $%d", argIdx))
-		args = append(args, req.Rules)
-		argIdx++
+		ub.Set("rules", req.Rules)
 	}
 
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
+	ub.SetRaw("updated_at = NOW()")
 	query := fmt.Sprintf("UPDATE customer_segments SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
-	args = append(args, id)
+		ub.SetClause(), ub.NextArgIdx())
+	args := append(ub.Args(), id)
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {
