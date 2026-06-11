@@ -261,6 +261,9 @@ backup:
   schedule: "0 3 * * *"  # daily at 3 AM
   retentionDays: 30
   minBackupBytes: 1000
+  # Pre-baked S3 client image used by the upload container (no runtime apk install).
+  # Pin to a digest for full immutability in production.
+  mcImage: minio/mc:RELEASE.2025-04-16T18-13-26Z
   s3:
     bucket: openoms-backups
     prefix: "backups/"
