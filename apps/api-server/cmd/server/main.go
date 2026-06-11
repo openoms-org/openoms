@@ -471,6 +471,7 @@ func run() error {
 	orderService.SetCustomerRepo(customerRepo)
 	orderService.SetPriceListService(priceListService)
 	orderService.SetLoyaltyService(loyaltyService)
+	orderService.SetBundleService(bundleService)
 
 	// Automation engine
 	automationRuleRepo := repository.NewAutomationRuleRepository()

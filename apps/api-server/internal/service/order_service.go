@@ -162,6 +162,35 @@ func (s *OrderService) SetLoyaltyService(loyaltySvc *LoyaltyService) {
 	s.loyaltyService = loyaltySvc
 }
 
+// SetBundleService sets the bundle service so order stock reserve/ship/cancel can expand
+// bundle line items into their component products. Called after construction to avoid a
+// circular dependency.
+func (s *OrderService) SetBundleService(bundleSvc *BundleService) {
+	s.bundleService = bundleSvc
+}
+
+// expandBundleQuantities rewrites productQtys in place: bundle product entries are removed
+// (bundles are virtual and hold no warehouse_stock of their own) and replaced by their
+// component product quantities, so a single warehouse_stock walk covers components AND
+// normal products. No-op when the bundle service is unwired; on expansion failure it logs
+// and leaves productQtys unchanged (best-effort, matching the surrounding side-effects).
+func (s *OrderService) expandBundleQuantities(ctx context.Context, tx pgx.Tx, productQtys map[uuid.UUID]int) {
+	if s.bundleService == nil || len(productQtys) == 0 {
+		return
+	}
+	componentQtys, bundleIDs, err := s.bundleService.ExpandBundleComponents(ctx, tx, productQtys)
+	if err != nil {
+		slog.Error("failed to expand bundle components for stock adjustment", "error", err)
+		return
+	}
+	for id := range bundleIDs {
+		delete(productQtys, id)
+	}
+	for productID, qty := range componentQtys {
+		productQtys[productID] += qty
+	}
+}
+
 func (s *OrderService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (*model.OrderStatusConfig, error) {
 	settings, err := s.tenantRepo.GetSettings(ctx, tx, tenantID)
 	if err != nil {
@@ -521,6 +550,7 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 		if len(productQtys) > 0 {
 			bgCtx := context.Background()
 			if err := database.WithTenant(bgCtx, s.pool, tenantID, func(tx pgx.Tx) error {
+				s.expandBundleQuantities(bgCtx, tx, productQtys)
 				s.adjustStockPerProduct(bgCtx, tx, productQtys, func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) int {
 					available := stock.Quantity - stock.Reserved
 					if available <= 0 {
@@ -736,6 +766,7 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 
 	var order *model.Order
 	var oldStatus string
+	var firstShip bool
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := s.orderRepo.FindByID(ctx, tx, orderID)
 		if err != nil {
@@ -745,6 +776,10 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 			return ErrOrderNotFound
 		}
 		oldStatus = existing.Status
+		// firstShip is true only when the order has not shipped before. shipped_at is set
+		// once (COALESCE on update, never cleared), so this gates the one-time stock
+		// decrement and makes a forced re-ship a no-op.
+		firstShip = existing.ShippedAt == nil
 
 		config, err := s.loadStatusConfig(ctx, tx, tenantID)
 		if err != nil {
@@ -821,14 +856,29 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 		// Stock sync on status change
 		switch req.Status {
 		case "shipped":
-			asyncutil.SafeGo(func() { s.handleStockOnShip(context.Background(), tenantID, order) })
+			// Decrement component/product stock exactly once per order (firstShip gate),
+			// so a forced re-ship does not double-decrement.
+			if firstShip {
+				asyncutil.SafeGo(func() { s.handleStockOnShip(context.Background(), tenantID, order) })
+			}
 		case "cancelled":
-			asyncutil.SafeGo(func() { s.handleStockOnCancel(context.Background(), tenantID, order) })
+			// Release reservations once; skip when the order was already terminal
+			// (cancelled/refunded) to avoid double-releasing.
+			if !isTerminalStockStatus(oldStatus) {
+				asyncutil.SafeGo(func() { s.handleStockOnCancel(context.Background(), tenantID, order) })
+			}
 		case "completed":
 			s.awardLoyaltyOnComplete(tenantID, order)
 		}
 	}
 	return order, err
+}
+
+// isTerminalStockStatus reports whether an order status already released/closed out its
+// stock reservations, so a transition into cancelled from such a status must not release
+// reservations again.
+func isTerminalStockStatus(status string) bool {
+	return status == model.OrderStatusCancelled || status == model.OrderStatusRefunded
 }
 
 // awardLoyaltyOnComplete fires order-completion loyalty accrual asynchronously for the
@@ -864,6 +914,7 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 		order     *model.Order
 		oldStatus string
 		newStatus string
+		firstShip bool
 	}
 	type webhookNotification struct {
 		orderID   uuid.UUID
@@ -945,6 +996,7 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 			if err == nil && updated != nil {
 				pendingEmails = append(pendingEmails, emailNotification{
 					order: updated, oldStatus: oldStatus, newStatus: req.Status,
+					firstShip: existing.ShippedAt == nil,
 				})
 			}
 
@@ -983,9 +1035,13 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 		// Stock sync on status change
 		switch n.newStatus {
 		case "shipped":
-			asyncutil.SafeGo(func() { s.handleStockOnShip(context.Background(), tenantID, n.order) })
+			if n.firstShip {
+				asyncutil.SafeGo(func() { s.handleStockOnShip(context.Background(), tenantID, n.order) })
+			}
 		case "cancelled":
-			asyncutil.SafeGo(func() { s.handleStockOnCancel(context.Background(), tenantID, n.order) })
+			if !isTerminalStockStatus(n.oldStatus) {
+				asyncutil.SafeGo(func() { s.handleStockOnCancel(context.Background(), tenantID, n.order) })
+			}
 		case "completed":
 			s.awardLoyaltyOnComplete(tenantID, n.order)
 		}
@@ -1074,6 +1130,7 @@ func (s *OrderService) handleStockOnShip(ctx context.Context, tenantID uuid.UUID
 	}
 	productQtys := extractProductQuantities(order.Items)
 	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		s.expandBundleQuantities(ctx, tx, productQtys)
 		s.adjustStockPerProduct(ctx, tx, productQtys, func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) int {
 			deduct := min(remaining, stock.Quantity)
 			// Decrement both quantity and reserved
@@ -1102,6 +1159,7 @@ func (s *OrderService) handleStockOnCancel(ctx context.Context, tenantID uuid.UU
 	}
 	productQtys := extractProductQuantities(order.Items)
 	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		s.expandBundleQuantities(ctx, tx, productQtys)
 		s.adjustStockPerProduct(ctx, tx, productQtys, func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) int {
 			release := min(remaining, stock.Reserved)
 			if _, execErr := tx.Exec(ctx,
