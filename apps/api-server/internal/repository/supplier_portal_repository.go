@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -28,34 +27,6 @@ func (r *SupplierPortalTokenRepository) Create(ctx context.Context, tx pgx.Tx, t
 	).Scan(&token.CreatedAt)
 }
 
-// FindByHash returns a supplier portal token by its hash.
-func (r *SupplierPortalTokenRepository) FindByHash(ctx context.Context, tx pgx.Tx, tokenHash string) (*model.SupplierPortalToken, error) {
-	var t model.SupplierPortalToken
-	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, supplier_id, token_hash, expires_at, last_used_at, created_at
-		 FROM supplier_portal_tokens WHERE token_hash = $1`,
-		tokenHash,
-	).Scan(&t.ID, &t.TenantID, &t.SupplierID, &t.TokenHash, &t.ExpiresAt, &t.LastUsedAt, &t.CreatedAt)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("find portal token by hash: %w", err)
-	}
-	return &t, nil
-}
-
-// UpdateLastUsed records the current time as last_used_at for the token.
-func (r *SupplierPortalTokenRepository) UpdateLastUsed(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
-	_, err := tx.Exec(ctx,
-		`UPDATE supplier_portal_tokens SET last_used_at = NOW() WHERE id = $1`, id,
-	)
-	if err != nil {
-		return fmt.Errorf("update portal token last_used_at: %w", err)
-	}
-	return nil
-}
-
 // DeleteBySupplier removes all portal tokens for the given supplier.
 func (r *SupplierPortalTokenRepository) DeleteBySupplier(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID) error {
 	_, err := tx.Exec(ctx,
@@ -65,17 +36,6 @@ func (r *SupplierPortalTokenRepository) DeleteBySupplier(ctx context.Context, tx
 		return fmt.Errorf("delete portal tokens by supplier: %w", err)
 	}
 	return nil
-}
-
-// DeleteExpired removes all expired portal tokens and returns the count deleted.
-func (r *SupplierPortalTokenRepository) DeleteExpired(ctx context.Context, tx pgx.Tx) (int64, error) {
-	ct, err := tx.Exec(ctx,
-		`DELETE FROM supplier_portal_tokens WHERE expires_at < $1`, time.Now(),
-	)
-	if err != nil {
-		return 0, fmt.Errorf("delete expired portal tokens: %w", err)
-	}
-	return ct.RowsAffected(), nil
 }
 
 // FindBySupplier returns all portal tokens for the given supplier.

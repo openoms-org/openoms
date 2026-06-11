@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -20,29 +19,18 @@ func NewMessageTemplateRepository() *MessageTemplateRepository {
 
 // List returns a paginated list of message templates matching the filter.
 func (r *MessageTemplateRepository) List(ctx context.Context, tx pgx.Tx, filter model.MessageTemplateListFilter) ([]model.MessageTemplate, int, error) {
-	var whereClauses []string
-	var args []any
-	argIdx := 1
-
+	qb := NewQueryBuilder()
 	if filter.Channel != nil {
-		whereClauses = append(whereClauses, fmt.Sprintf("channel = $%d", argIdx))
-		args = append(args, *filter.Channel)
-		argIdx++
+		qb.Add("channel = $%d", *filter.Channel)
 	}
 	if filter.Enabled != nil {
-		whereClauses = append(whereClauses, fmt.Sprintf("enabled = $%d", argIdx))
-		args = append(args, *filter.Enabled)
-		argIdx++
+		qb.Add("enabled = $%d", *filter.Enabled)
 	}
-
-	whereSQL := ""
-	if len(whereClauses) > 0 {
-		whereSQL = "WHERE " + strings.Join(whereClauses, " AND ")
-	}
+	whereSQL := qb.WhereClause()
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM message_templates %s", whereSQL)
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count message templates: %w", err)
 	}
 
@@ -53,15 +41,15 @@ func (r *MessageTemplateRepository) List(ctx context.Context, tx pgx.Tx, filter 
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
+	limitIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT id, tenant_id, name, channel, subject, body, variables,
 		        is_autoresponder, trigger_event, enabled, created_at, updated_at
 		 FROM message_templates %s %s LIMIT $%d OFFSET $%d`,
-		whereSQL, orderByClause, argIdx, argIdx+1,
+		whereSQL, orderByClause, limitIdx, limitIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list message templates: %w", err)
 	}
@@ -115,60 +103,27 @@ func (r *MessageTemplateRepository) Create(ctx context.Context, tx pgx.Tx, templ
 
 // Update applies partial updates to a message template.
 func (r *MessageTemplateRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateMessageTemplateRequest) error {
-	var setClauses []string
-	var args []any
-	argIdx := 1
-
-	if req.Name != nil {
-		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argIdx))
-		args = append(args, *req.Name)
-		argIdx++
-	}
-	if req.Channel != nil {
-		setClauses = append(setClauses, fmt.Sprintf("channel = $%d", argIdx))
-		args = append(args, *req.Channel)
-		argIdx++
-	}
-	if req.Subject != nil {
-		setClauses = append(setClauses, fmt.Sprintf("subject = $%d", argIdx))
-		args = append(args, *req.Subject)
-		argIdx++
-	}
-	if req.Body != nil {
-		setClauses = append(setClauses, fmt.Sprintf("body = $%d", argIdx))
-		args = append(args, *req.Body)
-		argIdx++
-	}
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "name", req.Name)
+	SetPtr(ub, "channel", req.Channel)
+	SetPtr(ub, "subject", req.Subject)
+	SetPtr(ub, "body", req.Body)
 	if req.Variables != nil {
-		setClauses = append(setClauses, fmt.Sprintf("variables = $%d", argIdx))
-		args = append(args, req.Variables)
-		argIdx++
+		ub.Set("variables", req.Variables)
 	}
-	if req.IsAutoresponder != nil {
-		setClauses = append(setClauses, fmt.Sprintf("is_autoresponder = $%d", argIdx))
-		args = append(args, *req.IsAutoresponder)
-		argIdx++
-	}
-	if req.TriggerEvent != nil {
-		setClauses = append(setClauses, fmt.Sprintf("trigger_event = $%d", argIdx))
-		args = append(args, *req.TriggerEvent)
-		argIdx++
-	}
-	if req.Enabled != nil {
-		setClauses = append(setClauses, fmt.Sprintf("enabled = $%d", argIdx))
-		args = append(args, *req.Enabled)
-		argIdx++
-	}
+	SetPtr(ub, "is_autoresponder", req.IsAutoresponder)
+	SetPtr(ub, "trigger_event", req.TriggerEvent)
+	SetPtr(ub, "enabled", req.Enabled)
 
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
+	ub.SetRaw("updated_at = NOW()")
 
 	query := fmt.Sprintf("UPDATE message_templates SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
-	args = append(args, id)
+		ub.SetClause(), ub.NextArgIdx())
+	args := append(ub.Args(), id)
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {

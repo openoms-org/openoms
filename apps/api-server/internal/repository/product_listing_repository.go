@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -35,69 +34,26 @@ func (r *ProductListingRepository) Create(ctx context.Context, tx pgx.Tx, listin
 
 // Update applies partial updates to a product listing.
 func (r *ProductListingRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req *model.UpdateProductListingRequest) error {
-	var setClauses []string
-	var args []any
-	argIdx := 1
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "external_id", req.ExternalID)
+	SetPtr(ub, "status", req.Status)
+	SetPtr(ub, "url", req.URL)
+	SetPtr(ub, "price_override", req.PriceOverride)
+	SetPtr(ub, "stock_override", req.StockOverride)
+	SetPtr(ub, "sync_status", req.SyncStatus)
+	SetPtr(ub, "error_message", req.ErrorMessage)
+	SetPtr(ub, "stock_sync_mode", req.StockSyncMode)
+	SetPtr(ub, "description_html", req.DescriptionHTML)
+	SetPtr(ub, "metadata", req.Metadata)
 
-	if req.ExternalID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("external_id = $%d", argIdx))
-		args = append(args, *req.ExternalID)
-		argIdx++
-	}
-	if req.Status != nil {
-		setClauses = append(setClauses, fmt.Sprintf("status = $%d", argIdx))
-		args = append(args, *req.Status)
-		argIdx++
-	}
-	if req.URL != nil {
-		setClauses = append(setClauses, fmt.Sprintf("url = $%d", argIdx))
-		args = append(args, *req.URL)
-		argIdx++
-	}
-	if req.PriceOverride != nil {
-		setClauses = append(setClauses, fmt.Sprintf("price_override = $%d", argIdx))
-		args = append(args, *req.PriceOverride)
-		argIdx++
-	}
-	if req.StockOverride != nil {
-		setClauses = append(setClauses, fmt.Sprintf("stock_override = $%d", argIdx))
-		args = append(args, *req.StockOverride)
-		argIdx++
-	}
-	if req.SyncStatus != nil {
-		setClauses = append(setClauses, fmt.Sprintf("sync_status = $%d", argIdx))
-		args = append(args, *req.SyncStatus)
-		argIdx++
-	}
-	if req.ErrorMessage != nil {
-		setClauses = append(setClauses, fmt.Sprintf("error_message = $%d", argIdx))
-		args = append(args, *req.ErrorMessage)
-		argIdx++
-	}
-	if req.StockSyncMode != nil {
-		setClauses = append(setClauses, fmt.Sprintf("stock_sync_mode = $%d", argIdx))
-		args = append(args, *req.StockSyncMode)
-		argIdx++
-	}
-	if req.DescriptionHTML != nil {
-		setClauses = append(setClauses, fmt.Sprintf("description_html = $%d", argIdx))
-		args = append(args, *req.DescriptionHTML)
-		argIdx++
-	}
-	if req.Metadata != nil {
-		setClauses = append(setClauses, fmt.Sprintf("metadata = $%d", argIdx))
-		args = append(args, *req.Metadata)
-		argIdx++
-	}
-
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
+	ub.SetRaw("updated_at = NOW()")
 	query := fmt.Sprintf("UPDATE product_listings SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
-	args = append(args, id)
+		ub.SetClause(), ub.NextArgIdx())
+	args := append(ub.Args(), id)
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {
