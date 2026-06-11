@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
@@ -40,25 +39,8 @@ func (w *KSeFStatusWorker) Interval() time.Duration {
 // Run polls the KSeF API for invoice submission status updates.
 func (w *KSeFStatusWorker) Run(ctx context.Context) error {
 	// Get all tenant IDs
-	rows, err := w.pool.Query(ctx, "SELECT id FROM tenants")
+	tenantIDs, err := listAllTenantIDs(ctx, w.pool, w.logger)
 	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	var tenantIDs []uuid.UUID
-	for rows.Next() {
-		if err := checkWorkerContext(ctx); err != nil {
-			return err
-		}
-		var id uuid.UUID
-		if err := rows.Scan(&id); err != nil {
-			w.logger.Error("ksef worker: scan tenant", "error", err)
-			continue
-		}
-		tenantIDs = append(tenantIDs, id)
-	}
-	if err := rows.Err(); err != nil {
 		return err
 	}
 

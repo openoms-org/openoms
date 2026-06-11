@@ -78,19 +78,8 @@ func (w *SupplierOrderStatusPoller) Run(ctx context.Context) error {
 	}
 	// Cross-tenant tenant list on the privileged pool, then per-tenant WithTenant (mirrors
 	// the other cross-tenant workers + the orchestration worker).
-	rows, err := w.pool.Query(ctx, "SELECT id FROM tenants")
+	tenantIDs, err := listAllTenantIDs(ctx, w.pool, w.logger)
 	if err != nil {
-		return err
-	}
-	var tenantIDs []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if rows.Scan(&id) == nil {
-			tenantIDs = append(tenantIDs, id)
-		}
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
 		return err
 	}
 
