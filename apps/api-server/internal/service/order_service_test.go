@@ -289,3 +289,23 @@ func TestApplyCustomerPriceList_Noop(t *testing.T) {
 		assert.Equal(t, 100.0, req.TotalAmount)
 	})
 }
+
+func TestDedupeOrderIDs(t *testing.T) {
+	a := uuid.New()
+	b := uuid.New()
+	c := uuid.New()
+
+	t.Run("removes duplicates preserving first-seen order", func(t *testing.T) {
+		got := dedupeOrderIDs([]uuid.UUID{a, b, a, c, b, a})
+		assert.Equal(t, []uuid.UUID{a, b, c}, got)
+	})
+
+	t.Run("no duplicates returns same sequence", func(t *testing.T) {
+		got := dedupeOrderIDs([]uuid.UUID{a, b, c})
+		assert.Equal(t, []uuid.UUID{a, b, c}, got)
+	})
+
+	t.Run("empty input", func(t *testing.T) {
+		assert.Empty(t, dedupeOrderIDs(nil))
+	})
+}

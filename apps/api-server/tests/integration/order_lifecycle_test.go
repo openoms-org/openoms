@@ -250,6 +250,50 @@ func TestOrderLifecycle_Duplicate(t *testing.T) {
 	assert.True(t, errors.Is(err, service.ErrOrderNotFound))
 }
 
+// TestOrderLifecycle_Duplicate_IncrementsLinkedCustomerStats verifies the duplicate
+// (which persists the source order's customer_id) counts toward the linked customer's
+// denormalized stats, keeping them equal to the RFM aggregate that counts every order row.
+func TestOrderLifecycle_Duplicate_IncrementsLinkedCustomerStats(t *testing.T) {
+	ctx := context.Background()
+	tenant := seedTenant(t, ctx)
+	svc := newLifecycleOrderService(appPool)
+
+	email := "dupstats-" + uuid.New().String()[:8] + "@example.com"
+	src, err := svc.Create(ctx, tenant, model.CreateOrderRequest{
+		CustomerName: "Dup Stats", CustomerEmail: &email, TotalAmount: 120, Currency: "PLN",
+	}, uuid.Nil, "127.0.0.1")
+	require.NoError(t, err)
+	require.NotNil(t, src.CustomerID, "source order links a customer")
+
+	readStats := func() (int, float64) {
+		var n int
+		var spent float64
+		require.NoError(t, superPool.QueryRow(ctx,
+			`SELECT total_orders, total_spent FROM customers WHERE id = $1`, *src.CustomerID).Scan(&n, &spent))
+		return n, spent
+	}
+	n, spent := readStats()
+	assert.Equal(t, 1, n)
+	assert.InDelta(t, 120.0, spent, 0.001)
+
+	dup, err := svc.Duplicate(ctx, tenant, src.ID, 0, uuid.Nil, "127.0.0.1")
+	require.NoError(t, err)
+	require.NotNil(t, dup.CustomerID)
+	assert.Equal(t, src.CustomerID.String(), dup.CustomerID.String(), "duplicate keeps the customer link")
+
+	n, spent = readStats()
+	assert.Equal(t, 2, n, "duplicate counts toward customer order count")
+	assert.InDelta(t, 240.0, spent, 0.001, "duplicate counts toward customer spend")
+}
+
+// NOTE: the bulk-transition duplicate-id dedupe (BulkTransitionStatus) is covered by the
+// pure unit test TestDedupeOrderIDs in internal/service. A DB-level bulk test is not
+// feasible here because BulkTransitionStatus calls OrderRepository.FindByIDs, whose
+// `id = ANY($1)` binds a []uuid.UUID; pgx cannot encode a uuid slice under the harness's
+// forced simple-protocol mode (production uses the extended protocol where it works). The
+// single-order firstShip gate is DB-proven by TestOrderLifecycle_BundleStock_*; dedupe
+// guarantees the bulk path reads the firstShip snapshot once per unique order.
+
 // --- Loyalty accrual: exactly-once ledger ---
 
 func seedPointsProgram(t *testing.T, ctx context.Context, tenant uuid.UUID, perPLN int) uuid.UUID {

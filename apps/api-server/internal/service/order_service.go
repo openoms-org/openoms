@@ -603,10 +603,11 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 
 // Duplicate creates a copy of an existing order as a fresh "new" order, with a new ID
 // and no external reference. It enforces the monthly order limit inside the same
-// transaction (mirroring Create) and writes an "order.duplicated" audit entry, then
-// dispatches an order.created webhook after commit. Behavior matches the previous
-// handler-based duplicate: it is webhook-only (no fulfillment process, stock reserve,
-// or automation event) and intentionally non-idempotent — each call mints a new order.
+// transaction (mirroring Create), increments the linked customer's denormalized order
+// stats, and writes an "order.duplicated" audit entry, then dispatches an order.created
+// webhook after commit. For post-commit side-effects it is webhook-only (no fulfillment
+// process, stock reserve, or automation event) and intentionally non-idempotent — each
+// call mints a new order.
 func (s *OrderService) Duplicate(ctx context.Context, tenantID, orderID uuid.UUID, maxOrdersMonthly int, actorID uuid.UUID, ip string) (*model.Order, error) {
 	var newOrder *model.Order
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -660,6 +661,16 @@ func (s *OrderService) Duplicate(ctx context.Context, tenantID, orderID uuid.UUI
 
 		if err := s.orderRepo.Create(ctx, tx, newOrder); err != nil {
 			return fmt.Errorf("create duplicated order: %w", err)
+		}
+
+		// The duplicate persists the source order's customer_id, so the RFM live aggregate
+		// (COUNT/SUM over orders by customer_id) counts it. Increment the denormalized
+		// customer stats in the same tx — exactly like Create — so the counters stay equal
+		// to that aggregate. No-op for unlinked source orders (customer_id NULL).
+		if s.customerRepo != nil && newOrder.CustomerID != nil {
+			if err := s.customerRepo.IncrementOrderStats(ctx, tx, *newOrder.CustomerID, newOrder.TotalAmount); err != nil {
+				return err
+			}
 		}
 
 		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
@@ -899,11 +910,32 @@ func (s *OrderService) awardLoyaltyOnComplete(tenantID uuid.UUID, order *model.O
 	})
 }
 
+// dedupeOrderIDs returns ids with duplicates removed, preserving first-seen order.
+func dedupeOrderIDs(ids []uuid.UUID) []uuid.UUID {
+	seen := make(map[uuid.UUID]struct{}, len(ids))
+	out := make([]uuid.UUID, 0, len(ids))
+	for _, id := range ids {
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		out = append(out, id)
+	}
+	return out
+}
+
 // BulkTransitionStatus transitions multiple orders to a new status.
 func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.UUID, req model.BulkStatusTransitionRequest, actorID uuid.UUID, ip string) (*model.BulkStatusTransitionResponse, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
 	}
+
+	// Collapse repeated order IDs so each order is processed exactly once. The firstShip
+	// gate reads a single ordersMap snapshot that UpdateStatus never refreshes, so a
+	// repeated ID would re-pass the gate and fire handleStockOnShip (plus emails, webhooks,
+	// audit, and the success counter) once per occurrence — double-decrementing stock for a
+	// single ship. req is passed by value, so this mutation stays local to the call.
+	req.OrderIDs = dedupeOrderIDs(req.OrderIDs)
 
 	resp := &model.BulkStatusTransitionResponse{
 		Results: make([]model.BulkStatusResult, 0, len(req.OrderIDs)),
