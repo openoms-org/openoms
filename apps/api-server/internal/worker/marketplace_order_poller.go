@@ -326,11 +326,12 @@ func insertMarketplaceOrderIfNotExists(
 	return orderRepo.CreateIfExternalIDNotExists(ctx, tx, order)
 }
 
-func (p *MarketplaceOrderPoller) buildOrder(mo integration.MarketplaceOrder, ti TenantIntegration, req model.CreateOrderRequest) model.Order {
-	if p.mapOrder != nil {
-		return p.mapOrder(mo, ti, req)
-	}
-
+// newBaseMarketplaceOrder seeds the model.Order and metadata map that every marketplace
+// mapper builds identically: the core order fields, the pending-default payment status, the
+// marshaled shipping address + items, and a metadata map seeded with external_id. Each mapper
+// extends the returned order (provider-specific fields) and metadata before marshaling
+// metadata into order.Metadata and setting order.Tags.
+func newBaseMarketplaceOrder(mo integration.MarketplaceOrder, ti TenantIntegration, req model.CreateOrderRequest) (model.Order, map[string]any) {
 	order := model.Order{
 		ID:            uuid.New(),
 		TenantID:      ti.TenantID,
@@ -353,20 +354,28 @@ func (p *MarketplaceOrderPoller) buildOrder(mo integration.MarketplaceOrder, ti 
 		order.PaymentStatus = "pending"
 	}
 
-	// Shipping address
 	addrJSON, err := json.Marshal(mo.ShippingAddress)
 	if err == nil {
 		order.ShippingAddress = addrJSON
 	}
 
-	// Items
 	itemsJSON, err := json.Marshal(mo.Items)
 	if err == nil {
 		order.Items = itemsJSON
 	}
 
-	// Metadata with external_id for duplicate detection
 	metadata := map[string]any{"external_id": mo.ExternalID}
+	return order, metadata
+}
+
+func (p *MarketplaceOrderPoller) buildOrder(mo integration.MarketplaceOrder, ti TenantIntegration, req model.CreateOrderRequest) model.Order {
+	if p.mapOrder != nil {
+		return p.mapOrder(mo, ti, req)
+	}
+
+	order, metadata := newBaseMarketplaceOrder(mo, ti, req)
+
+	// Metadata with external_id for duplicate detection
 	metadataJSON, _ := json.Marshal(metadata)
 	order.Metadata = metadataJSON
 
