@@ -21,7 +21,8 @@ const invoiceHooks = createCrudHooks<
 export const useInvoices = invoiceHooks.useList;
 export const useInvoice = invoiceHooks.useGet;
 export const useCreateInvoice = invoiceHooks.useCreate;
-export const useUpdateInvoice = invoiceHooks.useUpdate;
+// NOTE: no useUpdateInvoice — there is no PATCH/PUT /v1/invoices/{id} route.
+// Polish invoices are legally immutable; corrections are separate documents.
 
 export function useCancelInvoice() {
   const queryClient = useQueryClient();
