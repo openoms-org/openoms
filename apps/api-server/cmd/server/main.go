@@ -929,7 +929,8 @@ func run() error {
 
 	// Listing sync service & handler
 	listingSyncRepo := repository.NewListingSyncRepository()
-	listingSyncService := service.NewListingSyncService(listingSyncRepo, productRepo, productListingRepo, auditRepo, pool, slog.Default())
+	listingSyncService := service.NewListingSyncService(listingSyncRepo, productRepo, productListingRepo, auditRepo, integrationRepo, pool, encryptionKey, slog.Default())
+	listingSyncService.SetStockSyncService(stockSyncService)
 	listingSyncHandler := handler.NewListingSyncHandler(listingSyncService)
 
 	// Prometheus metrics collector

@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -160,13 +161,24 @@ func (r *ProductRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUI
 	return &p, nil
 }
 
-// FindByIDs returns products matching the given IDs in a single query.
+// FindByIDs returns products matching the given IDs in a single query. It uses
+// scalar IN ($1,$2,...) placeholders rather than = ANY($1) with a []uuid.UUID
+// argument: under the simple query protocol production runs behind the Supabase
+// transaction pooler, pgx cannot encode a []uuid.UUID parameter for an unknown
+// OID, so = ANY($1) fails at runtime. Scalar placeholders encode fine under both
+// protocols. Mirrors SupplierProductRepository.FindByIDs.
 func (r *ProductRepository) FindByIDs(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]model.Product, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
+	placeholders := make([]string, len(ids))
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
 	rows, err := tx.Query(ctx,
-		fmt.Sprintf(`SELECT %s FROM products WHERE id = ANY($1)`, productSelectColumns), ids,
+		fmt.Sprintf(`SELECT %s FROM products WHERE id IN (%s)`, productSelectColumns, strings.Join(placeholders, ", ")), args...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("find products by ids: %w", err)
