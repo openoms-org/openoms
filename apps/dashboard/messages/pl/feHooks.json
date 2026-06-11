@@ -19,6 +19,18 @@
     "rateStandard": "Podstawowa",
     "rateReduced1": "Obniżona 1",
     "rateReduced2": "Obniżona 2",
-    "rateSuperReduced": "Super obniżona"
+    "rateSuperReduced": "Super obniżona",
+    "settlementModeCsv": "Import CSV",
+    "settlementModeManual": "Wpis ręczny",
+    "settlementDate": "Data rozliczenia",
+    "settlementId": "ID rozliczenia (opcjonalnie)",
+    "settlementTotal": "Kwota brutto",
+    "settlementFee": "Prowizje",
+    "settlementNet": "Kwota netto",
+    "settlementCurrency": "Waluta",
+    "settlementNotes": "Uwagi",
+    "settlementCreate": "Utwórz rozliczenie",
+    "settlementCreated": "Rozliczenie utworzone",
+    "settlementInvalid": "Podaj datę rozliczenia i kwotę brutto"
   }
 }

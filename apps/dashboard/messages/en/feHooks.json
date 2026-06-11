@@ -19,6 +19,18 @@
     "rateStandard": "Standard",
     "rateReduced1": "Reduced 1",
     "rateReduced2": "Reduced 2",
-    "rateSuperReduced": "Super-reduced"
+    "rateSuperReduced": "Super-reduced",
+    "settlementModeCsv": "CSV import",
+    "settlementModeManual": "Manual entry",
+    "settlementDate": "Settlement date",
+    "settlementId": "Settlement ID (optional)",
+    "settlementTotal": "Gross amount",
+    "settlementFee": "Fees",
+    "settlementNet": "Net amount",
+    "settlementCurrency": "Currency",
+    "settlementNotes": "Notes",
+    "settlementCreate": "Create settlement",
+    "settlementCreated": "Settlement created",
+    "settlementInvalid": "Enter a settlement date and a gross amount"
   }
 }
