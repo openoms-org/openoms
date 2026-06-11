@@ -7,27 +7,18 @@ metadata:
     {{- include "openoms.labels" . | nindent 4 }}
     app.kubernetes.io/component: monitoring
 rules:
-  # Pod + namespace discovery (discovery.kubernetes role = "pod").
+  # Pod discovery + log collection
   - apiGroups: [""]
-    resources: ["pods", "namespaces"]
+    resources: ["pods", "pods/log", "namespaces"]
     verbs: ["get", "list", "watch"]
-  # Log collection via the Kubernetes API (loki.source.kubernetes). The configured
-  # pod discovery is cluster-wide (all namespaces, no namespace filter), so this
-  # stays cluster-scoped and read-only; scoping it to a Role would 403 on the
-  # other namespaces the collector observes. get is sufficient for /log.
+  # Node discovery + kubelet metrics
   - apiGroups: [""]
-    resources: ["pods/log"]
-    verbs: ["get"]
-  # Node discovery (discovery.kubernetes role = "node").
-  - apiGroups: [""]
-    resources: ["nodes"]
+    resources: ["nodes", "nodes/metrics", "nodes/proxy"]
     verbs: ["get", "list", "watch"]
-  # Kubelet authorization for direct /metrics + /metrics/cadvisor scraping.
-  # nodes/proxy is intentionally NOT granted — only the metrics subresource is
-  # used, and no scrape goes through the apiserver node proxy.
+  # Endpoints for service discovery
   - apiGroups: [""]
-    resources: ["nodes/metrics"]
-    verbs: ["get"]
+    resources: ["endpoints", "services"]
+    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
