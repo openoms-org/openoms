@@ -184,6 +184,7 @@
       "saved": "Settings have been saved",
       "settingsExported": "Settings exported",
       "settingsImported": "Settings imported successfully",
+      "settingsImportInvalid": "Selected file is not valid JSON",
       "subtitle": "Company settings",
       "title": "Company",
       "uploadLogo": "Upload logo",

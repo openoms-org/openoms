@@ -68,6 +68,23 @@
     "customFieldNo": "Nie",
     "customFieldYes": "Tak",
     "detail": {
+      "invoiceSection": {
+        "title": "Faktury",
+        "issue": "Wystaw fakturę",
+        "dialogTitle": "Wystaw fakturę",
+        "dialogDescription": "Wystaw nową fakturę dla tego zamówienia. Dane nabywcy są wstępnie wypełnione z zamówienia.",
+        "customerName": "Nazwa nabywcy",
+        "customerEmail": "E-mail nabywcy",
+        "nip": "NIP",
+        "paymentMethod": "Metoda płatności",
+        "submit": "Wystaw fakturę",
+        "issued": "Faktura wystawiona",
+        "empty": "Brak faktur dla tego zamówienia.",
+        "configureFirst": "Najpierw skonfiguruj dostawcę fakturowania w ustawieniach.",
+        "activeExists": "To zamówienie ma już aktywną fakturę.",
+        "number": "Numer",
+        "issueDate": "Data wystawienia"
+      },
       "addFirstPackage": "Dodaj pierwszą paczkę",
       "addPackage": "Dodaj paczkę",
       "allegroLabel": "Etykieta Allegro",

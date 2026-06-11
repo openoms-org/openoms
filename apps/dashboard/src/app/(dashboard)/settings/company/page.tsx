@@ -15,10 +15,10 @@ import {
 import {
   useCompanySettings,
   useUpdateCompanySettings,
+  useExportSettings,
+  useImportSettings,
 } from "@/hooks/use-settings";
-import { uploadFile, apiFetch, apiClient } from "@/lib/api-client";
-import { downloadBlob } from "@/lib/download";
-import { getErrorMessage } from "@/lib/api-client";
+import { uploadFile, getErrorMessage } from "@/lib/api-client";
 import { Loader2, Save, Upload, Download, Building2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import type { CompanySettings } from "@/types/api";
@@ -40,12 +40,12 @@ export default function CompanySettingsPage() {
   const t = useTranslations("settings");
   const { data: settings, isLoading } = useCompanySettings();
   const updateSettings = useUpdateCompanySettings();
+  const exportSettings = useExportSettings();
+  const importSettings = useImportSettings();
 
   const [form, setForm] = useState<CompanySettings>(DEFAULT_SETTINGS);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -312,22 +312,15 @@ export default function CompanySettingsPage() {
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
-              onClick={async () => {
-                setExporting(true);
-                try {
-                  const res = await apiFetch("/v1/settings/export");
-                  const blob = await res.blob();
-                  downloadBlob(blob, `settings-${new Date().toISOString().slice(0, 10)}.json`);
-                  toast.success(t("company.settingsExported"));
-                } catch (err) {
-                  toast.error(getErrorMessage(err));
-                } finally {
-                  setExporting(false);
-                }
-              }}
-              disabled={exporting}
+              onClick={() =>
+                exportSettings.mutate(undefined, {
+                  onSuccess: () => toast.success(t("company.settingsExported")),
+                  onError: (err) => toast.error(getErrorMessage(err)),
+                })
+              }
+              disabled={exportSettings.isPending}
             >
-              {exporting ? (
+              {exportSettings.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <Download className="mr-2 h-4 w-4" />
@@ -342,31 +335,31 @@ export default function CompanySettingsPage() {
               onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
-                setImporting(true);
+                let data: Record<string, unknown>;
                 try {
-                  const text = await file.text();
-                  const data = JSON.parse(text);
-                  await apiClient("/v1/settings/import", {
-                    method: "POST",
-                    body: JSON.stringify(data),
-                  });
-                  toast.success(t("company.settingsImported"));
-                } catch (err) {
-                  toast.error(getErrorMessage(err));
-                } finally {
-                  setImporting(false);
-                  if (importFileInputRef.current) {
-                    importFileInputRef.current.value = "";
-                  }
+                  data = JSON.parse(await file.text());
+                } catch {
+                  toast.error(t("company.settingsImportInvalid"));
+                  if (importFileInputRef.current) importFileInputRef.current.value = "";
+                  return;
                 }
+                importSettings.mutate(data, {
+                  onSuccess: () => toast.success(t("company.settingsImported")),
+                  onError: (err) => toast.error(getErrorMessage(err)),
+                  onSettled: () => {
+                    if (importFileInputRef.current) {
+                      importFileInputRef.current.value = "";
+                    }
+                  },
+                });
               }}
             />
             <Button
               variant="outline"
               onClick={() => importFileInputRef.current?.click()}
-              disabled={importing}
+              disabled={importSettings.isPending}
             >
-              {importing ? (
+              {importSettings.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <Upload className="mr-2 h-4 w-4" />

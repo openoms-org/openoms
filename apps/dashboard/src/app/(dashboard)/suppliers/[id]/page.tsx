@@ -19,6 +19,7 @@ import {
   useDeleteCategoryMapping,
   useAllegroParameterMappings,
   useBulkUpsertAllegroMappings,
+  useDeleteAllegroParameterMapping,
   useSupplierAttributes,
   useAllegroMappingCategories,
 } from "@/hooks/use-suppliers";
@@ -525,6 +526,8 @@ interface MappingRow {
   required: boolean;
   source_type: "attribute" | "field" | "static" | "";
   source_key: string;
+  // id of the persisted mapping (if any), enabling single-row deletion.
+  mapping_id?: string;
 }
 
 function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) {
@@ -549,6 +552,7 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
   const { data: supplierAttributes } = useSupplierAttributes(supplierId);
   const { data: configuredCategories } = useAllegroMappingCategories(supplierId);
   const bulkUpsert = useBulkUpsertAllegroMappings(supplierId);
+  const deleteMapping = useDeleteAllegroParameterMapping(supplierId);
   const mappingsReady = !selectedCategoryId || existingMappings !== undefined;
 
   const sourceMappingRows = useMemo<MappingRow[]>(() => {
@@ -570,6 +574,7 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
         required: p.required,
         source_type: existing?.source_type ?? "",
         source_key: existing?.source_key ?? "",
+        mapping_id: existing?.id,
       };
     });
   }, [paramsData, existingMappings, mappingsReady]);
@@ -714,6 +719,7 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
                     <TableHead className="w-[80px]">{tc("type")}</TableHead>
                     <TableHead className="w-[140px]">{t("source")}</TableHead>
                     <TableHead className="w-[200px]">{t("value")}</TableHead>
+                    <TableHead className="w-[40px]" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -789,6 +795,27 @@ function AllegroParameterMappingSection({ supplierId }: { supplierId: string }) 
                             placeholder={t("enterValue")}
                             className="h-8 text-xs"
                           />
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {row.mapping_id && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={deleteMapping.isPending}
+                            title={tc("delete")}
+                            onClick={() => {
+                              const mappingId = row.mapping_id;
+                              if (!mappingId) return;
+                              deleteMapping.mutate(mappingId, {
+                                onSuccess: () => toast.success(t("mappingDeleted")),
+                                onError: (error) => toast.error(getErrorMessage(error)),
+                              });
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                          </Button>
                         )}
                       </TableCell>
                     </TableRow>

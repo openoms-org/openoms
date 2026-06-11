@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, apiFetch } from "@/lib/api-client";
+import { downloadBlob } from "@/lib/download";
 import { useAuthStore } from "@/lib/auth";
 import type { CompanySettings, OrderStatusConfig, CustomFieldsConfig, InventorySettings } from "@/types/api";
 
@@ -80,8 +81,16 @@ export function useUpdateInventorySettings() {
 }
 
 export function useExportSettings() {
+  // apiClient<Blob> is wrong: apiClient always res.json()s the body, so it can
+  // never yield a Blob. Use apiFetch (raw Response) + downloadBlob instead,
+  // mirroring useDownloadOSSReportCSV in use-vat-oss.ts.
   return useMutation({
-    mutationFn: () => apiClient<Blob>("/v1/settings/export"),
+    mutationFn: async () => {
+      const res = await apiFetch("/v1/settings/export");
+      const blob = await res.blob();
+      const stamp = new Date().toISOString().slice(0, 10);
+      downloadBlob(blob, `openoms-settings-${stamp}.json`);
+    },
   });
 }
 

@@ -68,6 +68,23 @@
     "customFieldNo": "No",
     "customFieldYes": "Yes",
     "detail": {
+      "invoiceSection": {
+        "title": "Invoices",
+        "issue": "Issue invoice",
+        "dialogTitle": "Issue invoice",
+        "dialogDescription": "Issue a new invoice for this order. Customer details are pre-filled from the order.",
+        "customerName": "Customer name",
+        "customerEmail": "Customer email",
+        "nip": "Tax ID (NIP)",
+        "paymentMethod": "Payment method",
+        "submit": "Issue invoice",
+        "issued": "Invoice issued",
+        "empty": "No invoices for this order yet.",
+        "configureFirst": "Configure an invoicing provider in settings first.",
+        "activeExists": "This order already has an active invoice.",
+        "number": "Number",
+        "issueDate": "Issue date"
+      },
       "addFirstPackage": "Add first package",
       "addPackage": "Add package",
       "allegroLabel": "Allegro label",

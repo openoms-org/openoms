@@ -7,6 +7,7 @@ import {
   useReconciliationSummary,
   useSettlements,
   useImportCSV,
+  useCreateSettlement,
 } from "@/hooks/use-reconciliation";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { Button } from "@/components/ui/button";
@@ -59,8 +60,19 @@ function formatCurrency(amount: number, currency: string = "PLN"): string {
   }).format(amount);
 }
 
+const EMPTY_MANUAL = {
+  settlement_id: "",
+  settlement_date: "",
+  total_amount: "",
+  fee_amount: "",
+  net_amount: "",
+  currency: "PLN",
+  notes: "",
+};
+
 export default function ReconciliationPage() {
   const t = useTranslations("reconciliation");
+  const tf = useTranslations("feHooks");
   const router = useRouter();
   const [providerFilter, setProviderFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -71,8 +83,10 @@ export default function ReconciliationPage() {
 
   // Import dialog state
   const [importOpen, setImportOpen] = useState(false);
+  const [importMode, setImportMode] = useState<"csv" | "manual">("csv");
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importProvider, setImportProvider] = useState<string>("payu");
+  const [manualForm, setManualForm] = useState(EMPTY_MANUAL);
 
   const { data: summary } = useReconciliationSummary(
     dateFrom || undefined,
@@ -89,6 +103,38 @@ export default function ReconciliationPage() {
   });
 
   const importCSV = useImportCSV();
+  const createSettlement = useCreateSettlement();
+
+  const handleCreateManual = async () => {
+    const total = Number(manualForm.total_amount);
+    if (!manualForm.settlement_date || !Number.isFinite(total) || total <= 0) {
+      toast.error(tf("settlementInvalid"));
+      return;
+    }
+    const fee = Number(manualForm.fee_amount) || 0;
+    const net = manualForm.net_amount.trim()
+      ? Number(manualForm.net_amount)
+      : total - fee;
+    try {
+      const created = await createSettlement.mutateAsync({
+        provider: importProvider,
+        settlement_id: manualForm.settlement_id || undefined,
+        settlement_date: manualForm.settlement_date,
+        total_amount: total,
+        fee_amount: fee,
+        net_amount: net,
+        currency: manualForm.currency || undefined,
+        notes: manualForm.notes || undefined,
+      });
+      toast.success(tf("settlementCreated"));
+      setImportOpen(false);
+      setManualForm(EMPTY_MANUAL);
+      refetch();
+      router.push(`/reconciliation/${created.id}`);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  };
 
   const handleImport = async () => {
     if (!importFile) return;
@@ -142,6 +188,26 @@ export default function ReconciliationPage() {
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+              <div className="inline-flex rounded-md border p-0.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={importMode === "csv" ? "default" : "ghost"}
+                  className="flex-1"
+                  onClick={() => setImportMode("csv")}
+                >
+                  {tf("settlementModeCsv")}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={importMode === "manual" ? "default" : "ghost"}
+                  className="flex-1"
+                  onClick={() => setImportMode("manual")}
+                >
+                  {tf("settlementModeManual")}
+                </Button>
+              </div>
               <div className="grid gap-2">
                 <Label htmlFor="import-provider">{t("paymentProvider")}</Label>
                 <Select
@@ -160,20 +226,106 @@ export default function ReconciliationPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="import-file">{t("csvFile")}</Label>
-                <Input
-                  id="import-file"
-                  type="file"
-                  accept=".csv"
-                  onChange={(e) =>
-                    setImportFile(e.target.files?.[0] || null)
-                  }
-                />
-                <p className="text-xs text-muted-foreground">
-                  {t("csvFileHint")}
-                </p>
-              </div>
+              {importMode === "csv" ? (
+                <div className="grid gap-2">
+                  <Label htmlFor="import-file">{t("csvFile")}</Label>
+                  <Input
+                    id="import-file"
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) =>
+                      setImportFile(e.target.files?.[0] || null)
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t("csvFileHint")}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="manual-date">{tf("settlementDate")}</Label>
+                      <Input
+                        id="manual-date"
+                        type="date"
+                        value={manualForm.settlement_date}
+                        onChange={(e) =>
+                          setManualForm((f) => ({ ...f, settlement_date: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="manual-id">{tf("settlementId")}</Label>
+                      <Input
+                        id="manual-id"
+                        value={manualForm.settlement_id}
+                        onChange={(e) =>
+                          setManualForm((f) => ({ ...f, settlement_id: e.target.value }))
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="manual-total">{tf("settlementTotal")}</Label>
+                      <Input
+                        id="manual-total"
+                        type="number"
+                        step="0.01"
+                        value={manualForm.total_amount}
+                        onChange={(e) =>
+                          setManualForm((f) => ({ ...f, total_amount: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="manual-fee">{tf("settlementFee")}</Label>
+                      <Input
+                        id="manual-fee"
+                        type="number"
+                        step="0.01"
+                        value={manualForm.fee_amount}
+                        onChange={(e) =>
+                          setManualForm((f) => ({ ...f, fee_amount: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="manual-net">{tf("settlementNet")}</Label>
+                      <Input
+                        id="manual-net"
+                        type="number"
+                        step="0.01"
+                        value={manualForm.net_amount}
+                        onChange={(e) =>
+                          setManualForm((f) => ({ ...f, net_amount: e.target.value }))
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="manual-currency">{tf("settlementCurrency")}</Label>
+                    <Input
+                      id="manual-currency"
+                      value={manualForm.currency}
+                      onChange={(e) =>
+                        setManualForm((f) => ({ ...f, currency: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="manual-notes">{tf("settlementNotes")}</Label>
+                    <Input
+                      id="manual-notes"
+                      value={manualForm.notes}
+                      onChange={(e) =>
+                        setManualForm((f) => ({ ...f, notes: e.target.value }))
+                      }
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button
@@ -182,15 +334,27 @@ export default function ReconciliationPage() {
               >
                 {t("cancel")}
               </Button>
-              <Button
-                onClick={handleImport}
-                disabled={!importFile || importCSV.isPending}
-              >
-                {importCSV.isPending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                {t("import")}
-              </Button>
+              {importMode === "csv" ? (
+                <Button
+                  onClick={handleImport}
+                  disabled={!importFile || importCSV.isPending}
+                >
+                  {importCSV.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  {t("import")}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleCreateManual}
+                  disabled={createSettlement.isPending}
+                >
+                  {createSettlement.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  {tf("settlementCreate")}
+                </Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>

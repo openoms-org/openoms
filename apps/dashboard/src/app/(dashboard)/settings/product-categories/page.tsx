@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api-client";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import {
   useCategoryTree,
   useCreateCategory,
+  useUpdateCategory,
   useDeleteCategory,
 } from "@/hooks/use-categories";
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,7 @@ import {
   Check,
   FolderPlus,
 } from "lucide-react";
-import type { ProductCategory, UpdateCategoryRequest } from "@/types/api";
+import type { ProductCategory } from "@/types/api";
 import { useTranslations } from "next-intl";
 
 interface EditState {
@@ -178,21 +177,12 @@ export default function ProductCategoriesPage() {
   const { data: tree, isLoading } = useCategoryTree();
   const createCategory = useCreateCategory();
   const deleteCategory = useDeleteCategory();
-  const queryClient = useQueryClient();
-
-  const updateCategory = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateCategoryRequest }) =>
-      apiClient<ProductCategory>(`/v1/categories/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
-    },
-  });
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [editState, setEditState] = useState<EditState | null>(null);
+  // useUpdateCategory binds the id at hook-call time; editState is set before
+  // save fires, so the hook is re-bound to the edited category on re-render.
+  const updateCategory = useUpdateCategory(editState?.id ?? "");
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryColor, setNewCategoryColor] = useState("#6b7280");
   const [addingParentId, setAddingParentId] = useState<string | undefined>(undefined);
@@ -219,8 +209,8 @@ export default function ProductCategoriesPage() {
     }
     try {
       await updateCategory.mutateAsync({
-        id: editState.id,
-        data: { name: editState.name, color: editState.color },
+        name: editState.name,
+        color: editState.color,
       });
       toast.success(tp("categoryUpdated"));
       setEditState(null);
