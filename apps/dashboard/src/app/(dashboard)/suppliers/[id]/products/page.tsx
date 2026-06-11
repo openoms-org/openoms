@@ -48,6 +48,7 @@ import { DataTable, type ColumnDef } from "@/components/shared/data-table";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { DensityToggle } from "@/components/shared/density-toggle";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
+import { SupplierProductLinkDialog } from "@/components/suppliers/supplier-product-link-dialog";
 import type { SupplierProduct } from "@/types/api";
 import { useTranslations } from "next-intl";
 
@@ -75,6 +76,7 @@ export default function SupplierProductsPage() {
   const [pagination, setPagination] = useState({ limit: DEFAULT_LIMIT, offset: 0 });
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [detailProduct, setDetailProduct] = useState<SupplierProduct | null>(null);
+  const [linkTarget, setLinkTarget] = useState<SupplierProduct | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [listingLoadingId, setListingLoadingId] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -314,7 +316,7 @@ export default function SupplierProductsPage() {
                 <ShoppingBag className="h-3.5 w-3.5" />
               )}
             </Button>
-            {row.product_id && (
+            {row.product_id ? (
               <Button
                 variant="ghost"
                 size="icon"
@@ -323,6 +325,16 @@ export default function SupplierProductsPage() {
                 title={t("unlinkProduct")}
               >
                 <Unlink className="h-3.5 w-3.5" />
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setLinkTarget(row)}
+                title={t("linkProduct")}
+              >
+                <Link2 className="h-3.5 w-3.5" />
               </Button>
             )}
             <Button
@@ -640,6 +652,18 @@ export default function SupplierProductsPage() {
                         {t("unlinkFromProduct")}
                       </Button>
                     ) : (
+                      <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setLinkTarget(detailProduct);
+                          setDetailProduct(null);
+                        }}
+                      >
+                        <Link2 className="h-4 w-4 mr-2" />
+                        {t("linkProduct")}
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -664,6 +688,7 @@ export default function SupplierProductsPage() {
                         <Download className="h-4 w-4 mr-2" />
                         {t("importToCatalog")}
                       </Button>
+                      </>
                     )}
                     <Button
                       variant="destructive"
@@ -682,6 +707,14 @@ export default function SupplierProductsPage() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Link unlinked supplier product to an existing catalog product */}
+        <SupplierProductLinkDialog
+          key={linkTarget?.id ?? "none"}
+          supplierId={id}
+          supplierProduct={linkTarget}
+          onClose={() => setLinkTarget(null)}
+        />
       </div>
     </AdminGuard>
   );
