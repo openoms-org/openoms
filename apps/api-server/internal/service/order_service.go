@@ -356,6 +356,13 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 		if err := s.orderRepo.Create(ctx, tx, order); err != nil {
 			return err
 		}
+		// Keep the linked customer's denormalized order stats in sync (count on
+		// placement; atomic with the order insert). No-op for unlinked orders.
+		if s.customerRepo != nil && order.CustomerID != nil {
+			if err := s.customerRepo.IncrementOrderStats(ctx, tx, *order.CustomerID, order.TotalAmount); err != nil {
+				return err
+			}
+		}
 		// Route the new order through the fulfillment commands (OPE-416): create
 		// its fulfillment process + enqueue the orchestration event in the SAME
 		// transaction. No-op when the gated service is nil/disabled.

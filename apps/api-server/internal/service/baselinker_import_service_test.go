@@ -373,6 +373,9 @@ func TestBLImport_ImportOrderGroup_CreatesOrder(t *testing.T) {
 	assert.Nil(t, errs)
 	assert.Equal(t, 1, result.OrdersCreated)
 
+	// importCustomers=false → no customer linked → no stats increment.
+	assert.Empty(t, customerRepo.incrementCalls)
+
 	require.Len(t, orderRepo.created, 1)
 	order := orderRepo.created[0]
 
@@ -532,6 +535,47 @@ func TestBLImport_ImportOrderGroup_CreatesCustomer(t *testing.T) {
 	require.Len(t, orderRepo.created, 1)
 	assert.NotNil(t, orderRepo.created[0].CustomerID)
 	assert.Equal(t, c.ID, *orderRepo.created[0].CustomerID)
+
+	// Customer order stats incremented exactly once for the linked customer.
+	require.Len(t, customerRepo.incrementCalls, 1)
+	assert.Equal(t, c.ID, customerRepo.incrementCalls[0].ID)
+	assert.InDelta(t, orderRepo.created[0].TotalAmount, customerRepo.incrementCalls[0].Amount, 0.001)
+}
+
+func TestBLImport_ImportOrderGroup_IncrementsExistingCustomerStats(t *testing.T) {
+	orderRepo := newMockOrderRepo()
+	customerRepo := newMockCustomerRepo()
+	existing := &model.Customer{ID: uuid.New(), Name: "Existing", Email: strPtr("dup@example.com")}
+	customerRepo.customers["dup@example.com"] = existing
+
+	svc := &BaseLinkerImportService{
+		orderRepo:    orderRepo,
+		customerRepo: customerRepo,
+		auditRepo:    &mockAuditRepo{},
+	}
+
+	headers := []string{"order_id", "delivery_fullname", "buyer_email", "product_name", "product_quantity", "product_price_brutto"}
+	rows := [][]string{{"BL-3001", "Existing", "dup@example.com", "Widget", "2", "25.00"}}
+	csvData := buildBLCSV(headers, rows)
+
+	_, records, headerIdx, err := parseBLOrderCSV(csvData)
+	require.NoError(t, err)
+	groups, err := groupByOrderID(records, headerIdx)
+	require.NoError(t, err)
+
+	result := &BLOrderImportResult{Errors: []model.ImportError{}}
+	statusConfig := &model.OrderStatusConfig{Statuses: []model.StatusDef{{Key: "new", Label: "New"}}}
+
+	errs := svc.importOrderGroup(context.Background(), nil, uuid.New(), groups[0], headerIdx, result, statusConfig, true)
+	assert.Nil(t, errs)
+	assert.Equal(t, 1, result.OrdersCreated)
+	assert.Equal(t, 0, result.CustomersCreated, "existing customer is reused, not re-created")
+	assert.Empty(t, customerRepo.created)
+
+	// Increment fires once for the existing customer with the order total (2*25=50).
+	require.Len(t, customerRepo.incrementCalls, 1)
+	assert.Equal(t, existing.ID, customerRepo.incrementCalls[0].ID)
+	assert.InDelta(t, 50.0, customerRepo.incrementCalls[0].Amount, 0.001)
 }
 
 func TestBLImport_GroupsByOrderID_MissingColumn(t *testing.T) {
