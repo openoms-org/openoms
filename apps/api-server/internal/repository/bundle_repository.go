@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -82,30 +81,19 @@ func (r *BundleRepository) ListByBundleProduct(ctx context.Context, tx pgx.Tx, b
 
 // Update applies partial updates to a bundle component.
 func (r *BundleRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateBundleComponentRequest) error {
-	var setClauses []string
-	var args []any
-	argIdx := 1
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "quantity", req.Quantity)
+	SetPtr(ub, "position", req.Position)
 
-	if req.Quantity != nil {
-		setClauses = append(setClauses, fmt.Sprintf("quantity = $%d", argIdx))
-		args = append(args, *req.Quantity)
-		argIdx++
-	}
-	if req.Position != nil {
-		setClauses = append(setClauses, fmt.Sprintf("position = $%d", argIdx))
-		args = append(args, *req.Position)
-		argIdx++
-	}
-
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
-	args = append(args, id)
+	ub.SetRaw("updated_at = NOW()")
+	args := append(ub.Args(), id)
 
 	query := fmt.Sprintf("UPDATE product_bundles SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
+		ub.SetClause(), ub.NextArgIdx())
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {
