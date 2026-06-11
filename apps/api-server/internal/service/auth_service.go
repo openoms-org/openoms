@@ -539,9 +539,22 @@ func (s *AuthService) Verify2FALogin(ctx context.Context, tempTokenStr, code str
 		return nil, "", ErrInvalid2FAToken
 	}
 
+	// Per-account 2FA brute-force lockout. Keyed on the immutable tenant+user IDs
+	// from the 2fa_pending token, so repeated wrong codes lock the account regardless
+	// of source IP (the per-IP rate limit alone is bypassable with distributed IPs).
+	// Checked before any DB work so a locked account is rejected cheaply.
+	lockTenant := claims.TenantID.String()
+	lockUser := userID.String()
+	if s.lockout != nil {
+		if remaining, lerr := s.lockout.Check2FALocked(ctx, lockTenant, lockUser); lerr == nil && remaining > 0 {
+			return nil, "", ErrAccountLocked
+		}
+	}
+
 	var user *model.User
 	var tenant *model.Tenant
 	var encryptedSecret *string
+	var lastStep *int64
 
 	err = database.WithTenant(ctx, s.pool, claims.TenantID, func(tx pgx.Tx) error {
 		var findErr error
@@ -554,6 +567,10 @@ func (s *AuthService) Verify2FALogin(ctx context.Context, tempTokenStr, code str
 			return findErr
 		}
 		encryptedSecret, findErr = s.userRepo.GetTOTPSecret(ctx, tx, userID)
+		if findErr != nil {
+			return findErr
+		}
+		lastStep, findErr = s.userRepo.GetTOTPLastUsedStep(ctx, tx, userID)
 		return findErr
 	})
 	if err != nil {
@@ -569,9 +586,34 @@ func (s *AuthService) Verify2FALogin(ctx context.Context, tempTokenStr, code str
 		return nil, "", fmt.Errorf("decrypt totp secret: %w", err)
 	}
 
-	// Validate the TOTP code
-	if !totp.Validate(code, string(secretBytes)) {
+	// Validate the TOTP code and resolve the matching time-step (skew=1, matching
+	// totp.Validate). A wrong code counts toward the per-account lockout.
+	step, ok := acceptedTOTPStep(code, string(secretBytes), time.Now())
+	if !ok {
+		if s.lockout != nil {
+			_ = s.lockout.Record2FAFailure(ctx, lockTenant, lockUser)
+		}
 		return nil, "", ErrInvalid2FACode
+	}
+	// Replay protection: a code whose time-step is not strictly newer than the last
+	// accepted step has already been used (TOTP codes are single-use within their window).
+	if lastStep != nil && step <= *lastStep {
+		if s.lockout != nil {
+			_ = s.lockout.Record2FAFailure(ctx, lockTenant, lockUser)
+		}
+		return nil, "", ErrInvalid2FACode
+	}
+	// Record the accepted step before issuing tokens so a concurrent/subsequent replay
+	// of the same code is rejected. Best-effort: a write failure degrades replay
+	// protection (the lockout still throttles brute force) but must not block a valid login.
+	if perr := database.WithTenant(ctx, s.pool, claims.TenantID, func(tx pgx.Tx) error {
+		return s.userRepo.SetTOTPLastUsedStep(ctx, tx, userID, step)
+	}); perr != nil {
+		slog.Warn("failed to persist TOTP last-used step (replay protection degraded)", "error", perr, "user_id", userID)
+	}
+	// Successful 2FA: clear the failure counter.
+	if s.lockout != nil {
+		s.lockout.Reset2FAOnSuccess(ctx, lockTenant, lockUser)
 	}
 	if err := s.applyEffectivePermissions(ctx, user); err != nil {
 		return nil, "", err

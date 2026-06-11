@@ -240,3 +240,26 @@ func (r *UserRepository) GetTOTPSecret(ctx context.Context, tx pgx.Tx, id uuid.U
 	}
 	return secret, nil
 }
+
+// GetTOTPLastUsedStep returns the highest TOTP time-step accepted for the user,
+// or nil if no successful 2FA login has been recorded yet. Used for replay protection.
+func (r *UserRepository) GetTOTPLastUsedStep(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*int64, error) {
+	var step *int64
+	err := tx.QueryRow(ctx, "SELECT totp_last_used_step FROM users WHERE id = $1", id).Scan(&step)
+	if err != nil {
+		return nil, fmt.Errorf("get totp last used step: %w", err)
+	}
+	return step, nil
+}
+
+// SetTOTPLastUsedStep records the most recently accepted TOTP time-step for the user.
+// The write is monotonic (only advances forward) so the stored value can never regress
+// under concurrent 2FA verifications — even if two requests for different steps race, the
+// lower step cannot overwrite the higher one. The service layer performs the primary
+// replay check; this guard is defense in depth.
+func (r *UserRepository) SetTOTPLastUsedStep(ctx context.Context, tx pgx.Tx, id uuid.UUID, step int64) error {
+	_, err := tx.Exec(ctx,
+		"UPDATE users SET totp_last_used_step = $1 WHERE id = $2 AND (totp_last_used_step IS NULL OR totp_last_used_step < $1)",
+		step, id)
+	return err
+}
