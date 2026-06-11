@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, apiFetch } from "@/lib/api-client";
+import { buildSearchParams } from "@/lib/search-params";
 import type {
   PaymentSettlement,
   PaymentSettlementWithTransactions,
@@ -27,16 +28,7 @@ export function useReconciliationSummary(dateFrom?: string, dateTo?: string) {
 }
 
 export function useSettlements(params: SettlementListParams = {}) {
-  const query = new URLSearchParams();
-  if (params.limit != null) query.set("limit", String(params.limit));
-  if (params.offset != null) query.set("offset", String(params.offset));
-  if (params.provider) query.set("provider", params.provider);
-  if (params.status) query.set("status", params.status);
-  if (params.date_from) query.set("date_from", params.date_from);
-  if (params.date_to) query.set("date_to", params.date_to);
-  if (params.sort_by) query.set("sort_by", params.sort_by);
-  if (params.sort_order) query.set("sort_order", params.sort_order);
-  const qs = query.toString();
+  const qs = buildSearchParams(params).toString();
 
   return useQuery({
     queryKey: ["reconciliation", "settlements", params],
