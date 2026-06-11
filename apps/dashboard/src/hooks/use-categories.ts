@@ -6,7 +6,7 @@ import type {
   UpdateCategoryRequest,
 } from "@/types/api";
 
-export function useCategories(params?: { tree?: boolean; parent_id?: string }) {
+function useCategories(params?: { tree?: boolean; parent_id?: string }) {
   const query = new URLSearchParams();
   if (params?.tree) query.set("tree", "true");
   if (params?.parent_id) query.set("parent_id", params.parent_id);
@@ -25,14 +25,6 @@ export function useCategories(params?: { tree?: boolean; parent_id?: string }) {
 
 export function useCategoryTree() {
   return useCategories({ tree: true });
-}
-
-export function useCategory(id: string) {
-  return useQuery({
-    queryKey: ["categories", id],
-    queryFn: () => apiClient<ProductCategory>(`/v1/categories/${id}`),
-    enabled: !!id,
-  });
 }
 
 export function useCreateCategory() {

@@ -28,17 +28,6 @@ export function useVariants(productId: string, params: VariantListParams = {}) {
   });
 }
 
-export function useVariant(productId: string, id: string) {
-  return useQuery({
-    queryKey: ["variants", productId, id],
-    queryFn: () =>
-      apiClient<ProductVariant>(
-        `/v1/products/${productId}/variants/${id}`
-      ),
-    enabled: !!productId && !!id,
-  });
-}
-
 export function useCreateVariant(productId: string) {
   const queryClient = useQueryClient();
 

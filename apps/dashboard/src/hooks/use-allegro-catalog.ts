@@ -175,14 +175,3 @@ export function useAllegroFees(offerId: string | null) {
     enabled: !!offerId,
   });
 }
-
-export function useAllegroCommissions(categoryId: string | null) {
-  return useQuery({
-    queryKey: ["allegro", "commissions", categoryId],
-    queryFn: () =>
-      apiClient<AllegroCommissionList>(
-        `/v1/integrations/allegro/pricing/commissions?category_id=${categoryId}`
-      ),
-    enabled: !!categoryId,
-  });
-}

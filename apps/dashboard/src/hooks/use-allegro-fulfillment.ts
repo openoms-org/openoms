@@ -153,20 +153,6 @@ export function useCreateAllegroShipment() {
   });
 }
 
-export function useAllegroLabel(shipmentId: string | null) {
-  return useQuery({
-    queryKey: ["allegro", "label", shipmentId],
-    queryFn: async () => {
-      if (!shipmentId) return null;
-      const res = await apiFetch(
-        `/v1/integrations/allegro/shipments/${shipmentId}/label`
-      );
-      return res.blob();
-    },
-    enabled: !!shipmentId,
-  });
-}
-
 export async function downloadAllegroLabel(shipmentId: string) {
   const res = await apiFetch(
     `/v1/integrations/allegro/shipments/${shipmentId}/label`

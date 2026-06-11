@@ -3,14 +3,12 @@ import { apiClient, apiFetch } from "@/lib/api-client";
 import type {
   PaymentSettlement,
   PaymentSettlementWithTransactions,
-  PaymentTransaction,
   ReconciliationSummary,
   AutoMatchResponse,
   ManualMatchRequest,
   CreateSettlementRequest,
   ListResponse,
   SettlementListParams,
-  TransactionListParams,
 } from "@/types/api";
 
 export function useReconciliationSummary(dateFrom?: string, dateTo?: string) {
@@ -57,30 +55,6 @@ export function useSettlement(id: string) {
         `/v1/reconciliation/settlements/${id}`
       ),
     enabled: !!id,
-  });
-}
-
-export function useTransactions(params: TransactionListParams = {}) {
-  const query = new URLSearchParams();
-  if (params.limit != null) query.set("limit", String(params.limit));
-  if (params.offset != null) query.set("offset", String(params.offset));
-  if (params.settlement_id) query.set("settlement_id", params.settlement_id);
-  if (params.match_status) query.set("match_status", params.match_status);
-  if (params.provider) query.set("provider", params.provider);
-  if (params.transaction_type)
-    query.set("transaction_type", params.transaction_type);
-  if (params.date_from) query.set("date_from", params.date_from);
-  if (params.date_to) query.set("date_to", params.date_to);
-  if (params.sort_by) query.set("sort_by", params.sort_by);
-  if (params.sort_order) query.set("sort_order", params.sort_order);
-  const qs = query.toString();
-
-  return useQuery({
-    queryKey: ["reconciliation", "transactions", params],
-    queryFn: () =>
-      apiClient<ListResponse<PaymentTransaction>>(
-        `/v1/reconciliation/transactions${qs ? `?${qs}` : ""}`
-      ),
   });
 }
 

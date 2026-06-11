@@ -18,11 +18,3 @@ export function useSyncJobs(params: SyncJobListParams) {
     },
   });
 }
-
-export function useSyncJob(id: string) {
-  return useQuery({
-    queryKey: ["sync-job", id],
-    queryFn: () => apiClient<SyncJob>(`/v1/sync-jobs/${encodeURIComponent(id)}`),
-    enabled: !!id,
-  });
-}

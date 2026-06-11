@@ -481,17 +481,6 @@ export function useAllegroPromotions(params?: {
   });
 }
 
-export function useAllegroPromotion(promotionId: string | null) {
-  return useQuery({
-    queryKey: ["allegro", "promotions", promotionId],
-    queryFn: () =>
-      apiClient<AllegroPromotion>(
-        `/v1/integrations/allegro/promotions/${promotionId}`
-      ),
-    enabled: !!promotionId,
-  });
-}
-
 export function useCreateAllegroPromotion() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -600,17 +589,6 @@ export function useAllegroShippingRates() {
         "/v1/integrations/allegro/shipping-rates"
       ),
     staleTime: 1000 * 60 * 30, // 30min
-  });
-}
-
-export function useAllegroShippingRate(rateId: string | null) {
-  return useQuery({
-    queryKey: ["allegro", "shipping-rates", rateId],
-    queryFn: () =>
-      apiClient<AllegroShippingRateSet>(
-        `/v1/integrations/allegro/shipping-rates/${rateId}`
-      ),
-    enabled: !!rateId,
   });
 }
 
