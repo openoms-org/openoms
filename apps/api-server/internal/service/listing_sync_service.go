@@ -506,7 +506,6 @@ func (s *ListingSyncService) dispatchPriceUpdates(ctx context.Context, tenantID,
 	if _, ok := provider.(integration.AsyncPriceUpdater); ok {
 		syncStatus = "pending"
 	}
-	feedMeta := feedMetaForProvider(provider)
 
 	for _, job := range jobs {
 		if pushErr := provider.UpdatePrice(ctx, *job.listing.ExternalID, job.adjustedPrice); pushErr != nil {
@@ -520,6 +519,12 @@ func (s *ListingSyncService) dispatchPriceUpdates(ctx context.Context, tenantID,
 			result.ItemsFailed++
 			continue
 		}
+		// Capture feed metadata AFTER each successful push: an async feed provider
+		// (Amazon Feeds API) populates FeedResult() only when UpdatePrice submits a
+		// feed, and each push yields its own feed id. Hoisting this above the loop
+		// would persist a nil/stale feed id and leave pending listings unreconcilable
+		// by the feed-status worker. Mirrors PriceSyncWorker.syncOneByOne.
+		feedMeta := feedMetaForProvider(provider)
 		s.persistPricePush(ctx, tenantID, configID, job.listing, job.adjustedPrice, syncStatus, feedMeta)
 		result.ItemsProcessed++
 	}
@@ -651,7 +656,12 @@ func (s *ListingSyncService) RunFullSync(ctx context.Context, tenantID uuid.UUID
 // and returns them keyed by product ID.
 func (s *ListingSyncService) productMapForListings(ctx context.Context, tx pgx.Tx, listings []*model.ProductListing) (map[uuid.UUID]*model.Product, error) {
 	productIDs := make([]uuid.UUID, 0, len(listings))
+	seen := make(map[uuid.UUID]struct{}, len(listings))
 	for _, l := range listings {
+		if _, ok := seen[l.ProductID]; ok {
+			continue
+		}
+		seen[l.ProductID] = struct{}{}
 		productIDs = append(productIDs, l.ProductID)
 	}
 	products, err := s.productRepo.FindByIDs(ctx, tx, productIDs)

@@ -105,13 +105,29 @@ func (p *lsFakeProvider) UpdatePrice(ctx context.Context, ext string, price floa
 }
 
 // lsFakeAsyncProvider additionally implements AsyncPriceUpdater + AsyncFeedResult so
-// the service persists sync_status='pending' plus feed metadata.
-type lsFakeAsyncProvider struct{ lsFakeProvider }
+// the service persists sync_status='pending' plus feed metadata. It mirrors the real
+// Amazon provider's timing precisely: lastFeed is reset at the start of each
+// UpdatePrice and set — to a per-offer feed id — only AFTER the feed submission
+// succeeds. FeedResult therefore returns nil before any push and a distinct id per
+// offer afterwards. A service that captured feed metadata before the push loop, or
+// reused one id across offers, would be caught by this fake.
+type lsFakeAsyncProvider struct {
+	lsFakeProvider
+	lastFeed *integration.FeedSubmission
+}
 
 func (p *lsFakeAsyncProvider) ProviderName() string { return "fake_listing_sync_async" }
 func (p *lsFakeAsyncProvider) IsAsyncPriceUpdate()  {}
+func (p *lsFakeAsyncProvider) UpdatePrice(ctx context.Context, ext string, price float64) error {
+	p.lastFeed = nil
+	if err := p.lsFakeProvider.UpdatePrice(ctx, ext, price); err != nil {
+		return err
+	}
+	p.lastFeed = &integration.FeedSubmission{FeedID: "FEED-" + ext, FeedType: "pricing"}
+	return nil
+}
 func (p *lsFakeAsyncProvider) FeedResult() *integration.FeedSubmission {
-	return &integration.FeedSubmission{FeedID: "FEED-1", FeedType: "pricing"}
+	return p.lastFeed
 }
 
 func lsRunProbe(ctx context.Context) {
@@ -362,20 +378,32 @@ func TestSyncPrices_AsyncProvider_PendingWithFeedMeta(t *testing.T) {
 	tenantID := seedTenant(t, ctx)
 	integrationID, configID := lsSeedIntegrationAndConfig(t, ctx, tenantID, "fake_listing_sync_async", "{}", "markup_pct", 10)
 
-	prod := lsSeedProduct(t, ctx, tenantID, 100, 5)
-	listing := lsSeedListing(t, ctx, tenantID, prod, integrationID, strptr("OFFER-E"), "active", "auto", nil)
+	// Two eligible listings so we can assert each pending listing carries ITS OWN
+	// feed id — proving feed metadata is captured after each push, not hoisted above
+	// the loop (where it would be nil) nor shared across offers.
+	prod1 := lsSeedProduct(t, ctx, tenantID, 100, 5)
+	listing1 := lsSeedListing(t, ctx, tenantID, prod1, integrationID, strptr("OFFER-E1"), "active", "auto", nil)
+	prod2 := lsSeedProduct(t, ctx, tenantID, 200, 5)
+	listing2 := lsSeedListing(t, ctx, tenantID, prod2, integrationID, strptr("OFFER-E2"), "active", "auto", nil)
 
 	svc := lsNewServices(lsAppPool(t, ctx, 4))
 	res, err := svc.SyncPrices(ctx, tenantID, configID)
 	require.NoError(t, err)
-	require.Len(t, lsRec.byOp("price"), 1)
-	assert.Equal(t, 1, res.ItemsProcessed)
+	require.Len(t, lsRec.byOp("price"), 2)
+	assert.Equal(t, 2, res.ItemsProcessed)
 
-	st := lsReadListing(t, ctx, tenantID, listing)
-	assert.Equal(t, "pending", st.syncStatus, "async provider marks pending, not synced")
-	assert.Contains(t, st.metadata, "FEED-1", "feed id persisted for async status polling")
-	require.NotNil(t, st.priceOverride)
-	assert.InDelta(t, 110.0, *st.priceOverride, 0.001)
+	st1 := lsReadListing(t, ctx, tenantID, listing1)
+	assert.Equal(t, "pending", st1.syncStatus, "async provider marks pending, not synced")
+	assert.Contains(t, st1.metadata, "FEED-OFFER-E1", "listing 1's own feed id persisted for status polling")
+	assert.NotContains(t, st1.metadata, "FEED-OFFER-E2", "feed ids are not shared across offers")
+	require.NotNil(t, st1.priceOverride)
+	assert.InDelta(t, 110.0, *st1.priceOverride, 0.001)
+
+	st2 := lsReadListing(t, ctx, tenantID, listing2)
+	assert.Equal(t, "pending", st2.syncStatus)
+	assert.Contains(t, st2.metadata, "FEED-OFFER-E2", "listing 2's own feed id persisted for status polling")
+	require.NotNil(t, st2.priceOverride)
+	assert.InDelta(t, 220.0, *st2.priceOverride, 0.001)
 }
 
 // --- Case (f): push happens with NO DB transaction held (two-phase) ---
@@ -434,11 +462,14 @@ func TestSyncStock_DelegatesToWarehouseStockSource(t *testing.T) {
 }
 
 // lsAppPool opens a pool authenticated as openoms_app (so RLS applies) with the
-// given connection cap. Unlike the shared harness pool it uses the production
-// DEFAULT (extended) query protocol, which lets pgx encode the []uuid.UUID
-// parameter the service's batch product fetch uses. Against this direct connection
-// (no Supabase pooler in front) set_config-in-transaction still drives RLS, so the
-// simple-protocol workaround the harness needs for the pooler is unnecessary here.
+// given connection cap, using the SAME simple query protocol production runs behind
+// the Supabase transaction pooler — exactly as the shared harness appPool does. This
+// is deliberate: the service's batch product fetch must encode its parameters under
+// simple protocol just as in production (which is why ProductRepository.FindByIDs
+// uses scalar IN placeholders rather than = ANY on a []uuid.UUID — the latter cannot
+// be encoded under simple protocol). A per-test pool, rather than the shared appPool,
+// is used only so the structural two-phase probe (case f) can pin a hard
+// single-connection cap.
 func lsAppPool(t *testing.T, ctx context.Context, maxConns int32) *pgxpool.Pool {
 	t.Helper()
 	raw := os.Getenv("DATABASE_URL")
@@ -449,6 +480,7 @@ func lsAppPool(t *testing.T, ctx context.Context, maxConns int32) *pgxpool.Pool 
 	cfg, err := pgxpool.ParseConfig(u.String())
 	require.NoError(t, err)
 	cfg.MaxConns = maxConns
+	cfg.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 	cfg.AfterConnect = func(_ context.Context, conn *pgx.Conn) error {
 		tm := conn.TypeMap()
 		tm.RegisterType(&pgtype.Type{
