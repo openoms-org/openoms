@@ -9,6 +9,9 @@ import (
 	"net/http"
 
 	"github.com/getsentry/sentry-go"
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
@@ -43,6 +46,29 @@ func writeCSVHeaders(w http.ResponseWriter, filename string) {
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
+}
+
+// decodeJSON decodes the JSON request body into dst. On failure it writes a
+// 400 "invalid request body" response and returns false; the caller should
+// simply return when this returns false.
+func decodeJSON(w http.ResponseWriter, r *http.Request, dst any) bool {
+	if err := json.NewDecoder(r.Body).Decode(dst); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return false
+	}
+	return true
+}
+
+// parseIDParam parses the named chi URL parameter as a UUID. On failure it
+// writes a 400 "invalid <resource> id" response and returns ok=false; the
+// caller should simply return when ok is false.
+func parseIDParam(w http.ResponseWriter, r *http.Request, param, resource string) (uuid.UUID, bool) {
+	id, err := uuid.Parse(chi.URLParam(r, param))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid "+resource+" id")
+		return uuid.Nil, false
+	}
+	return id, true
 }
 
 func isValidationError(err error) bool {
