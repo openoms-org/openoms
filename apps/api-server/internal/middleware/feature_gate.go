@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/readiness"
@@ -15,9 +14,7 @@ func RequireFeature(featureID, surfaceMode string) func(http.Handler) http.Handl
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if !enabled {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusNotFound)
-				_ = json.NewEncoder(w).Encode(map[string]string{"error": "feature_not_available"})
+				writeJSONError(w, http.StatusNotFound, "feature_not_available")
 				return
 			}
 			next.ServeHTTP(w, r)
