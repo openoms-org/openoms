@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -35,11 +34,6 @@ type WebhookDispatchService struct {
 	wsBroadcast  wsBroadcastFunc
 }
 
-// noPrivateDialer delegates to netutil.NoPrivateDialer for SSRF protection.
-func noPrivateDialer() func(ctx context.Context, network, addr string) (net.Conn, error) {
-	return netutil.NoPrivateDialer()
-}
-
 // NewWebhookDispatchService creates a new WebhookDispatchService.
 func NewWebhookDispatchService(
 	tenantRepo repository.TenantRepo,
@@ -53,7 +47,7 @@ func NewWebhookDispatchService(
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 			Transport: &http.Transport{
-				DialContext: noPrivateDialer(),
+				DialContext: netutil.NoPrivateDialer(),
 			},
 		},
 	}
@@ -141,7 +135,7 @@ func (s *WebhookDispatchService) sendWebhookWithRetry(ctx context.Context, tenan
 // trySendWebhook attempts a single webhook delivery. It logs the delivery only
 // on success or when isFinalAttempt is true. Returns true if successful.
 func (s *WebhookDispatchService) trySendWebhook(ctx context.Context, tenantID uuid.UUID, ep model.WebhookEndpoint, eventType string, payload []byte, isFinalAttempt bool) bool {
-	// SSRF protection is handled atomically by the custom dialer (noPrivateDialer)
+	// SSRF protection is handled atomically by the custom dialer (netutil.NoPrivateDialer)
 	// which checks the resolved IP at connect time, avoiding TOCTOU vulnerabilities.
 
 	// Compute HMAC-SHA256 signature

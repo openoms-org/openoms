@@ -58,15 +58,7 @@ func (s *AutomationService) List(ctx context.Context, tenantID uuid.UUID, filter
 		if err != nil {
 			return err
 		}
-		if rules == nil {
-			rules = []model.AutomationRule{}
-		}
-		resp = model.ListResponse[model.AutomationRule]{
-			Items:  rules,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(rules, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err
@@ -196,15 +188,7 @@ func (s *AutomationService) GetLogs(ctx context.Context, tenantID, ruleID uuid.U
 		if err != nil {
 			return err
 		}
-		if logs == nil {
-			logs = []model.AutomationRuleLog{}
-		}
-		resp = model.ListResponse[model.AutomationRuleLog]{
-			Items:  logs,
-			Total:  total,
-			Limit:  limit,
-			Offset: offset,
-		}
+		resp = model.NewListResponse(logs, total, limit, offset)
 		return nil
 	})
 	return resp, err

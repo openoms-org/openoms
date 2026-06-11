@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
@@ -63,15 +62,7 @@ func (s *ReturnService) List(ctx context.Context, tenantID uuid.UUID, filter mod
 		if err != nil {
 			return err
 		}
-		if returns == nil {
-			returns = []model.Return{}
-		}
-		resp = model.ListResponse[model.Return]{
-			Items:  returns,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(returns, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err
@@ -148,9 +139,7 @@ func (s *ReturnService) Create(ctx context.Context, tenantID uuid.UUID, req mode
 	if err != nil {
 		return nil, err
 	}
-	if s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "return.created", ret) })
-	}
+	DispatchWebhookAsync(s.webhookDispatch, tenantID, "return.created", ret)
 	FireAutomationEvent(s.automationService, tenantID, "return", "return.created", ret.ID, map[string]any{
 		"status": ret.Status, "reason": ret.Reason, "order_id": ret.OrderID.String(),
 		"refund_amount": ret.RefundAmount,
@@ -193,9 +182,7 @@ func (s *ReturnService) Update(ctx context.Context, tenantID, returnID uuid.UUID
 		})
 	})
 	if err == nil && ret != nil {
-		if s.webhookDispatch != nil {
-			asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "return.updated", ret) })
-		}
+		DispatchWebhookAsync(s.webhookDispatch, tenantID, "return.updated", ret)
 	}
 	return ret, err
 }
@@ -255,11 +242,7 @@ func (s *ReturnService) TransitionStatus(ctx context.Context, tenantID, returnID
 		return nil
 	})
 	if err == nil && ret != nil {
-		if s.webhookDispatch != nil {
-			asyncutil.SafeGo(func() {
-				s.webhookDispatch.Dispatch(context.Background(), tenantID, "return.status_changed", map[string]any{"return_id": returnID.String(), "from": oldStatus, "to": req.Status})
-			})
-		}
+		DispatchWebhookAsync(s.webhookDispatch, tenantID, "return.status_changed", map[string]any{"return_id": returnID.String(), "from": oldStatus, "to": req.Status})
 		FireAutomationEvent(s.automationService, tenantID, "return", "return.status_changed", ret.ID, map[string]any{
 			"status": ret.Status, "old_status": oldStatus, "new_status": req.Status,
 			"order_id": ret.OrderID.String(), "refund_amount": ret.RefundAmount,
@@ -294,11 +277,7 @@ func (s *ReturnService) Delete(ctx context.Context, tenantID, returnID, actorID 
 		})
 	})
 	if err == nil {
-		if s.webhookDispatch != nil {
-			asyncutil.SafeGo(func() {
-				s.webhookDispatch.Dispatch(context.Background(), tenantID, "return.deleted", map[string]any{"return_id": returnID.String()})
-			})
-		}
+		DispatchWebhookAsync(s.webhookDispatch, tenantID, "return.deleted", map[string]any{"return_id": returnID.String()})
 	}
 	return err
 }

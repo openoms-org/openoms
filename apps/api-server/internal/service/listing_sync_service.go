@@ -60,15 +60,7 @@ func (s *ListingSyncService) List(ctx context.Context, tenantID uuid.UUID, filte
 		if listErr != nil {
 			return listErr
 		}
-		if configs == nil {
-			configs = []model.ListingSyncConfig{}
-		}
-		resp = model.ListResponse[model.ListingSyncConfig]{
-			Items:  configs,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(configs, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err
@@ -212,15 +204,7 @@ func (s *ListingSyncService) ListLogs(ctx context.Context, tenantID uuid.UUID, f
 		if listErr != nil {
 			return listErr
 		}
-		if logs == nil {
-			logs = []model.ListingSyncLog{}
-		}
-		resp = model.ListResponse[model.ListingSyncLog]{
-			Items:  logs,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(logs, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err
@@ -358,18 +342,9 @@ func (s *ListingSyncService) PullListings(ctx context.Context, tenantID uuid.UUI
 			return fmt.Errorf("list listings: %w", listErr)
 		}
 
-		// Batch-fetch all linked products
-		productIDs := make([]uuid.UUID, 0, len(listings))
-		for _, l := range listings {
-			productIDs = append(productIDs, l.ProductID)
-		}
-		products, prodErr := s.productRepo.FindByIDs(ctx, tx, productIDs)
-		if prodErr != nil {
-			return fmt.Errorf("batch fetch products: %w", prodErr)
-		}
-		productMap := make(map[uuid.UUID]*model.Product, len(products))
-		for i := range products {
-			productMap[products[i].ID] = &products[i]
+		productMap, err := s.productMapForListings(ctx, tx, listings)
+		if err != nil {
+			return err
 		}
 
 		for _, listing := range listings {
@@ -425,18 +400,9 @@ func (s *ListingSyncService) SyncPrices(ctx context.Context, tenantID uuid.UUID,
 			return fmt.Errorf("list listings: %w", listErr)
 		}
 
-		// Batch-fetch all linked products
-		productIDs := make([]uuid.UUID, 0, len(listings))
-		for _, l := range listings {
-			productIDs = append(productIDs, l.ProductID)
-		}
-		products, prodErr := s.productRepo.FindByIDs(ctx, tx, productIDs)
-		if prodErr != nil {
-			return fmt.Errorf("batch fetch products: %w", prodErr)
-		}
-		productMap := make(map[uuid.UUID]*model.Product, len(products))
-		for i := range products {
-			productMap[products[i].ID] = &products[i]
+		productMap, err := s.productMapForListings(ctx, tx, listings)
+		if err != nil {
+			return err
 		}
 
 		for _, listing := range listings {
@@ -495,18 +461,9 @@ func (s *ListingSyncService) SyncStock(ctx context.Context, tenantID uuid.UUID, 
 			return fmt.Errorf("list listings: %w", listErr)
 		}
 
-		// Batch-fetch all linked products
-		productIDs := make([]uuid.UUID, 0, len(listings))
-		for _, l := range listings {
-			productIDs = append(productIDs, l.ProductID)
-		}
-		products, prodErr := s.productRepo.FindByIDs(ctx, tx, productIDs)
-		if prodErr != nil {
-			return fmt.Errorf("batch fetch products: %w", prodErr)
-		}
-		productMap := make(map[uuid.UUID]*model.Product, len(products))
-		for i := range products {
-			productMap[products[i].ID] = &products[i]
+		productMap, err := s.productMapForListings(ctx, tx, listings)
+		if err != nil {
+			return err
 		}
 
 		for _, listing := range listings {
@@ -601,6 +558,24 @@ func (s *ListingSyncService) RunFullSync(ctx context.Context, tenantID uuid.UUID
 }
 
 // --- Helpers ---
+
+// productMapForListings batch-fetches the products linked to the given listings
+// and returns them keyed by product ID.
+func (s *ListingSyncService) productMapForListings(ctx context.Context, tx pgx.Tx, listings []*model.ProductListing) (map[uuid.UUID]*model.Product, error) {
+	productIDs := make([]uuid.UUID, 0, len(listings))
+	for _, l := range listings {
+		productIDs = append(productIDs, l.ProductID)
+	}
+	products, err := s.productRepo.FindByIDs(ctx, tx, productIDs)
+	if err != nil {
+		return nil, fmt.Errorf("batch fetch products: %w", err)
+	}
+	productMap := make(map[uuid.UUID]*model.Product, len(products))
+	for i := range products {
+		productMap[products[i].ID] = &products[i]
+	}
+	return productMap, nil
+}
 
 func (s *ListingSyncService) applyPriceRule(cfg *model.ListingSyncConfig, basePrice float64) float64 {
 	switch cfg.PriceRule {

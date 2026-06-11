@@ -114,15 +114,7 @@ func (s *WarehouseDocumentService) List(ctx context.Context, tenantID uuid.UUID,
 		if err != nil {
 			return err
 		}
-		if docs == nil {
-			docs = []model.WarehouseDocument{}
-		}
-		resp = model.ListResponse[model.WarehouseDocument]{
-			Items:  docs,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(docs, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err

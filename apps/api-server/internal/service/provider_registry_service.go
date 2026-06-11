@@ -220,8 +220,10 @@ func (s *ProviderRegistryService) GetSchema(ctx context.Context, versionID uuid.
 	return schema, nil
 }
 
-func (s *ProviderRegistryService) inTx(ctx context.Context, fn func(pgx.Tx) error) error {
-	tx, err := s.pool.Begin(ctx)
+// runInTx runs fn inside a transaction on pool, committing on success and
+// rolling back on error.
+func runInTx(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) error) error {
+	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
@@ -230,6 +232,10 @@ func (s *ProviderRegistryService) inTx(ctx context.Context, fn func(pgx.Tx) erro
 		return err
 	}
 	return tx.Commit(ctx)
+}
+
+func (s *ProviderRegistryService) inTx(ctx context.Context, fn func(pgx.Tx) error) error {
+	return runInTx(ctx, s.pool, fn)
 }
 
 // CreateProviderDefinitionInput is the payload for creating a provider family.

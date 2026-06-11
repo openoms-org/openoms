@@ -22,6 +22,20 @@ type ListResponse[T any] struct {
 	Offset int `json:"offset"`
 }
 
+// NewListResponse builds a ListResponse, normalizing a nil items slice to an
+// empty slice so JSON serialization emits [] instead of null.
+func NewListResponse[T any](items []T, total, limit, offset int) ListResponse[T] {
+	if items == nil {
+		items = []T{}
+	}
+	return ListResponse[T]{
+		Items:  items,
+		Total:  total,
+		Limit:  limit,
+		Offset: offset,
+	}
+}
+
 // PaginationParams holds parsed limit, offset and sort parameters.
 type PaginationParams struct {
 	Limit     int

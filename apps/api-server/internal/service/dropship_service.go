@@ -14,7 +14,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
@@ -264,15 +263,7 @@ func (s *DropshipService) List(ctx context.Context, tenantID uuid.UUID, filter m
 		if err != nil {
 			return err
 		}
-		if orders == nil {
-			orders = []model.DropshipOrder{}
-		}
-		resp = model.ListResponse[model.DropshipOrder]{
-			Items:  orders,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(orders, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err
@@ -484,10 +475,8 @@ func (s *DropshipService) AutoRouteOrder(ctx context.Context, tenantID, orderID,
 		return nil, err
 	}
 
-	if s.webhookDispatch != nil {
-		for _, ds := range result {
-			asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.created", ds) })
-		}
+	for _, ds := range result {
+		DispatchWebhookAsync(s.webhookDispatch, tenantID, "dropship_order.created", ds)
 	}
 	// OPE-418: record a dropship unit per supplier + supplier capability (gated,
 	// best-effort — never affects the routing result above).
@@ -578,9 +567,7 @@ func (s *DropshipService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 		return nil, err
 	}
 
-	if s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.created", d) })
-	}
+	DispatchWebhookAsync(s.webhookDispatch, tenantID, "dropship_order.created", d)
 	// OPE-418: record the dropship unit + supplier capability (gated, best-effort).
 	s.recordDropshipUnit(ctx, tenantID, d.OrderID, d.SupplierID, d.SupplierName, d.Items)
 	return d, nil
@@ -699,9 +686,7 @@ func (s *DropshipService) UpdateStatus(ctx context.Context, tenantID, id uuid.UU
 		}
 	}
 
-	if s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.status_updated", d) })
-	}
+	DispatchWebhookAsync(s.webhookDispatch, tenantID, "dropship_order.status_updated", d)
 	// OPE-418: map the dropship status change onto the dropship unit + supplier
 	// steps (gated, best-effort — never affects the result above).
 	s.recordDropshipTransition(ctx, tenantID, d)
@@ -790,9 +775,7 @@ func (s *DropshipService) Cancel(ctx context.Context, tenantID, id uuid.UUID, ac
 		return nil, err
 	}
 
-	if s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "dropship_order.cancelled", d) })
-	}
+	DispatchWebhookAsync(s.webhookDispatch, tenantID, "dropship_order.cancelled", d)
 	// OPE-418: cancel the dropship unit (gated, best-effort).
 	s.recordDropshipTransition(ctx, tenantID, d)
 	return d, nil

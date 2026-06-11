@@ -56,15 +56,7 @@ func (s *RepricingService) List(ctx context.Context, tenantID uuid.UUID, filter 
 		if err != nil {
 			return err
 		}
-		if rules == nil {
-			rules = []model.RepricingRule{}
-		}
-		resp = model.ListResponse[model.RepricingRule]{
-			Items:  rules,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(rules, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err
@@ -604,15 +596,7 @@ func (s *RepricingService) ListLog(ctx context.Context, tenantID uuid.UUID, limi
 		if err != nil {
 			return err
 		}
-		if logs == nil {
-			logs = []model.RepricingLog{}
-		}
-		resp = model.ListResponse[model.RepricingLog]{
-			Items:  logs,
-			Total:  total,
-			Limit:  limit,
-			Offset: offset,
-		}
+		resp = model.NewListResponse(logs, total, limit, offset)
 		return nil
 	})
 	return resp, err

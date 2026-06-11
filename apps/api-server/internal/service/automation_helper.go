@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/automation"
 )
 
@@ -19,5 +20,16 @@ func FireAutomationEvent(automationSvc *AutomationService, tenantID uuid.UUID, e
 			EntityID:   entityID,
 			Data:       data,
 		})
+	}
+}
+
+// DispatchWebhookAsync dispatches an outgoing webhook on a background goroutine
+// when a dispatcher is configured. It deduplicates the identical nil-guarded
+// async dispatch pattern used across the order, shipment, product, return,
+// customer, supplier, purchase-order, recurring-order, stocktake, stock-sync
+// and dropship services.
+func DispatchWebhookAsync(wd *WebhookDispatchService, tenantID uuid.UUID, eventType string, payload any) {
+	if wd != nil {
+		asyncutil.SafeGo(func() { wd.Dispatch(context.Background(), tenantID, eventType, payload) })
 	}
 }
