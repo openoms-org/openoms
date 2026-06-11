@@ -663,6 +663,17 @@ func (s *SupplierService) SyncFeed(ctx context.Context, tenantID, supplierID uui
 	return s.syncViaIOF(ctx, tenantID, supplierID, supplier)
 }
 
+// recordSyncError persists a supplier's failed sync status (last-sync timestamp +
+// error message) in its own tenant-scoped transaction, logging if that write
+// itself fails.
+func (s *SupplierService) recordSyncError(ctx context.Context, tenantID, supplierID uuid.UUID, errMsg string) {
+	if dbErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		return s.supplierRepo.UpdateSyncStatus(ctx, tx, supplierID, time.Now(), &errMsg)
+	}); dbErr != nil {
+		s.logger.Error("failed to record supplier sync error", "supplier_id", supplierID, "error", dbErr)
+	}
+}
+
 // syncViaProvider syncs products using a registered SupplierProvider (e.g. BTP API).
 // Uses full sync (FetchProducts with descriptions/images) when last full sync is >24h old,
 // otherwise uses inventory-only sync (FetchInventory for stock/prices).
@@ -674,22 +685,14 @@ func (s *SupplierService) syncViaProvider(ctx context.Context, tenantID, supplie
 	credJSON, err := s.integrationSvc.GetDecryptedCredentialsByID(ctx, tenantID, *supplier.IntegrationID)
 	if err != nil {
 		errMsg := fmt.Sprintf("failed to decrypt credentials: %s", err)
-		if dbErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-			return s.supplierRepo.UpdateSyncStatus(ctx, tx, supplierID, time.Now(), &errMsg)
-		}); dbErr != nil {
-			s.logger.Error("failed to record supplier sync error", "supplier_id", supplierID, "error", dbErr)
-		}
+		s.recordSyncError(ctx, tenantID, supplierID, errMsg)
 		return fmt.Errorf("decrypt supplier credentials: %w", err)
 	}
 
 	provider, err := integration.NewSupplierProvider(supplier.FeedFormat, credJSON, supplier.Settings)
 	if err != nil {
 		errMsg := err.Error()
-		if dbErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-			return s.supplierRepo.UpdateSyncStatus(ctx, tx, supplierID, time.Now(), &errMsg)
-		}); dbErr != nil {
-			s.logger.Error("failed to record supplier sync error", "supplier_id", supplierID, "error", dbErr)
-		}
+		s.recordSyncError(ctx, tenantID, supplierID, errMsg)
 		return fmt.Errorf("create supplier provider: %w", err)
 	}
 
@@ -703,11 +706,7 @@ func (s *SupplierService) syncViaProvider(ctx context.Context, tenantID, supplie
 	}
 	if err != nil {
 		errMsg := err.Error()
-		if dbErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-			return s.supplierRepo.UpdateSyncStatus(ctx, tx, supplierID, time.Now(), &errMsg)
-		}); dbErr != nil {
-			s.logger.Error("failed to record supplier sync error", "supplier_id", supplierID, "error", dbErr)
-		}
+		s.recordSyncError(ctx, tenantID, supplierID, errMsg)
 		kind := "inventory"
 		if fullSync {
 			kind = "products"
@@ -781,11 +780,7 @@ func (s *SupplierService) syncViaXML(ctx context.Context, tenantID, supplierID u
 	items, err := btpsdk.ParseCatalogueURL(ctx, *supplier.FeedURL, netutil.SafeHTTPClient(60*time.Second))
 	if err != nil {
 		errMsg := err.Error()
-		if dbErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-			return s.supplierRepo.UpdateSyncStatus(ctx, tx, supplierID, time.Now(), &errMsg)
-		}); dbErr != nil {
-			s.logger.Error("failed to record supplier sync error", "supplier_id", supplierID, "error", dbErr)
-		}
+		s.recordSyncError(ctx, tenantID, supplierID, errMsg)
 		return fmt.Errorf("parse XML catalogue: %w", err)
 	}
 
@@ -825,33 +820,21 @@ func (s *SupplierService) syncXMLInventory(ctx context.Context, tenantID, suppli
 	credJSON, err := s.integrationSvc.GetDecryptedCredentialsByID(ctx, tenantID, *supplier.IntegrationID)
 	if err != nil {
 		errMsg := fmt.Sprintf("failed to decrypt credentials: %s", err)
-		if dbErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-			return s.supplierRepo.UpdateSyncStatus(ctx, tx, supplierID, time.Now(), &errMsg)
-		}); dbErr != nil {
-			s.logger.Error("failed to record supplier sync error", "supplier_id", supplierID, "error", dbErr)
-		}
+		s.recordSyncError(ctx, tenantID, supplierID, errMsg)
 		return fmt.Errorf("decrypt supplier credentials: %w", err)
 	}
 
 	provider, err := integration.NewSupplierProvider("btp", credJSON, supplier.Settings)
 	if err != nil {
 		errMsg := err.Error()
-		if dbErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-			return s.supplierRepo.UpdateSyncStatus(ctx, tx, supplierID, time.Now(), &errMsg)
-		}); dbErr != nil {
-			s.logger.Error("failed to record supplier sync error", "supplier_id", supplierID, "error", dbErr)
-		}
+		s.recordSyncError(ctx, tenantID, supplierID, errMsg)
 		return fmt.Errorf("create btp provider for inventory sync: %w", err)
 	}
 
 	products, err := provider.FetchInventory(ctx)
 	if err != nil {
 		errMsg := err.Error()
-		if dbErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-			return s.supplierRepo.UpdateSyncStatus(ctx, tx, supplierID, time.Now(), &errMsg)
-		}); dbErr != nil {
-			s.logger.Error("failed to record supplier sync error", "supplier_id", supplierID, "error", dbErr)
-		}
+		s.recordSyncError(ctx, tenantID, supplierID, errMsg)
 		return fmt.Errorf("fetch inventory: %w", err)
 	}
 
@@ -867,11 +850,7 @@ func (s *SupplierService) syncViaIOF(ctx context.Context, tenantID, supplierID u
 	iofProducts, err := iof.ParseURL(ctx, *supplier.FeedURL, netutil.SafeHTTPClient(60*time.Second))
 	if err != nil {
 		errMsg := err.Error()
-		if dbErr := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-			return s.supplierRepo.UpdateSyncStatus(ctx, tx, supplierID, time.Now(), &errMsg)
-		}); dbErr != nil {
-			s.logger.Error("failed to record supplier sync error", "supplier_id", supplierID, "error", dbErr)
-		}
+		s.recordSyncError(ctx, tenantID, supplierID, errMsg)
 		return fmt.Errorf("parse feed: %w", err)
 	}
 
