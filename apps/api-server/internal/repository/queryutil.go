@@ -96,14 +96,9 @@ func (ub *UpdateBuilder) SetRaw(clause string) {
 	ub.setClauses = append(ub.setClauses, clause)
 }
 
-// IsEmpty reports whether no parameterized SET clauses have been added.
+// IsEmpty reports whether no SET clauses have been added.
 func (ub *UpdateBuilder) IsEmpty() bool {
 	return len(ub.setClauses) == 0
-}
-
-// Len returns the number of accumulated SET clauses (parameterized and raw).
-func (ub *UpdateBuilder) Len() int {
-	return len(ub.setClauses)
 }
 
 // SetClause returns the joined SET clauses (without the leading SET keyword).
