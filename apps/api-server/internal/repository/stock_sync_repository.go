@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -34,29 +33,18 @@ const stockSyncChannelColumns = `id, tenant_id, integration_id, channel_type,
 
 // List returns a paginated list of stock sync channels matching the filter.
 func (r *StockSyncChannelRepository) List(ctx context.Context, tx pgx.Tx, filter model.StockSyncChannelListFilter) ([]model.StockSyncChannel, int, error) {
-	var conditions []string
-	var args []any
-	argIdx := 1
-
+	qb := NewQueryBuilder()
 	if filter.Enabled != nil {
-		conditions = append(conditions, fmt.Sprintf("enabled = $%d", argIdx))
-		args = append(args, *filter.Enabled)
-		argIdx++
+		qb.Add("enabled = $%d", *filter.Enabled)
 	}
 	if filter.ChannelType != nil {
-		conditions = append(conditions, fmt.Sprintf("channel_type = $%d", argIdx))
-		args = append(args, *filter.ChannelType)
-		argIdx++
+		qb.Add("channel_type = $%d", *filter.ChannelType)
 	}
-
-	where := ""
-	if len(conditions) > 0 {
-		where = "WHERE " + strings.Join(conditions, " AND ")
-	}
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM stock_sync_channels %s", where)
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count stock sync channels: %w", err)
 	}
 
@@ -68,13 +56,13 @@ func (r *StockSyncChannelRepository) List(ctx context.Context, tx pgx.Tx, filter
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
+	limitIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT %s FROM stock_sync_channels %s %s LIMIT $%d OFFSET $%d`,
-		stockSyncChannelColumns, where, orderByClause, argIdx, argIdx+1,
+		stockSyncChannelColumns, where, orderByClause, limitIdx, limitIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list stock sync channels: %w", err)
 	}
@@ -147,39 +135,20 @@ func (r *StockSyncChannelRepository) Create(ctx context.Context, tx pgx.Tx, ch *
 
 // Update applies partial updates to a stock sync channel.
 func (r *StockSyncChannelRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateStockSyncChannelRequest) error {
-	var setClauses []string
-	var args []any
-	argIdx := 1
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "enabled", req.Enabled)
+	SetPtr(ub, "stock_buffer", req.StockBuffer)
+	SetPtr(ub, "sync_mode", req.SyncMode)
+	SetPtr(ub, "priority", req.Priority)
 
-	if req.Enabled != nil {
-		setClauses = append(setClauses, fmt.Sprintf("enabled = $%d", argIdx))
-		args = append(args, *req.Enabled)
-		argIdx++
-	}
-	if req.StockBuffer != nil {
-		setClauses = append(setClauses, fmt.Sprintf("stock_buffer = $%d", argIdx))
-		args = append(args, *req.StockBuffer)
-		argIdx++
-	}
-	if req.SyncMode != nil {
-		setClauses = append(setClauses, fmt.Sprintf("sync_mode = $%d", argIdx))
-		args = append(args, *req.SyncMode)
-		argIdx++
-	}
-	if req.Priority != nil {
-		setClauses = append(setClauses, fmt.Sprintf("priority = $%d", argIdx))
-		args = append(args, *req.Priority)
-		argIdx++
-	}
-
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
+	ub.SetRaw("updated_at = NOW()")
 	query := fmt.Sprintf("UPDATE stock_sync_channels SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
-	args = append(args, id)
+		ub.SetClause(), ub.NextArgIdx())
+	args := append(ub.Args(), id)
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {
@@ -242,32 +211,22 @@ func (r *StockSyncEventRepository) Create(ctx context.Context, tx pgx.Tx, event 
 
 // List returns a paginated list of stock sync events matching the filter.
 func (r *StockSyncEventRepository) List(ctx context.Context, tx pgx.Tx, filter model.StockSyncEventListFilter) ([]model.StockSyncEvent, int, error) {
-	var conditions []string
-	var args []any
-	argIdx := 1
-
+	qb := NewQueryBuilder()
 	if filter.ProductID != nil {
-		conditions = append(conditions, fmt.Sprintf("product_id = $%d", argIdx))
-		args = append(args, *filter.ProductID)
-		argIdx++
+		qb.Add("product_id = $%d", *filter.ProductID)
 	}
 	if filter.TriggerType != nil {
-		conditions = append(conditions, fmt.Sprintf("trigger_type = $%d", argIdx))
-		args = append(args, *filter.TriggerType)
-		argIdx++
+		qb.Add("trigger_type = $%d", *filter.TriggerType)
 	}
-
-	where := ""
-	if len(conditions) > 0 {
-		where = "WHERE " + strings.Join(conditions, " AND ")
-	}
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM stock_sync_events %s", where)
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count stock sync events: %w", err)
 	}
 
+	limitIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT id, tenant_id, product_id, sku, trigger_type,
 		 old_quantity, new_quantity, available_quantity,
@@ -275,11 +234,10 @@ func (r *StockSyncEventRepository) List(ctx context.Context, tx pgx.Tx, filter m
 		 FROM stock_sync_events %s
 		 ORDER BY created_at DESC
 		 LIMIT $%d OFFSET $%d`,
-		where, argIdx, argIdx+1,
+		where, limitIdx, limitIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list stock sync events: %w", err)
 	}
