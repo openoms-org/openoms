@@ -129,6 +129,29 @@ func (r *LoyaltyRepository) DeleteProgram(ctx context.Context, tx pgx.Tx, id uui
 	return nil
 }
 
+// RecordOrderAccrual inserts a loyalty accrual ledger row for an order, keyed by
+// (tenant_id, order_id, program_id). It returns true when a new row was inserted and
+// false when an accrual already exists for that order+program (the ON CONFLICT guard),
+// giving exactly-once order-driven accrual. The conflict target matches the unique index
+// uq_loyalty_transactions_order_program.
+func (r *LoyaltyRepository) RecordOrderAccrual(ctx context.Context, tx pgx.Tx, lt *model.LoyaltyTransaction) (bool, error) {
+	var id uuid.UUID
+	err := tx.QueryRow(ctx,
+		`INSERT INTO loyalty_transactions (id, tenant_id, customer_id, program_id, order_id, amount)
+		 VALUES ($1, $2, $3, $4, $5, $6)
+		 ON CONFLICT (tenant_id, order_id, program_id) DO NOTHING
+		 RETURNING id`,
+		lt.ID, lt.TenantID, lt.CustomerID, lt.ProgramID, lt.OrderID, lt.Amount,
+	).Scan(&id)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return false, nil // conflict — accrual already recorded for this order+program
+		}
+		return false, fmt.Errorf("record order accrual: %w", err)
+	}
+	return true, nil
+}
+
 // GetCustomerLoyalty retrieves a customer's loyalty record for a specific program.
 func (r *LoyaltyRepository) GetCustomerLoyalty(ctx context.Context, tx pgx.Tx, customerID, programID uuid.UUID) (*model.CustomerLoyalty, error) {
 	var cl model.CustomerLoyalty

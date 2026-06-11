@@ -156,6 +156,12 @@ func (s *OrderService) SetPriceListService(priceListSvc *PriceListService) {
 	s.priceListService = priceListSvc
 }
 
+// SetLoyaltyService sets the loyalty service so order completion accrues loyalty points
+// for the linked customer. Called after construction to avoid a circular dependency.
+func (s *OrderService) SetLoyaltyService(loyaltySvc *LoyaltyService) {
+	s.loyaltyService = loyaltySvc
+}
+
 func (s *OrderService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (*model.OrderStatusConfig, error) {
 	settings, err := s.tenantRepo.GetSettings(ctx, tx, tenantID)
 	if err != nil {
@@ -818,9 +824,29 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 			asyncutil.SafeGo(func() { s.handleStockOnShip(context.Background(), tenantID, order) })
 		case "cancelled":
 			asyncutil.SafeGo(func() { s.handleStockOnCancel(context.Background(), tenantID, order) })
+		case "completed":
+			s.awardLoyaltyOnComplete(tenantID, order)
 		}
 	}
 	return order, err
+}
+
+// awardLoyaltyOnComplete fires order-completion loyalty accrual asynchronously for the
+// order's linked customer. It is a no-op when the loyalty service is unwired or the order
+// has no linked customer. Accrual is exactly-once per (order, program) via the ledger
+// guard inside AwardPointsForOrder, so re-entry into "completed" (incl. forced
+// re-transitions) never double-awards. Runs in a background context like the other
+// post-commit side-effects so it cannot fail or block the status transition.
+func (s *OrderService) awardLoyaltyOnComplete(tenantID uuid.UUID, order *model.Order) {
+	if s.loyaltyService == nil || order.CustomerID == nil {
+		return
+	}
+	customerID := *order.CustomerID
+	orderID := order.ID
+	amount := order.TotalAmount
+	asyncutil.SafeGo(func() {
+		s.loyaltyService.AwardPointsForOrder(context.Background(), tenantID, customerID, orderID, amount)
+	})
 }
 
 // BulkTransitionStatus transitions multiple orders to a new status.
@@ -960,6 +986,8 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 			asyncutil.SafeGo(func() { s.handleStockOnShip(context.Background(), tenantID, n.order) })
 		case "cancelled":
 			asyncutil.SafeGo(func() { s.handleStockOnCancel(context.Background(), tenantID, n.order) })
+		case "completed":
+			s.awardLoyaltyOnComplete(tenantID, n.order)
 		}
 	}
 	for _, n := range pendingWebhooks {

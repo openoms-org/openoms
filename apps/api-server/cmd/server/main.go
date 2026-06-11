@@ -470,6 +470,7 @@ func run() error {
 	// (customer link/stats, B2B pricing, loyalty accrual, bundle stock).
 	orderService.SetCustomerRepo(customerRepo)
 	orderService.SetPriceListService(priceListService)
+	orderService.SetLoyaltyService(loyaltyService)
 
 	// Automation engine
 	automationRuleRepo := repository.NewAutomationRuleRepository()

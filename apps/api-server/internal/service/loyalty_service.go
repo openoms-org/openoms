@@ -303,6 +303,35 @@ func (s *LoyaltyService) GetLeaderboard(ctx context.Context, tenantID, programID
 	return entries, err
 }
 
+// highestQualifyingTier returns the name of the highest tier a customer with the given
+// total spent qualifies for, parsed from a tier program's config. It iterates the config
+// tiers in order and keeps the last one whose min_spent is met (matching the legacy
+// UpdateTier / AwardPointsForOrder behavior). The bool is false when the config cannot be
+// parsed or no tier qualifies, letting callers treat both as "no tier change". This is the
+// single source of truth for tier selection, shared by UpdateTier and AwardPointsForOrder.
+func highestQualifyingTier(config json.RawMessage, totalSpent float64) (string, bool) {
+	type tierDef struct {
+		Name     string  `json:"name"`
+		MinSpent float64 `json:"min_spent"`
+	}
+	type tierConfig struct {
+		Tiers []tierDef `json:"tiers"`
+	}
+	var cfg tierConfig
+	if err := json.Unmarshal(config, &cfg); err != nil {
+		return "", false
+	}
+	var tier string
+	var found bool
+	for _, t := range cfg.Tiers {
+		if totalSpent >= t.MinSpent {
+			tier = t.Name
+			found = true
+		}
+	}
+	return tier, found
+}
+
 // UpdateTier recalculates a customer's tier in a tier-based program.
 func (s *LoyaltyService) UpdateTier(ctx context.Context, tenantID, customerID, programID uuid.UUID) error {
 	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
@@ -325,28 +354,11 @@ func (s *LoyaltyService) UpdateTier(ctx context.Context, tenantID, customerID, p
 			return nil
 		}
 
-		// Parse tier config
-		type TierDef struct {
-			Name     string  `json:"name"`
-			MinSpent float64 `json:"min_spent"`
-		}
-		type TierConfig struct {
-			Tiers []TierDef `json:"tiers"`
-		}
-		var cfg TierConfig
-		if err := json.Unmarshal(program.Config, &cfg); err != nil {
-			s.logger.Warn("invalid tier config", "program_id", programID, "error", err)
+		// Find the highest tier the customer qualifies for (shared with AwardPointsForOrder).
+		tier, ok := highestQualifyingTier(program.Config, cl.TotalSpent)
+		if !ok {
 			return nil
 		}
-
-		// Find the highest tier the customer qualifies for
-		var tier string
-		for _, t := range cfg.Tiers {
-			if cl.TotalSpent >= t.MinSpent {
-				tier = t.Name
-			}
-		}
-
 		if tier != "" && (cl.CurrentTier == nil || *cl.CurrentTier != tier) {
 			cl.CurrentTier = &tier
 			return s.loyaltyRepo.UpsertCustomerLoyalty(ctx, tx, cl)
@@ -355,8 +367,14 @@ func (s *LoyaltyService) UpdateTier(ctx context.Context, tenantID, customerID, p
 	})
 }
 
-// AwardPointsForOrder awards loyalty points based on order amount (called automatically).
-func (s *LoyaltyService) AwardPointsForOrder(ctx context.Context, tenantID, customerID uuid.UUID, orderAmount float64) {
+// AwardPointsForOrder awards loyalty points based on order amount (called automatically
+// on order completion). Accrual is exactly-once per (order, program): for each active
+// program it first claims a loyalty_transactions ledger row keyed by (tenant, order,
+// program); if the row already exists (a re-completion / forced re-transition), all
+// increments for that program are skipped. The ledger claim and the customer_loyalty
+// upsert share one transaction, so accrual is atomic. Errors are logged and swallowed —
+// the ledger guard, not the caller, enforces once-only.
+func (s *LoyaltyService) AwardPointsForOrder(ctx context.Context, tenantID, customerID, orderID uuid.UUID, orderAmount float64) {
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		// Find all active programs
 		programs, _, err := s.loyaltyRepo.ListPrograms(ctx, tx, model.LoyaltyProgramListFilter{
@@ -369,6 +387,23 @@ func (s *LoyaltyService) AwardPointsForOrder(ctx context.Context, tenantID, cust
 		now := time.Now()
 		for _, program := range programs {
 			if program.Status != "active" {
+				continue
+			}
+
+			// Exactly-once guard: claim the accrual slot for this (order, program). When a
+			// row already exists, skip ALL increments for this program (idempotent replay).
+			inserted, err := s.loyaltyRepo.RecordOrderAccrual(ctx, tx, &model.LoyaltyTransaction{
+				ID:         uuid.New(),
+				TenantID:   tenantID,
+				CustomerID: customerID,
+				ProgramID:  program.ID,
+				OrderID:    &orderID,
+				Amount:     orderAmount,
+			})
+			if err != nil {
+				return err
+			}
+			if !inserted {
 				continue
 			}
 
@@ -412,21 +447,9 @@ func (s *LoyaltyService) AwardPointsForOrder(ctx context.Context, tenantID, cust
 				cl.TotalPointsEarned += points
 
 			case "tier":
-				// Just update spending/count, tier will be recalculated
-				type TierDef struct {
-					Name     string  `json:"name"`
-					MinSpent float64 `json:"min_spent"`
-				}
-				type TierConfig struct {
-					Tiers []TierDef `json:"tiers"`
-				}
-				var cfg TierConfig
-				if err := json.Unmarshal(program.Config, &cfg); err == nil {
-					for _, t := range cfg.Tiers {
-						if cl.TotalSpent >= t.MinSpent {
-							cl.CurrentTier = &t.Name
-						}
-					}
+				// Recalculate tier from the new total spent (shared with UpdateTier).
+				if tier, ok := highestQualifyingTier(program.Config, cl.TotalSpent); ok && tier != "" {
+					cl.CurrentTier = &tier
 				}
 
 			case "discount_after_n":
@@ -442,6 +465,6 @@ func (s *LoyaltyService) AwardPointsForOrder(ctx context.Context, tenantID, cust
 	})
 
 	if err != nil {
-		s.logger.Error("failed to award loyalty points", "error", err, "customer_id", customerID)
+		s.logger.Error("failed to award loyalty points", "error", err, "customer_id", customerID, "order_id", orderID)
 	}
 }
