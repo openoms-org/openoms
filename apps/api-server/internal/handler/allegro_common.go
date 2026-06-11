@@ -26,6 +26,20 @@ type allegroCredentials struct {
 
 const allegroTokenRefreshPersistTimeout = 10 * time.Second
 
+// allegroClientBase carries the shared integration dependencies used by the
+// Allegro sub-handlers. Embedding it provides a common newAllegroClient method
+// and removes the duplicated integrationService/encryptionKey field pairs.
+type allegroClientBase struct {
+	integrationService *service.IntegrationService
+	encryptionKey      []byte
+}
+
+// newAllegroClient creates an authenticated Allegro SDK client from the
+// integration credentials in the request context.
+func (b allegroClientBase) newAllegroClient(r *http.Request) (*allegrosdk.Client, error) {
+	return buildAllegroClient(r, b.integrationService, b.encryptionKey)
+}
+
 // buildAllegroClient creates an authenticated Allegro SDK client from the request context.
 // It includes a token refresh callback that persists refreshed tokens to the database.
 func buildAllegroClient(r *http.Request, integrationService *service.IntegrationService, _ []byte) (*allegrosdk.Client, error) {
