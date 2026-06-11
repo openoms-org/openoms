@@ -62,3 +62,70 @@ func (qb *QueryBuilder) AddArgs(values ...any) int {
 	qb.argIdx += len(values)
 	return startIdx
 }
+
+// UpdateBuilder helps construct parameterized SET clauses for partial UPDATE statements.
+// It is the SET-clause sibling of QueryBuilder.
+type UpdateBuilder struct {
+	setClauses []string
+	args       []any
+	argIdx     int
+}
+
+// NewUpdateBuilder creates a new UpdateBuilder with arg indices starting at 1.
+func NewUpdateBuilder() *UpdateBuilder {
+	return &UpdateBuilder{argIdx: 1}
+}
+
+// Set appends "column = $N" with the given value and advances the arg index.
+func (ub *UpdateBuilder) Set(column string, value any) {
+	ub.setClauses = append(ub.setClauses, fmt.Sprintf("%s = $%d", column, ub.argIdx))
+	ub.args = append(ub.args, value)
+	ub.argIdx++
+}
+
+// SetRaw appends a raw SET expression with no parameter (e.g., "updated_at = NOW()").
+func (ub *UpdateBuilder) SetRaw(clause string) {
+	ub.setClauses = append(ub.setClauses, clause)
+}
+
+// IsEmpty reports whether no parameterized SET clauses have been added.
+func (ub *UpdateBuilder) IsEmpty() bool {
+	return len(ub.setClauses) == 0
+}
+
+// Len returns the number of accumulated SET clauses (parameterized and raw).
+func (ub *UpdateBuilder) Len() int {
+	return len(ub.setClauses)
+}
+
+// SetClause returns the joined SET clauses (without the leading SET keyword).
+func (ub *UpdateBuilder) SetClause() string {
+	return strings.Join(ub.setClauses, ", ")
+}
+
+// Args returns all accumulated parameter values.
+func (ub *UpdateBuilder) Args() []any {
+	return ub.args
+}
+
+// NextArgIdx returns the next available parameter index (e.g., for a trailing WHERE placeholder).
+func (ub *UpdateBuilder) NextArgIdx() int {
+	return ub.argIdx
+}
+
+// AddArg appends a single trailing arg (e.g., a WHERE id value) and returns its placeholder index.
+func (ub *UpdateBuilder) AddArg(value any) int {
+	idx := ub.argIdx
+	ub.args = append(ub.args, value)
+	ub.argIdx++
+	return idx
+}
+
+// SetPtr appends "column = $N" with the dereferenced pointer value when ptr is non-nil.
+// It is a free function because Go does not support generic methods.
+func SetPtr[T any](ub *UpdateBuilder, column string, ptr *T) {
+	if ptr == nil {
+		return
+	}
+	ub.Set(column, *ptr)
+}
