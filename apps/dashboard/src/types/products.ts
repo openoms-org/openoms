@@ -513,7 +513,7 @@ export interface RepricingRule {
   tenant_id: string;
   name: string;
   status: "active" | "paused" | "archived";
-  strategy: "margin" | "competitive" | "time_based" | "stock_based";
+  strategy: "margin" | "time_based" | "stock_based";
   priority: number;
   scope_type: "all" | "category" | "tag" | "product_ids";
   scope_value?: unknown;

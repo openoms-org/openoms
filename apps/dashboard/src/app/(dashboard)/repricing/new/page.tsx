@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, TrendingUp, Package, Clock, BarChart3 } from "lucide-react";
+import { ArrowLeft, TrendingUp, Package, Clock } from "lucide-react";
 import { useCreateRepricingRule } from "@/hooks/use-repricing";
 import { getErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
@@ -43,13 +43,6 @@ export default function NewRepricingRulePage() {
       label: t("strategyTimeBased"),
       description: t("strategyTimeBasedDesc"),
       icon: Clock,
-    },
-    {
-      value: "competitive",
-      label: t("strategyCompetitive"),
-      description: t("strategyCompetitiveDesc"),
-      icon: BarChart3,
-      disabled: true,
     },
   ];
   const router = useRouter();
@@ -207,26 +200,17 @@ export default function NewRepricingRulePage() {
                 <button
                   key={s.value}
                   type="button"
-                  disabled={s.disabled}
-                  onClick={() => !s.disabled && setStrategy(s.value)}
+                  onClick={() => setStrategy(s.value)}
                   className={cn(
                     "flex items-start gap-3 rounded-lg border p-4 text-left transition-colors",
                     strategy === s.value
                       ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/50",
-                    s.disabled && "cursor-not-allowed opacity-50"
+                      : "border-border hover:border-primary/50"
                   )}
                 >
                   <s.icon className="mt-0.5 h-5 w-5 shrink-0" />
                   <div>
-                    <p className="font-medium">
-                      {s.label}
-                      {s.disabled && (
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          {t("wkrotce")}
-                        </span>
-                      )}
-                    </p>
+                    <p className="font-medium">{s.label}</p>
                     <p className="text-sm text-muted-foreground">
                       {s.description}
                     </p>

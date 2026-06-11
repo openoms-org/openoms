@@ -326,11 +326,7 @@
     "statusArchived": "Zarchiwizowany",
     "statusPaused": "Wstrzymany",
     "stockParams": "Parametry stanu",
-    "strategiaKonkurencyjnaJestWPrzygotowaniuDaneOCenac": "Strategia konkurencyjna jest w przygotowaniu. Dane o cenach konkurencji nie są jeszcze dostępne.",
     "strategy": "Strategia",
-    "strategyCompetitive": "Konkurencyjna",
-    "strategyCompetitiveDesc": "Dostosuj ceny do konkurencji",
-    "strategyCompetitiveSoon": "Wkrótce dostępne",
     "strategyMargin": "Marżowa",
     "strategyMarginDesc": "Utrzymuj stałą marżę",
     "strategyParams": "Parametry strategii",
@@ -342,7 +338,6 @@
     "utworzPierwszaReguleDynamicznegoUstalaniaCen": "Utwórz pierwszą regułę dynamicznego ustalania cen.",
     "wartoscZakresu": "Wartość zakresu",
     "weekdaysLabel": "Dni tygodnia",
-    "wkrotce": "Wkrótce",
     "zakresProduktow": "Zakres produktów"
   },
   "stockSync": {
