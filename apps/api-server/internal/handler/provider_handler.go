@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
@@ -101,14 +100,6 @@ func (h *ProviderHandler) writeServiceError(w http.ResponseWriter, err error) {
 	}
 }
 
-func pathUUID(r *http.Request, key string) (uuid.UUID, bool) {
-	id, err := uuid.Parse(chi.URLParam(r, key))
-	if err != nil {
-		return uuid.Nil, false
-	}
-	return id, true
-}
-
 // ---- Definitions ----
 
 type createDefinitionRequest struct {
@@ -135,8 +126,7 @@ func (h *ProviderHandler) ListDefinitions(w http.ResponseWriter, r *http.Request
 // CreateDefinition creates a new provider family definition.
 func (h *ProviderHandler) CreateDefinition(w http.ResponseWriter, r *http.Request) {
 	var req createDefinitionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if req.ProviderKey == "" || req.DisplayName == "" || req.ProviderType == "" {
@@ -163,9 +153,8 @@ func (h *ProviderHandler) CreateDefinition(w http.ResponseWriter, r *http.Reques
 
 // GetDefinition returns a provider definition by id.
 func (h *ProviderHandler) GetDefinition(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathUUID(r, "id")
+	id, ok := parseIDParam(w, r, "id", "provider")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid provider id")
 		return
 	}
 	def, err := h.svc.GetDefinition(r.Context(), id)
@@ -188,14 +177,12 @@ type patchDefinitionRequest struct {
 
 // PatchDefinition updates editable provider definition metadata.
 func (h *ProviderHandler) PatchDefinition(w http.ResponseWriter, r *http.Request) {
-	id, ok := pathUUID(r, "id")
+	id, ok := parseIDParam(w, r, "id", "provider")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid provider id")
 		return
 	}
 	var req patchDefinitionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	def, err := h.svc.UpdateDefinitionMetadata(r.Context(), model.ProviderDefinition{
@@ -226,14 +213,12 @@ type createVersionRequest struct {
 
 // CreateVersion creates a new draft (research) version under a definition.
 func (h *ProviderHandler) CreateVersion(w http.ResponseWriter, r *http.Request) {
-	defID, ok := pathUUID(r, "id")
+	defID, ok := parseIDParam(w, r, "id", "provider")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid provider id")
 		return
 	}
 	var req createVersionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if req.Version == "" {
@@ -251,9 +236,8 @@ func (h *ProviderHandler) CreateVersion(w http.ResponseWriter, r *http.Request) 
 
 // ListVersions returns the versions of a provider definition.
 func (h *ProviderHandler) ListVersions(w http.ResponseWriter, r *http.Request) {
-	defID, ok := pathUUID(r, "id")
+	defID, ok := parseIDParam(w, r, "id", "provider")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid provider id")
 		return
 	}
 	vers, err := h.svc.ListVersions(r.Context(), defID)
@@ -266,9 +250,8 @@ func (h *ProviderHandler) ListVersions(w http.ResponseWriter, r *http.Request) {
 
 // GetVersion returns a provider version by id.
 func (h *ProviderHandler) GetVersion(w http.ResponseWriter, r *http.Request) {
-	versionID, ok := pathUUID(r, "version_id")
+	versionID, ok := parseIDParam(w, r, "version_id", "version")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid version id")
 		return
 	}
 	v, err := h.svc.GetVersion(r.Context(), versionID)
@@ -281,9 +264,8 @@ func (h *ProviderHandler) GetVersion(w http.ResponseWriter, r *http.Request) {
 
 // ListPublicationEvents returns the publication audit trail for a version.
 func (h *ProviderHandler) ListPublicationEvents(w http.ResponseWriter, r *http.Request) {
-	versionID, ok := pathUUID(r, "version_id")
+	versionID, ok := parseIDParam(w, r, "version_id", "version")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid version id")
 		return
 	}
 	events, err := h.svc.ListPublicationEvents(r.Context(), versionID)
@@ -301,14 +283,12 @@ type publishRequest struct {
 
 // Publish transitions a version to the requested lifecycle state.
 func (h *ProviderHandler) Publish(w http.ResponseWriter, r *http.Request) {
-	versionID, ok := pathUUID(r, "version_id")
+	versionID, ok := parseIDParam(w, r, "version_id", "version")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid version id")
 		return
 	}
 	var req publishRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if req.ToState == "" {
@@ -330,9 +310,8 @@ type disableRequest struct {
 
 // EmergencyDisable pulls an available/private-beta version back to internal_validation.
 func (h *ProviderHandler) EmergencyDisable(w http.ResponseWriter, r *http.Request) {
-	versionID, ok := pathUUID(r, "version_id")
+	versionID, ok := parseIDParam(w, r, "version_id", "version")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid version id")
 		return
 	}
 	var req disableRequest
@@ -352,14 +331,12 @@ type enableTenantRequest struct {
 
 // EnableTenant adds a tenant to a version's private-beta allowlist.
 func (h *ProviderHandler) EnableTenant(w http.ResponseWriter, r *http.Request) {
-	versionID, ok := pathUUID(r, "version_id")
+	versionID, ok := parseIDParam(w, r, "version_id", "version")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid version id")
 		return
 	}
 	var req enableTenantRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	tenantID, err := uuid.Parse(req.TenantID)
@@ -384,9 +361,8 @@ type setSchemaRequest struct {
 
 // GetSchema returns the credential/settings field schema for a version.
 func (h *ProviderHandler) GetSchema(w http.ResponseWriter, r *http.Request) {
-	versionID, ok := pathUUID(r, "version_id")
+	versionID, ok := parseIDParam(w, r, "version_id", "version")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid version id")
 		return
 	}
 	schema, err := h.svc.GetSchema(r.Context(), versionID)
@@ -399,14 +375,12 @@ func (h *ProviderHandler) GetSchema(w http.ResponseWriter, r *http.Request) {
 
 // UpdateSchema replaces the credential/settings field schema for a version.
 func (h *ProviderHandler) UpdateSchema(w http.ResponseWriter, r *http.Request) {
-	versionID, ok := pathUUID(r, "version_id")
+	versionID, ok := parseIDParam(w, r, "version_id", "version")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid version id")
 		return
 	}
 	var req setSchemaRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	schema, err := h.svc.SetSchema(r.Context(), versionID, req.Groups)
@@ -426,9 +400,8 @@ type setCapabilitiesRequest struct {
 
 // GetCapabilities returns a version's capability profiles.
 func (h *ProviderHandler) GetCapabilities(w http.ResponseWriter, r *http.Request) {
-	versionID, ok := pathUUID(r, "version_id")
+	versionID, ok := parseIDParam(w, r, "version_id", "version")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid version id")
 		return
 	}
 	caps, err := h.svc.GetCapabilities(r.Context(), versionID)
@@ -441,14 +414,12 @@ func (h *ProviderHandler) GetCapabilities(w http.ResponseWriter, r *http.Request
 
 // UpdateCapabilities replaces a version's capability profiles.
 func (h *ProviderHandler) UpdateCapabilities(w http.ResponseWriter, r *http.Request) {
-	versionID, ok := pathUUID(r, "version_id")
+	versionID, ok := parseIDParam(w, r, "version_id", "version")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid version id")
 		return
 	}
 	var req setCapabilitiesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	caps, err := h.svc.SetCapabilities(r.Context(), versionID, req.Capabilities)
@@ -468,9 +439,8 @@ type setStatusMappingsRequest struct {
 
 // GetStatusMappings returns a version's status mappings.
 func (h *ProviderHandler) GetStatusMappings(w http.ResponseWriter, r *http.Request) {
-	versionID, ok := pathUUID(r, "version_id")
+	versionID, ok := parseIDParam(w, r, "version_id", "version")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid version id")
 		return
 	}
 	mappings, err := h.svc.GetStatusMappings(r.Context(), versionID)
@@ -483,14 +453,12 @@ func (h *ProviderHandler) GetStatusMappings(w http.ResponseWriter, r *http.Reque
 
 // UpdateStatusMappings replaces a version's status mappings.
 func (h *ProviderHandler) UpdateStatusMappings(w http.ResponseWriter, r *http.Request) {
-	versionID, ok := pathUUID(r, "version_id")
+	versionID, ok := parseIDParam(w, r, "version_id", "version")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid version id")
 		return
 	}
 	var req setStatusMappingsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	mappings, err := h.svc.SetStatusMappings(r.Context(), versionID, req.StatusMappings)
@@ -512,9 +480,8 @@ type createGapRequest struct {
 
 // ListGaps returns a version's integration gaps.
 func (h *ProviderHandler) ListGaps(w http.ResponseWriter, r *http.Request) {
-	versionID, ok := pathUUID(r, "version_id")
+	versionID, ok := parseIDParam(w, r, "version_id", "version")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid version id")
 		return
 	}
 	gaps, err := h.svc.ListGaps(r.Context(), versionID)
@@ -527,14 +494,12 @@ func (h *ProviderHandler) ListGaps(w http.ResponseWriter, r *http.Request) {
 
 // CreateGap records an integration gap for a version.
 func (h *ProviderHandler) CreateGap(w http.ResponseWriter, r *http.Request) {
-	versionID, ok := pathUUID(r, "version_id")
+	versionID, ok := parseIDParam(w, r, "version_id", "version")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid version id")
 		return
 	}
 	var req createGapRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	gap, err := h.svc.CreateGap(r.Context(), versionID, req.GapType, req.Severity, req.Description)
@@ -552,14 +517,12 @@ type updateGapRequest struct {
 
 // UpdateGap changes an integration gap's lifecycle status.
 func (h *ProviderHandler) UpdateGap(w http.ResponseWriter, r *http.Request) {
-	gapID, ok := pathUUID(r, "gap_id")
+	gapID, ok := parseIDParam(w, r, "gap_id", "gap")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid gap id")
 		return
 	}
 	var req updateGapRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	gap, err := h.svc.UpdateGapStatus(r.Context(), gapID, req.Status)

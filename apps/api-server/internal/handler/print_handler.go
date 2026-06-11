@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"log/slog"
@@ -20,6 +21,10 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
+
+// errPrintNotFound is returned by the print render closures when the target
+// entity does not exist; the handlers translate it into a 404 response.
+var errPrintNotFound = errors.New("not_found")
 
 // PrintTemplatesConfig holds the custom print templates stored in tenant settings.
 type PrintTemplatesConfig struct {
@@ -391,7 +396,7 @@ func (h *PrintHandler) GetPackingSlip(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		if order == nil {
-			return fmt.Errorf("not_found")
+			return errPrintNotFound
 		}
 
 		company := h.loadCompanySettings(r.Context(), tx, tenantID)
@@ -430,7 +435,7 @@ func (h *PrintHandler) GetPackingSlip(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		if err.Error() == "not_found" {
+		if errors.Is(err, errPrintNotFound) {
 			writeError(w, http.StatusNotFound, "order not found")
 			return
 		}
@@ -458,7 +463,7 @@ func (h *PrintHandler) GetOrderSummary(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		if order == nil {
-			return fmt.Errorf("not_found")
+			return errPrintNotFound
 		}
 
 		company := h.loadCompanySettings(r.Context(), tx, tenantID)
@@ -503,7 +508,7 @@ func (h *PrintHandler) GetOrderSummary(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		if err.Error() == "not_found" {
+		if errors.Is(err, errPrintNotFound) {
 			writeError(w, http.StatusNotFound, "order not found")
 			return
 		}
@@ -531,7 +536,7 @@ func (h *PrintHandler) GetReturnSlip(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		if ret == nil {
-			return fmt.Errorf("not_found")
+			return errPrintNotFound
 		}
 
 		company := h.loadCompanySettings(r.Context(), tx, tenantID)
@@ -569,7 +574,7 @@ func (h *PrintHandler) GetReturnSlip(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		if err.Error() == "not_found" {
+		if errors.Is(err, errPrintNotFound) {
 			writeError(w, http.StatusNotFound, "return not found")
 			return
 		}

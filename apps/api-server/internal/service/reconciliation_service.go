@@ -416,15 +416,7 @@ func (s *ReconciliationService) ListSettlements(ctx context.Context, tenantID uu
 		if err != nil {
 			return err
 		}
-		if settlements == nil {
-			settlements = []model.PaymentSettlement{}
-		}
-		resp = model.ListResponse[model.PaymentSettlement]{
-			Items:  settlements,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(settlements, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err
@@ -470,15 +462,7 @@ func (s *ReconciliationService) ListTransactions(ctx context.Context, tenantID u
 		if err != nil {
 			return err
 		}
-		if transactions == nil {
-			transactions = []model.PaymentTransaction{}
-		}
-		resp = model.ListResponse[model.PaymentTransaction]{
-			Items:  transactions,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(transactions, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err

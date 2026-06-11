@@ -55,15 +55,7 @@ func (s *SegmentService) List(ctx context.Context, tenantID uuid.UUID, filter mo
 		if err != nil {
 			return err
 		}
-		if segments == nil {
-			segments = []model.CustomerSegment{}
-		}
-		resp = model.ListResponse[model.CustomerSegment]{
-			Items:  segments,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(segments, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err
@@ -199,15 +191,7 @@ func (s *SegmentService) ListMembers(ctx context.Context, tenantID, segmentID uu
 		if err != nil {
 			return err
 		}
-		if members == nil {
-			members = []model.SegmentMember{}
-		}
-		resp = model.ListResponse[model.SegmentMember]{
-			Items:  members,
-			Total:  total,
-			Limit:  limit,
-			Offset: offset,
-		}
+		resp = model.NewListResponse(members, total, limit, offset)
 		return nil
 	})
 	return resp, err

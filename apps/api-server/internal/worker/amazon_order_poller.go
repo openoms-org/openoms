@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
@@ -29,37 +28,7 @@ func NewAmazonOrderPoller(pool *pgxpool.Pool, encryptionKey []byte, orderRepo re
 }
 
 func amazonOrderMapper(mo integration.MarketplaceOrder, ti TenantIntegration, req model.CreateOrderRequest) model.Order {
-	order := model.Order{
-		ID:            uuid.New(),
-		TenantID:      ti.TenantID,
-		ExternalID:    req.ExternalID,
-		Source:        req.Source,
-		IntegrationID: req.IntegrationID,
-		Status:        "new",
-		CustomerName:  req.CustomerName,
-		CustomerEmail: req.CustomerEmail,
-		CustomerPhone: req.CustomerPhone,
-		TotalAmount:   req.TotalAmount,
-		Currency:      req.Currency,
-		OrderedAt:     req.OrderedAt,
-		PaymentMethod: req.PaymentMethod,
-	}
-
-	if req.PaymentStatus != nil {
-		order.PaymentStatus = *req.PaymentStatus
-	} else {
-		order.PaymentStatus = "pending"
-	}
-
-	addrJSON, err := json.Marshal(mo.ShippingAddress)
-	if err == nil {
-		order.ShippingAddress = addrJSON
-	}
-
-	itemsJSON, err := json.Marshal(mo.Items)
-	if err == nil {
-		order.Items = itemsJSON
-	}
+	order, metadata := newBaseMarketplaceOrder(mo, ti, req)
 
 	// Amazon-specific: fulfillment channel from RawData
 	if mo.RawData != nil {
@@ -68,7 +37,6 @@ func amazonOrderMapper(mo integration.MarketplaceOrder, ti TenantIntegration, re
 		}
 	}
 
-	metadata := map[string]any{"external_id": mo.ExternalID}
 	metadataJSON, _ := json.Marshal(metadata)
 	order.Metadata = metadataJSON
 	order.Tags = []string{}

@@ -58,7 +58,7 @@ func NewAutomationStatusTransitionHandler(orders AutomationOrderTransitioner) *A
 // target status unless it is already there. See the type doc for the idempotency
 // and permanent-failure contract.
 func (h *AutomationStatusTransitionHandler) Handle(ctx context.Context, event model.OrchestrationOutboxEvent) error {
-	payload, err := decodeSetStatusPayload(event.Payload)
+	payload, err := decodeOutboxPayload[automationSetStatusPayload](event.Payload)
 	if err != nil {
 		return model.Permanent(fmt.Errorf("automation.set_status: %w", err))
 	}
@@ -120,10 +120,10 @@ func isValidationError(err error) bool {
 	return errors.As(err, &ve)
 }
 
-// decodeSetStatusPayload normalises the outbox payload (stored as jsonb, scanned
-// back as an arbitrary `any`) into the typed automation.set_status payload.
-func decodeSetStatusPayload(raw any) (automationSetStatusPayload, error) {
-	var p automationSetStatusPayload
+// decodeOutboxPayload normalises an orchestration outbox payload (stored as
+// jsonb and scanned back as an arbitrary `any`) into the typed payload T.
+func decodeOutboxPayload[T any](raw any) (T, error) {
+	var p T
 	if raw == nil {
 		return p, errors.New("missing payload")
 	}

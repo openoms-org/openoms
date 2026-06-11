@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -82,8 +81,7 @@ func (h *PriceListHandler) Create(w http.ResponseWriter, r *http.Request) {
 	actorID := middleware.UserIDFromContext(r.Context())
 
 	var req model.CreatePriceListRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -111,8 +109,7 @@ func (h *PriceListHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req model.UpdatePriceListRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -202,8 +199,7 @@ func (h *PriceListHandler) CreateItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req model.CreatePriceListItemRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 

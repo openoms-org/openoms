@@ -41,34 +41,24 @@ const settlementSelectColumns = `id, tenant_id, provider, settlement_id,
 
 // ListSettlements returns a paginated list of payment settlements.
 func (r *PaymentRepository) ListSettlements(ctx context.Context, tx pgx.Tx, filter model.SettlementListFilter) ([]model.PaymentSettlement, int, error) {
-	where := "WHERE 1=1"
-	args := []any{}
-	argIdx := 1
-
+	qb := NewQueryBuilder()
 	if filter.Provider != nil {
-		where += fmt.Sprintf(" AND provider = $%d", argIdx)
-		args = append(args, *filter.Provider)
-		argIdx++
+		qb.Add("provider = $%d", *filter.Provider)
 	}
 	if filter.Status != nil {
-		where += fmt.Sprintf(" AND status = $%d", argIdx)
-		args = append(args, *filter.Status)
-		argIdx++
+		qb.Add("status = $%d", *filter.Status)
 	}
 	if filter.DateFrom != nil {
-		where += fmt.Sprintf(" AND settlement_date >= $%d", argIdx)
-		args = append(args, *filter.DateFrom)
-		argIdx++
+		qb.Add("settlement_date >= $%d", *filter.DateFrom)
 	}
 	if filter.DateTo != nil {
-		where += fmt.Sprintf(" AND settlement_date <= $%d", argIdx)
-		args = append(args, *filter.DateTo)
-		argIdx++
+		qb.Add("settlement_date <= $%d", *filter.DateTo)
 	}
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := "SELECT COUNT(*) FROM payment_settlements " + where
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count payment settlements: %w", err)
 	}
 
@@ -81,13 +71,13 @@ func (r *PaymentRepository) ListSettlements(ctx context.Context, tx pgx.Tx, filt
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
+	limitIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		"SELECT %s FROM payment_settlements %s %s LIMIT $%d OFFSET $%d",
-		settlementSelectColumns, where, orderByClause, argIdx, argIdx+1,
+		settlementSelectColumns, where, orderByClause, limitIdx, limitIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list payment settlements: %w", err)
 	}
@@ -165,44 +155,30 @@ func scanTransaction(row pgx.Row) (model.PaymentTransaction, error) {
 
 // ListTransactions returns a paginated list of payment transactions.
 func (r *PaymentRepository) ListTransactions(ctx context.Context, tx pgx.Tx, filter model.TransactionListFilter) ([]model.PaymentTransaction, int, error) {
-	where := "WHERE 1=1"
-	args := []any{}
-	argIdx := 1
-
+	qb := NewQueryBuilder()
 	if filter.SettlementID != nil {
-		where += fmt.Sprintf(" AND settlement_id = $%d", argIdx)
-		args = append(args, *filter.SettlementID)
-		argIdx++
+		qb.Add("settlement_id = $%d", *filter.SettlementID)
 	}
 	if filter.MatchStatus != nil {
-		where += fmt.Sprintf(" AND match_status = $%d", argIdx)
-		args = append(args, *filter.MatchStatus)
-		argIdx++
+		qb.Add("match_status = $%d", *filter.MatchStatus)
 	}
 	if filter.Provider != nil {
-		where += fmt.Sprintf(" AND provider = $%d", argIdx)
-		args = append(args, *filter.Provider)
-		argIdx++
+		qb.Add("provider = $%d", *filter.Provider)
 	}
 	if filter.TransactionType != nil {
-		where += fmt.Sprintf(" AND transaction_type = $%d", argIdx)
-		args = append(args, *filter.TransactionType)
-		argIdx++
+		qb.Add("transaction_type = $%d", *filter.TransactionType)
 	}
 	if filter.DateFrom != nil {
-		where += fmt.Sprintf(" AND transaction_date >= $%d", argIdx)
-		args = append(args, *filter.DateFrom)
-		argIdx++
+		qb.Add("transaction_date >= $%d", *filter.DateFrom)
 	}
 	if filter.DateTo != nil {
-		where += fmt.Sprintf(" AND transaction_date <= $%d", argIdx)
-		args = append(args, *filter.DateTo)
-		argIdx++
+		qb.Add("transaction_date <= $%d", *filter.DateTo)
 	}
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := "SELECT COUNT(*) FROM payment_transactions " + where
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count payment transactions: %w", err)
 	}
 
@@ -214,13 +190,13 @@ func (r *PaymentRepository) ListTransactions(ctx context.Context, tx pgx.Tx, fil
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
+	limitIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		"SELECT %s FROM payment_transactions %s %s LIMIT $%d OFFSET $%d",
-		transactionSelectColumns, where, orderByClause, argIdx, argIdx+1,
+		transactionSelectColumns, where, orderByClause, limitIdx, limitIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list payment transactions: %w", err)
 	}
@@ -290,29 +266,6 @@ func (r *PaymentRepository) FindTransactionsBySettlement(ctx context.Context, tx
 	return transactions, rows.Err()
 }
 
-// FindUnmatchedTransactions returns all unmatched payment transactions.
-func (r *PaymentRepository) FindUnmatchedTransactions(ctx context.Context, tx pgx.Tx) ([]model.PaymentTransaction, error) {
-	query := fmt.Sprintf(
-		"SELECT %s FROM payment_transactions WHERE match_status = 'unmatched' ORDER BY transaction_date ASC",
-		transactionSelectColumns,
-	)
-	rows, err := tx.Query(ctx, query)
-	if err != nil {
-		return nil, fmt.Errorf("find unmatched transactions: %w", err)
-	}
-	defer rows.Close()
-
-	var transactions []model.PaymentTransaction
-	for rows.Next() {
-		t, err := scanTransaction(rows)
-		if err != nil {
-			return nil, fmt.Errorf("scan transaction: %w", err)
-		}
-		transactions = append(transactions, t)
-	}
-	return transactions, rows.Err()
-}
-
 // CreateTransaction inserts a new payment transaction.
 func (r *PaymentRepository) CreateTransaction(ctx context.Context, tx pgx.Tx, t *model.PaymentTransaction) error {
 	query := `INSERT INTO payment_transactions
@@ -345,19 +298,14 @@ func (r *PaymentRepository) UpdateTransactionMatch(ctx context.Context, tx pgx.T
 
 // GetReconciliationSummary returns an aggregated reconciliation summary for the given date range.
 func (r *PaymentRepository) GetReconciliationSummary(ctx context.Context, tx pgx.Tx, dateFrom, dateTo *string) (*model.ReconciliationSummary, error) {
-	where := "WHERE 1=1"
-	args := []any{}
-	argIdx := 1
-
+	qb := NewQueryBuilder()
 	if dateFrom != nil {
-		where += fmt.Sprintf(" AND transaction_date >= $%d", argIdx)
-		args = append(args, *dateFrom)
-		argIdx++
+		qb.Add("transaction_date >= $%d", *dateFrom)
 	}
 	if dateTo != nil {
-		where += fmt.Sprintf(" AND transaction_date <= $%d", argIdx)
-		args = append(args, *dateTo)
+		qb.Add("transaction_date <= $%d", *dateTo)
 	}
+	where := qb.WhereClause()
 
 	query := fmt.Sprintf(`
 		SELECT
@@ -375,7 +323,7 @@ func (r *PaymentRepository) GetReconciliationSummary(ctx context.Context, tx pgx
 	`, where)
 
 	var summary model.ReconciliationSummary
-	err := tx.QueryRow(ctx, query, args...).Scan(
+	err := tx.QueryRow(ctx, query, qb.Args()...).Scan(
 		&summary.TotalTransactions,
 		&summary.MatchedCount,
 		&summary.UnmatchedCount,

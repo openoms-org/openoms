@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -162,60 +161,27 @@ func (r *ShipmentRepository) Create(ctx context.Context, tx pgx.Tx, shipment *mo
 
 // Update applies partial updates to a shipment.
 func (r *ShipmentRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateShipmentRequest) error {
-	setClauses := []string{}
-	args := []any{}
-	argIdx := 1
-
-	if req.TrackingNumber != nil {
-		setClauses = append(setClauses, fmt.Sprintf("tracking_number = $%d", argIdx))
-		args = append(args, *req.TrackingNumber)
-		argIdx++
-	}
-	if req.LabelURL != nil {
-		setClauses = append(setClauses, fmt.Sprintf("label_url = $%d", argIdx))
-		args = append(args, *req.LabelURL)
-		argIdx++
-	}
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "tracking_number", req.TrackingNumber)
+	SetPtr(ub, "label_url", req.LabelURL)
 	if req.CarrierData != nil {
-		setClauses = append(setClauses, fmt.Sprintf("carrier_data = $%d", argIdx))
-		args = append(args, req.CarrierData)
-		argIdx++
+		ub.Set("carrier_data", req.CarrierData)
 	}
-	if req.Weight != nil {
-		setClauses = append(setClauses, fmt.Sprintf("weight = $%d", argIdx))
-		args = append(args, *req.Weight)
-		argIdx++
-	}
-	if req.Length != nil {
-		setClauses = append(setClauses, fmt.Sprintf("dimensions_length = $%d", argIdx))
-		args = append(args, *req.Length)
-		argIdx++
-	}
-	if req.Width != nil {
-		setClauses = append(setClauses, fmt.Sprintf("dimensions_width = $%d", argIdx))
-		args = append(args, *req.Width)
-		argIdx++
-	}
-	if req.Height != nil {
-		setClauses = append(setClauses, fmt.Sprintf("dimensions_height = $%d", argIdx))
-		args = append(args, *req.Height)
-		argIdx++
-	}
-	if req.Notes != nil {
-		setClauses = append(setClauses, fmt.Sprintf("notes = $%d", argIdx))
-		args = append(args, *req.Notes)
-		argIdx++
-	}
+	SetPtr(ub, "weight", req.Weight)
+	SetPtr(ub, "dimensions_length", req.Length)
+	SetPtr(ub, "dimensions_width", req.Width)
+	SetPtr(ub, "dimensions_height", req.Height)
+	SetPtr(ub, "notes", req.Notes)
 
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
-	args = append(args, id)
+	ub.SetRaw("updated_at = NOW()")
+	args := append(ub.Args(), id)
 
 	query := fmt.Sprintf("UPDATE shipments SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
+		ub.SetClause(), ub.NextArgIdx())
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {

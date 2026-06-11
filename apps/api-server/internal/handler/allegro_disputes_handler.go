@@ -15,21 +15,12 @@ import (
 
 // AllegroDisputesHandler handles Allegro post-purchase dispute API routes.
 type AllegroDisputesHandler struct {
-	integrationService *service.IntegrationService
-	encryptionKey      []byte
+	allegroClientBase
 }
 
 // NewAllegroDisputesHandler creates a new AllegroDisputesHandler.
 func NewAllegroDisputesHandler(integrationService *service.IntegrationService, encryptionKey []byte) *AllegroDisputesHandler {
-	return &AllegroDisputesHandler{
-		integrationService: integrationService,
-		encryptionKey:      encryptionKey,
-	}
-}
-
-// newAllegroClient creates an authenticated Allegro SDK client from the integration credentials.
-func (h *AllegroDisputesHandler) newAllegroClient(r *http.Request) (*allegrosdk.Client, error) {
-	return buildAllegroClient(r, h.integrationService, h.encryptionKey)
+	return &AllegroDisputesHandler{allegroClientBase{integrationService: integrationService, encryptionKey: encryptionKey}}
 }
 
 // ListDisputes returns the list of disputes from Allegro.

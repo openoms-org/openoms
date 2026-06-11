@@ -18,21 +18,12 @@ import (
 // AllegroPoliciesHandler handles Allegro after-sales policies: return policies,
 // implied warranties (rekojmia), and size tables.
 type AllegroPoliciesHandler struct {
-	integrationService *service.IntegrationService
-	encryptionKey      []byte
+	allegroClientBase
 }
 
 // NewAllegroPoliciesHandler creates a new AllegroPoliciesHandler.
 func NewAllegroPoliciesHandler(integrationService *service.IntegrationService, encryptionKey []byte) *AllegroPoliciesHandler {
-	return &AllegroPoliciesHandler{
-		integrationService: integrationService,
-		encryptionKey:      encryptionKey,
-	}
-}
-
-// newAllegroClient creates an authenticated Allegro SDK client from the integration credentials.
-func (h *AllegroPoliciesHandler) newAllegroClient(r *http.Request) (*allegrosdk.Client, error) {
-	return buildAllegroClient(r, h.integrationService, h.encryptionKey)
+	return &AllegroPoliciesHandler{allegroClientBase{integrationService: integrationService, encryptionKey: encryptionKey}}
 }
 
 // --- Return Policies ---

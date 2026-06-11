@@ -28,8 +28,18 @@ spec:
           {{- end }}
           automountServiceAccountToken: false
           restartPolicy: OnFailure
-          containers:
-            - name: backup
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            fsGroup: 65534
+            seccompProfile:
+              type: RuntimeDefault
+          initContainers:
+            # Dump + compress the database into a shared emptyDir. The S3 client is
+            # deliberately NOT installed here; upload happens in a separate pre-baked
+            # image so neither container performs runtime package installation.
+            - name: dump
               image: postgres:17-alpine
               command:
                 - /bin/sh
@@ -45,13 +55,13 @@ spec:
                     --no-owner \
                     --no-privileges \
                     --format=plain \
-                    --file=/tmp/backup.sql
+                    --file=/backup/backup.sql
 
-                  gzip -c /tmp/backup.sql > "/tmp/${FILENAME}"
-                  gzip -t "/tmp/${FILENAME}"
-                  rm -f /tmp/backup.sql
+                  gzip -c /backup/backup.sql > "/backup/${FILENAME}"
+                  gzip -t "/backup/${FILENAME}"
+                  rm -f /backup/backup.sql
 
-                  SIZE=$(stat -c%s "/tmp/${FILENAME}" 2>/dev/null || stat -f%z "/tmp/${FILENAME}")
+                  SIZE=$(stat -c%s "/backup/${FILENAME}" 2>/dev/null || stat -f%z "/backup/${FILENAME}")
                   echo "Backup size: ${SIZE} bytes"
 
                   if [ "${SIZE}" -lt "${MIN_BACKUP_BYTES}" ]; then
@@ -59,32 +69,10 @@ spec:
                     exit 1
                   fi
 
-                  echo "Uploading to S3: s3://${S3_BUCKET}/${S3_PREFIX}${FILENAME}"
-                  apk add --no-cache minio-client >/dev/null 2>&1
-                  export MC_CONFIG_DIR=/tmp/.mc
-                  mcli alias set openoms-backups "${S3_ENDPOINT}" "${AWS_ACCESS_KEY_ID}" "${AWS_SECRET_ACCESS_KEY}" --api S3v4 --path {{ if .Values.backup.s3.forcePathStyle }}on{{ else }}off{{ end }}
-                  mcli cp "/tmp/${FILENAME}" "openoms-backups/${S3_BUCKET}/${S3_PREFIX}${FILENAME}"
-
-                  echo "Backup completed: ${FILENAME} (${SIZE} bytes)"
-
-                  {{- if .Values.backup.retentionDays }}
-                  echo "Cleaning backups older than {{ .Values.backup.retentionDays }} days..."
-                  CUTOFF=$(date -d "-{{ .Values.backup.retentionDays }} days" +%Y%m%d 2>/dev/null || date -v-{{ .Values.backup.retentionDays }}d +%Y%m%d)
-                  mcli ls "openoms-backups/${S3_BUCKET}/${S3_PREFIX}" \
-                    | awk '{print $NF}' \
-                    | while read -r file; do
-                        case "${file}" in
-                          openoms-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-*.sql.gz) ;;
-                          *) continue ;;
-                        esac
-                        FILE_DATE=$(echo "$file" | sed 's/openoms-\([0-9]*\)-.*/\1/')
-                        if [ "${FILE_DATE}" \< "${CUTOFF}" ]; then
-                          echo "Deleting old backup: ${file}"
-                          mcli rm "openoms-backups/${S3_BUCKET}/${S3_PREFIX}${file}"
-                        fi
-                      done
-                  echo "Cleanup done"
-                  {{- end }}
+                  # Hand the artifact name and size to the upload container so it
+                  # needs no extra coreutils (cat only).
+                  echo "${FILENAME}" > /backup/filename
+                  echo "${SIZE}" > /backup/size
               env:
                 # Use migration (superuser) URL for backups — app URL is RLS-restricted
                 # and would produce incomplete dumps missing other tenants' data.
@@ -93,14 +81,61 @@ spec:
                     secretKeyRef:
                       name: {{ include "openoms.secretName" . }}
                       key: MIGRATION_DATABASE_URL
+                - name: MIN_BACKUP_BYTES
+                  value: {{ .Values.backup.minBackupBytes | default 1000 | quote }}
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 65534
+                readOnlyRootFilesystem: true
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ['ALL']
+                seccompProfile:
+                  type: RuntimeDefault
+              volumeMounts:
+                - name: backup-data
+                  mountPath: /backup
+          containers:
+            # Upload using a pre-baked S3 client image (no runtime apk install).
+            - name: upload
+              image: {{ .Values.backup.mcImage | default "minio/mc:RELEASE.2025-04-16T18-13-26Z" }}
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -eu
+                  FILENAME=$(cat /backup/filename)
+                  SIZE=$(cat /backup/size)
+
+                  echo "Uploading to S3: s3://${S3_BUCKET}/${S3_PREFIX}${FILENAME}"
+                  export MC_CONFIG_DIR=/backup/.mc
+                  mc alias set openoms-backups "${S3_ENDPOINT}" "${AWS_ACCESS_KEY_ID}" "${AWS_SECRET_ACCESS_KEY}" --api S3v4 --path {{ if .Values.backup.s3.forcePathStyle }}on{{ else }}off{{ end }}
+                  mc cp "/backup/${FILENAME}" "openoms-backups/${S3_BUCKET}/${S3_PREFIX}${FILENAME}"
+
+                  echo "Backup completed: ${FILENAME} (${SIZE} bytes)"
+
+                  {{- if .Values.backup.retentionDays }}
+                  echo "Cleaning backups older than {{ .Values.backup.retentionDays }} days..."
+                  # Native mc retention avoids depending on date/awk/sed in the
+                  # minimal client image. Scoped to the dedicated backup prefix.
+                  mc rm --recursive --force --older-than "{{ .Values.backup.retentionDays }}d" \
+                    "openoms-backups/${S3_BUCKET}/${S3_PREFIX}"
+                  echo "Cleanup done"
+                  {{- end }}
+              env:
                 - name: S3_BUCKET
                   value: {{ .Values.backup.s3.bucket | quote }}
                 - name: S3_PREFIX
                   value: {{ .Values.backup.s3.prefix | default "backups/" | quote }}
                 - name: S3_ENDPOINT
                   value: {{ .Values.backup.s3.endpoint | quote }}
-                - name: MIN_BACKUP_BYTES
-                  value: {{ .Values.backup.minBackupBytes | default 1000 | quote }}
                 {{- if .Values.backup.s3.region }}
                 - name: AWS_DEFAULT_REGION
                   value: {{ .Values.backup.s3.region | quote }}
@@ -118,24 +153,24 @@ spec:
               resources:
                 requests:
                   cpu: 50m
-                  memory: 128Mi
+                  memory: 64Mi
                 limits:
-                  cpu: 500m
-                  memory: 512Mi
+                  cpu: 200m
+                  memory: 256Mi
               securityContext:
                 runAsNonRoot: true
                 runAsUser: 65534
-                readOnlyRootFilesystem: false
+                readOnlyRootFilesystem: true
                 allowPrivilegeEscalation: false
                 capabilities:
                   drop: ['ALL']
                 seccompProfile:
                   type: RuntimeDefault
               volumeMounts:
-                - name: tmp
-                  mountPath: /tmp
+                - name: backup-data
+                  mountPath: /backup
           volumes:
-            - name: tmp
+            - name: backup-data
               emptyDir:
                 sizeLimit: 2Gi
 {{- end }}

@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -83,9 +82,8 @@ type setProbesRequest struct {
 
 // GetProbes returns a version's validation probes.
 func (h *ProviderValidationHandler) GetProbes(w http.ResponseWriter, r *http.Request) {
-	versionID, ok := pathUUID(r, "version_id")
+	versionID, ok := parseIDParam(w, r, "version_id", "version")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid version id")
 		return
 	}
 	probes, err := h.svc.GetProbes(r.Context(), versionID)
@@ -98,14 +96,12 @@ func (h *ProviderValidationHandler) GetProbes(w http.ResponseWriter, r *http.Req
 
 // UpdateProbes replaces a version's validation probes.
 func (h *ProviderValidationHandler) UpdateProbes(w http.ResponseWriter, r *http.Request) {
-	versionID, ok := pathUUID(r, "version_id")
+	versionID, ok := parseIDParam(w, r, "version_id", "version")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid version id")
 		return
 	}
 	var req setProbesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	probes, err := h.svc.SetProbes(r.Context(), versionID, req.Probes)
@@ -124,14 +120,12 @@ type startRunRequest struct {
 
 // StartRun opens a validation run for a version.
 func (h *ProviderValidationHandler) StartRun(w http.ResponseWriter, r *http.Request) {
-	versionID, ok := pathUUID(r, "version_id")
+	versionID, ok := parseIDParam(w, r, "version_id", "version")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid version id")
 		return
 	}
 	var req startRunRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	run, err := h.svc.StartRun(r.Context(), versionID, req.Environment, req.AllowDestructive, h.actor(r))
@@ -145,9 +139,8 @@ func (h *ProviderValidationHandler) StartRun(w http.ResponseWriter, r *http.Requ
 
 // ListRuns returns a version's validation runs.
 func (h *ProviderValidationHandler) ListRuns(w http.ResponseWriter, r *http.Request) {
-	versionID, ok := pathUUID(r, "version_id")
+	versionID, ok := parseIDParam(w, r, "version_id", "version")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid version id")
 		return
 	}
 	runs, err := h.svc.ListRuns(r.Context(), versionID)
@@ -160,9 +153,8 @@ func (h *ProviderValidationHandler) ListRuns(w http.ResponseWriter, r *http.Requ
 
 // GetRun returns a validation run with its probe results.
 func (h *ProviderValidationHandler) GetRun(w http.ResponseWriter, r *http.Request) {
-	runID, ok := pathUUID(r, "run_id")
+	runID, ok := parseIDParam(w, r, "run_id", "run")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid run id")
 		return
 	}
 	run, err := h.svc.GetRunWithResults(r.Context(), runID)
@@ -184,14 +176,12 @@ type recordResultRequest struct {
 
 // RecordResult records a probe result on a pending run.
 func (h *ProviderValidationHandler) RecordResult(w http.ResponseWriter, r *http.Request) {
-	runID, ok := pathUUID(r, "run_id")
+	runID, ok := parseIDParam(w, r, "run_id", "run")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid run id")
 		return
 	}
 	var req recordResultRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if req.Label == "" {
@@ -209,9 +199,8 @@ func (h *ProviderValidationHandler) RecordResult(w http.ResponseWriter, r *http.
 
 // CompleteRun finalizes a validation run.
 func (h *ProviderValidationHandler) CompleteRun(w http.ResponseWriter, r *http.Request) {
-	runID, ok := pathUUID(r, "run_id")
+	runID, ok := parseIDParam(w, r, "run_id", "run")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid run id")
 		return
 	}
 	run, err := h.svc.CompleteRun(r.Context(), runID)

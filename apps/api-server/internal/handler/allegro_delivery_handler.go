@@ -18,21 +18,12 @@ import (
 
 // AllegroDeliveryHandler handles Allegro delivery settings and shipping rate endpoints.
 type AllegroDeliveryHandler struct {
-	integrationService *service.IntegrationService
-	encryptionKey      []byte
+	allegroClientBase
 }
 
 // NewAllegroDeliveryHandler creates a new AllegroDeliveryHandler.
 func NewAllegroDeliveryHandler(integrationService *service.IntegrationService, encryptionKey []byte) *AllegroDeliveryHandler {
-	return &AllegroDeliveryHandler{
-		integrationService: integrationService,
-		encryptionKey:      encryptionKey,
-	}
-}
-
-// newAllegroClient creates an authenticated Allegro SDK client from the integration credentials.
-func (h *AllegroDeliveryHandler) newAllegroClient(r *http.Request) (*allegrosdk.Client, error) {
-	return buildAllegroClient(r, h.integrationService, h.encryptionKey)
+	return &AllegroDeliveryHandler{allegroClientBase{integrationService: integrationService, encryptionKey: encryptionKey}}
 }
 
 // GetDeliverySettings retrieves the seller's delivery settings.

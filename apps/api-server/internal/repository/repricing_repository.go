@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -22,24 +21,18 @@ func NewRepricingRepository() *RepricingRepository {
 
 // ListRules returns a paginated list of repricing rules matching the filter.
 func (r *RepricingRepository) ListRules(ctx context.Context, tx pgx.Tx, filter model.RepricingRuleListFilter) ([]model.RepricingRule, int, error) {
-	where := "WHERE 1=1"
-	args := []any{}
-	argIdx := 1
-
+	qb := NewQueryBuilder()
 	if filter.Status != nil {
-		where += fmt.Sprintf(" AND status = $%d", argIdx)
-		args = append(args, *filter.Status)
-		argIdx++
+		qb.Add("status = $%d", *filter.Status)
 	}
 	if filter.Strategy != nil {
-		where += fmt.Sprintf(" AND strategy = $%d", argIdx)
-		args = append(args, *filter.Strategy)
-		argIdx++
+		qb.Add("strategy = $%d", *filter.Strategy)
 	}
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := "SELECT COUNT(*) FROM repricing_rules " + where
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count repricing rules: %w", err)
 	}
 
@@ -52,6 +45,7 @@ func (r *RepricingRepository) ListRules(ctx context.Context, tx pgx.Tx, filter m
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
+	limitIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT id, tenant_id, name, status, strategy, priority, scope_type, scope_value,
 		        params, min_price, max_price, channels, last_applied_at, products_affected,
@@ -59,11 +53,10 @@ func (r *RepricingRepository) ListRules(ctx context.Context, tx pgx.Tx, filter m
 		 FROM repricing_rules %s
 		 %s
 		 LIMIT $%d OFFSET $%d`,
-		where, orderByClause, argIdx, argIdx+1,
+		where, orderByClause, limitIdx, limitIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list repricing rules: %w", err)
 	}
@@ -126,70 +119,27 @@ func (r *RepricingRepository) CreateRule(ctx context.Context, tx pgx.Tx, rule *m
 
 // UpdateRule applies partial updates to a repricing rule.
 func (r *RepricingRepository) UpdateRule(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateRepricingRuleRequest) error {
-	setClauses := []string{}
-	args := []any{}
-	argIdx := 1
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "name", req.Name)
+	SetPtr(ub, "status", req.Status)
+	SetPtr(ub, "strategy", req.Strategy)
+	SetPtr(ub, "priority", req.Priority)
+	SetPtr(ub, "scope_type", req.ScopeType)
+	SetPtr(ub, "scope_value", req.ScopeValue)
+	SetPtr(ub, "params", req.Params)
+	SetPtr(ub, "min_price", req.MinPrice)
+	SetPtr(ub, "max_price", req.MaxPrice)
+	SetPtr(ub, "channels", req.Channels)
 
-	if req.Name != nil {
-		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argIdx))
-		args = append(args, *req.Name)
-		argIdx++
-	}
-	if req.Status != nil {
-		setClauses = append(setClauses, fmt.Sprintf("status = $%d", argIdx))
-		args = append(args, *req.Status)
-		argIdx++
-	}
-	if req.Strategy != nil {
-		setClauses = append(setClauses, fmt.Sprintf("strategy = $%d", argIdx))
-		args = append(args, *req.Strategy)
-		argIdx++
-	}
-	if req.Priority != nil {
-		setClauses = append(setClauses, fmt.Sprintf("priority = $%d", argIdx))
-		args = append(args, *req.Priority)
-		argIdx++
-	}
-	if req.ScopeType != nil {
-		setClauses = append(setClauses, fmt.Sprintf("scope_type = $%d", argIdx))
-		args = append(args, *req.ScopeType)
-		argIdx++
-	}
-	if req.ScopeValue != nil {
-		setClauses = append(setClauses, fmt.Sprintf("scope_value = $%d", argIdx))
-		args = append(args, *req.ScopeValue)
-		argIdx++
-	}
-	if req.Params != nil {
-		setClauses = append(setClauses, fmt.Sprintf("params = $%d", argIdx))
-		args = append(args, *req.Params)
-		argIdx++
-	}
-	if req.MinPrice != nil {
-		setClauses = append(setClauses, fmt.Sprintf("min_price = $%d", argIdx))
-		args = append(args, *req.MinPrice)
-		argIdx++
-	}
-	if req.MaxPrice != nil {
-		setClauses = append(setClauses, fmt.Sprintf("max_price = $%d", argIdx))
-		args = append(args, *req.MaxPrice)
-		argIdx++
-	}
-	if req.Channels != nil {
-		setClauses = append(setClauses, fmt.Sprintf("channels = $%d", argIdx))
-		args = append(args, *req.Channels)
-		argIdx++
-	}
-
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
-	args = append(args, id)
+	ub.SetRaw("updated_at = NOW()")
+	args := append(ub.Args(), id)
 
 	query := fmt.Sprintf("UPDATE repricing_rules SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
+		ub.SetClause(), ub.NextArgIdx())
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {

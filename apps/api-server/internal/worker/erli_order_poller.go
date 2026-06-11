@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	erlisdk "github.com/openoms-org/openoms/packages/erli-go-sdk"
@@ -31,41 +30,9 @@ func NewErliOrderPoller(pool *pgxpool.Pool, encryptionKey []byte, orderRepo repo
 }
 
 func erliOrderMapper(mo integration.MarketplaceOrder, ti TenantIntegration, req model.CreateOrderRequest) model.Order {
-	order := model.Order{
-		ID:            uuid.New(),
-		TenantID:      ti.TenantID,
-		ExternalID:    req.ExternalID,
-		Source:        req.Source,
-		IntegrationID: req.IntegrationID,
-		Status:        "new",
-		CustomerName:  req.CustomerName,
-		CustomerEmail: req.CustomerEmail,
-		CustomerPhone: req.CustomerPhone,
-		TotalAmount:   req.TotalAmount,
-		Currency:      req.Currency,
-		OrderedAt:     req.OrderedAt,
-		PaymentMethod: req.PaymentMethod,
-	}
+	order, metadata := newBaseMarketplaceOrder(mo, ti, req)
 
-	if req.PaymentStatus != nil {
-		order.PaymentStatus = *req.PaymentStatus
-	} else {
-		order.PaymentStatus = "pending"
-	}
-
-	addrJSON, err := json.Marshal(mo.ShippingAddress)
-	if err == nil {
-		order.ShippingAddress = addrJSON
-	}
-
-	itemsJSON, err := json.Marshal(mo.Items)
-	if err == nil {
-		order.Items = itemsJSON
-	}
-
-	// Build metadata: always include external_id plus Erli-specific status fields.
-	metadata := map[string]any{"external_id": mo.ExternalID}
-
+	// Erli-specific status fields extend the base metadata (already seeded with external_id).
 	// Prefer pre-computed statuses from RawData (set by the provider's mapErliOrder).
 	if mo.RawData != nil {
 		if erliStatus, ok := mo.RawData["erli_status"].(string); ok {

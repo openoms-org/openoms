@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
@@ -63,15 +62,7 @@ func (s *RecurringOrderService) List(ctx context.Context, tenantID uuid.UUID, fi
 		if err != nil {
 			return err
 		}
-		if orders == nil {
-			orders = []model.RecurringOrder{}
-		}
-		resp = model.ListResponse[model.RecurringOrder]{
-			Items:  orders,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(orders, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err
@@ -179,9 +170,7 @@ func (s *RecurringOrderService) Create(ctx context.Context, tenantID uuid.UUID, 
 	if err != nil {
 		return nil, err
 	}
-	if s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "recurring_order.created", ro) })
-	}
+	DispatchWebhookAsync(s.webhookDispatch, tenantID, "recurring_order.created", ro)
 	return ro, nil
 }
 
@@ -252,8 +241,8 @@ func (s *RecurringOrderService) Update(ctx context.Context, tenantID, id uuid.UU
 	if err != nil {
 		return nil, err
 	}
-	if ro != nil && s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "recurring_order.updated", ro) })
+	if ro != nil {
+		DispatchWebhookAsync(s.webhookDispatch, tenantID, "recurring_order.updated", ro)
 	}
 	return ro, nil
 }
@@ -286,10 +275,8 @@ func (s *RecurringOrderService) Delete(ctx context.Context, tenantID, id uuid.UU
 			IPAddress:  ip,
 		})
 	})
-	if err == nil && s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() {
-			s.webhookDispatch.Dispatch(context.Background(), tenantID, "recurring_order.deleted", map[string]any{"recurring_order_id": id.String()})
-		})
+	if err == nil {
+		DispatchWebhookAsync(s.webhookDispatch, tenantID, "recurring_order.deleted", map[string]any{"recurring_order_id": id.String()})
 	}
 	return err
 }

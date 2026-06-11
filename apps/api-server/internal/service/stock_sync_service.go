@@ -33,6 +33,27 @@ func closeMarketplaceProvider(provider any) {
 	}
 }
 
+// marketplaceProviderFor decrypts the integration credentials and constructs its
+// marketplace provider for the worker loops. On failure it logs with logPrefix
+// (reproducing each loop's per-stage message) and returns ok=false; the caller
+// owns the failed-count/continue bookkeeping and the provider lifecycle
+// (closeMarketplaceProvider).
+func (s *StockSyncService) marketplaceProviderFor(integ *model.IntegrationWithCreds, logPrefix string) (integration.MarketplaceProvider, bool) {
+	credJSON, err := crypto.Decrypt(integ.EncryptedCredentials, s.encryptionKey)
+	if err != nil {
+		s.logger.Error(logPrefix+": decrypt credentials failed",
+			"integration_id", integ.ID, "error", err)
+		return nil, false
+	}
+	provider, err := integration.NewMarketplaceProvider(integ.Provider, credJSON, integ.Settings)
+	if err != nil {
+		s.logger.Error(logPrefix+": create provider failed",
+			"provider", integ.Provider, "error", err)
+		return nil, false
+	}
+	return provider, true
+}
+
 const maxServiceErrorMsgLen = 500
 
 // truncateServiceErrorMsg limits error messages stored in the database to avoid storing
@@ -101,12 +122,7 @@ func (s *StockSyncService) ListChannels(ctx context.Context, tenantID uuid.UUID,
 		if err != nil {
 			return err
 		}
-		resp = model.ListResponse[model.StockSyncChannel]{
-			Items:  channels,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(channels, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	if resp.Items == nil {
@@ -310,9 +326,7 @@ func (s *StockSyncService) OnStockChange(ctx context.Context, tenantID, productI
 	}
 
 	// Dispatch webhook for stock change
-	if s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "stock.changed", event) })
-	}
+	DispatchWebhookAsync(s.webhookDispatch, tenantID, "stock.changed", event)
 
 	// Detect stock restored: stock was 0, now > 0.
 	// If automation engine is wired, fire the event and let user-configured rules handle relisting.
@@ -440,18 +454,8 @@ func (s *StockSyncService) reactivateListings(ctx context.Context, tenantID, pro
 			continue
 		}
 
-		credJSON, err := crypto.Decrypt(job.integration.EncryptedCredentials, s.encryptionKey)
-		if err != nil {
-			s.logger.Error("auto-relist: decrypt credentials failed",
-				"integration_id", job.integration.ID, "error", err)
-			failed++
-			continue
-		}
-
-		provider, err := integration.NewMarketplaceProvider(job.integration.Provider, credJSON, job.integration.Settings)
-		if err != nil {
-			s.logger.Error("auto-relist: create provider failed",
-				"provider", job.integration.Provider, "error", err)
+		provider, ok := s.marketplaceProviderFor(job.integration, "auto-relist")
+		if !ok {
 			failed++
 			continue
 		}
@@ -547,18 +551,8 @@ func (s *StockSyncService) deactivateListings(ctx context.Context, tenantID, pro
 			continue
 		}
 
-		credJSON, err := crypto.Decrypt(job.integration.EncryptedCredentials, s.encryptionKey)
-		if err != nil {
-			s.logger.Error("auto-deactivate: decrypt credentials failed",
-				"integration_id", job.integration.ID, "error", err)
-			failed++
-			continue
-		}
-
-		provider, err := integration.NewMarketplaceProvider(job.integration.Provider, credJSON, job.integration.Settings)
-		if err != nil {
-			s.logger.Error("auto-deactivate: create provider failed",
-				"provider", job.integration.Provider, "error", err)
+		provider, ok := s.marketplaceProviderFor(job.integration, "auto-deactivate")
+		if !ok {
 			failed++
 			continue
 		}
@@ -744,18 +738,8 @@ func (s *StockSyncService) PropagateStockToMarketplaces(ctx context.Context, ten
 			continue
 		}
 
-		credJSON, err := crypto.Decrypt(job.integration.EncryptedCredentials, s.encryptionKey)
-		if err != nil {
-			s.logger.Error("stock sync: decrypt credentials failed",
-				"integration_id", job.integration.ID, "error", err)
-			failed++
-			continue
-		}
-
-		provider, err := integration.NewMarketplaceProvider(job.integration.Provider, credJSON, job.integration.Settings)
-		if err != nil {
-			s.logger.Error("stock sync: create provider failed",
-				"provider", job.integration.Provider, "error", err)
+		provider, ok := s.marketplaceProviderFor(job.integration, "stock sync")
+		if !ok {
 			failed++
 			continue
 		}
@@ -1030,12 +1014,7 @@ func (s *StockSyncService) ListEvents(ctx context.Context, tenantID uuid.UUID, f
 		if err != nil {
 			return err
 		}
-		resp = model.ListResponse[model.StockSyncEvent]{
-			Items:  events,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(events, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	if resp.Items == nil {

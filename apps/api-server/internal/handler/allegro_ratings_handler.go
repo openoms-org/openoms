@@ -15,21 +15,12 @@ import (
 
 // AllegroRatingsHandler handles Allegro seller rating management API routes.
 type AllegroRatingsHandler struct {
-	integrationService *service.IntegrationService
-	encryptionKey      []byte
+	allegroClientBase
 }
 
 // NewAllegroRatingsHandler creates a new AllegroRatingsHandler.
 func NewAllegroRatingsHandler(integrationService *service.IntegrationService, encryptionKey []byte) *AllegroRatingsHandler {
-	return &AllegroRatingsHandler{
-		integrationService: integrationService,
-		encryptionKey:      encryptionKey,
-	}
-}
-
-// newAllegroClient creates an authenticated Allegro SDK client from the integration credentials.
-func (h *AllegroRatingsHandler) newAllegroClient(r *http.Request) (*allegrosdk.Client, error) {
-	return buildAllegroClient(r, h.integrationService, h.encryptionKey)
+	return &AllegroRatingsHandler{allegroClientBase{integrationService: integrationService, encryptionKey: encryptionKey}}
 }
 
 // ListRatings returns the list of seller ratings from Allegro.

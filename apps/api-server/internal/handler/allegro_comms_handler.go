@@ -15,21 +15,12 @@ import (
 
 // AllegroCommsHandler handles Allegro messaging, returns, and refund API routes.
 type AllegroCommsHandler struct {
-	integrationService *service.IntegrationService
-	encryptionKey      []byte
+	allegroClientBase
 }
 
 // NewAllegroCommsHandler creates a new AllegroCommsHandler.
 func NewAllegroCommsHandler(integrationService *service.IntegrationService, encryptionKey []byte) *AllegroCommsHandler {
-	return &AllegroCommsHandler{
-		integrationService: integrationService,
-		encryptionKey:      encryptionKey,
-	}
-}
-
-// newAllegroClient creates an authenticated Allegro SDK client from the integration credentials.
-func (h *AllegroCommsHandler) newAllegroClient(r *http.Request) (*allegrosdk.Client, error) {
-	return buildAllegroClient(r, h.integrationService, h.encryptionKey)
+	return &AllegroCommsHandler{allegroClientBase{integrationService: integrationService, encryptionKey: encryptionKey}}
 }
 
 // --- Messaging ---

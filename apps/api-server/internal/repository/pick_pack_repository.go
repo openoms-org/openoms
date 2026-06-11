@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -51,29 +50,18 @@ func (r *PickPackRepository) FindSessionByID(ctx context.Context, tx pgx.Tx, id 
 
 // ListSessions lists pick-pack sessions with filtering and pagination.
 func (r *PickPackRepository) ListSessions(ctx context.Context, tx pgx.Tx, filter model.PickPackSessionListFilter) ([]model.PickPackSession, int, error) {
-	var conditions []string
-	var args []any
-	argIdx := 1
-
+	qb := NewQueryBuilder()
 	if filter.Status != nil {
-		conditions = append(conditions, fmt.Sprintf("status = $%d", argIdx))
-		args = append(args, *filter.Status)
-		argIdx++
+		qb.Add("status = $%d", *filter.Status)
 	}
 	if filter.AssignedTo != nil {
-		conditions = append(conditions, fmt.Sprintf("assigned_to = $%d", argIdx))
-		args = append(args, *filter.AssignedTo)
-		argIdx++
+		qb.Add("assigned_to = $%d", *filter.AssignedTo)
 	}
-
-	where := ""
-	if len(conditions) > 0 {
-		where = "WHERE " + strings.Join(conditions, " AND ")
-	}
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM pick_pack_sessions %s", where)
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count pick_pack_sessions: %w", err)
 	}
 
@@ -84,15 +72,15 @@ func (r *PickPackRepository) ListSessions(ctx context.Context, tx pgx.Tx, filter
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
+	limitIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT id, tenant_id, session_type, status, assigned_to, started_at,
 		        completed_at, notes, created_at, updated_at
 		 FROM pick_pack_sessions %s %s LIMIT $%d OFFSET $%d`,
-		where, orderByClause, argIdx, argIdx+1,
+		where, orderByClause, limitIdx, limitIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list pick_pack_sessions: %w", err)
 	}

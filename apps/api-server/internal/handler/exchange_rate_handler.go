@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -81,8 +80,7 @@ func (h *ExchangeRateHandler) Create(w http.ResponseWriter, r *http.Request) {
 	actorID := middleware.UserIDFromContext(r.Context())
 
 	var req model.CreateExchangeRateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -110,8 +108,7 @@ func (h *ExchangeRateHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req model.UpdateExchangeRateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -178,8 +175,7 @@ func (h *ExchangeRateHandler) Convert(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 
 	var req model.ConvertAmountRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if err := req.Validate(); err != nil {

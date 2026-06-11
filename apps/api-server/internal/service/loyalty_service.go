@@ -54,15 +54,7 @@ func (s *LoyaltyService) ListPrograms(ctx context.Context, tenantID uuid.UUID, f
 		if err != nil {
 			return err
 		}
-		if programs == nil {
-			programs = []model.LoyaltyProgram{}
-		}
-		resp = model.ListResponse[model.LoyaltyProgram]{
-			Items:  programs,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(programs, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err

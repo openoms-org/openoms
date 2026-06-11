@@ -180,11 +180,6 @@ type StockSyncEventListFilter struct {
 	PaginationParams
 }
 
-// ManualPushRequest is an optional payload for manual stock push.
-type ManualPushRequest struct {
-	ProductIDs []uuid.UUID `json:"product_ids,omitempty"`
-}
-
 // IsValidTriggerType checks if a trigger type is valid.
 func IsValidTriggerType(t string) bool {
 	return validTriggerTypes[t]

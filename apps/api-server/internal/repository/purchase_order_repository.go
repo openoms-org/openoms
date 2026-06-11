@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -117,53 +116,28 @@ func (r *PurchaseOrderRepository) Create(ctx context.Context, tx pgx.Tx, po *mod
 
 // Update applies partial updates to a purchase order.
 func (r *PurchaseOrderRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdatePurchaseOrderRequest) error {
-	var setClauses []string
-	var args []any
-	argIdx := 1
-
-	if req.SupplierID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("supplier_id = $%d", argIdx))
-		args = append(args, *req.SupplierID)
-		argIdx++
-	}
-	if req.SupplierName != nil {
-		setClauses = append(setClauses, fmt.Sprintf("supplier_name = $%d", argIdx))
-		args = append(args, *req.SupplierName)
-		argIdx++
-	}
-	if req.WarehouseID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("warehouse_id = $%d", argIdx))
-		args = append(args, *req.WarehouseID)
-		argIdx++
-	}
-	if req.Notes != nil {
-		setClauses = append(setClauses, fmt.Sprintf("notes = $%d", argIdx))
-		args = append(args, *req.Notes)
-		argIdx++
-	}
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "supplier_id", req.SupplierID)
+	SetPtr(ub, "supplier_name", req.SupplierName)
+	SetPtr(ub, "warehouse_id", req.WarehouseID)
+	SetPtr(ub, "notes", req.Notes)
 	if req.ExpectedDeliveryDate != nil {
 		if *req.ExpectedDeliveryDate == "" {
-			setClauses = append(setClauses, "expected_delivery_date = NULL")
+			ub.SetRaw("expected_delivery_date = NULL")
 		} else {
-			setClauses = append(setClauses, fmt.Sprintf("expected_delivery_date = $%d", argIdx))
-			args = append(args, *req.ExpectedDeliveryDate)
-			argIdx++
+			ub.Set("expected_delivery_date", *req.ExpectedDeliveryDate)
 		}
 	}
-	if req.Currency != nil {
-		setClauses = append(setClauses, fmt.Sprintf("currency = $%d", argIdx))
-		args = append(args, *req.Currency)
-		argIdx++
-	}
+	SetPtr(ub, "currency", req.Currency)
 
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
+	ub.SetRaw("updated_at = NOW()")
 	query := fmt.Sprintf("UPDATE purchase_orders SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
-	args = append(args, id)
+		ub.SetClause(), ub.NextArgIdx())
+	args := append(ub.Args(), id)
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {

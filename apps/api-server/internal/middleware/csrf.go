@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/base64"
-	"encoding/json"
 	"net/http"
 	"strings"
 )
@@ -33,17 +32,13 @@ func CSRF(secure bool, cookieDomain string) func(http.Handler) http.Handler {
 			// State-changing methods: validate token
 			cookie, err := r.Cookie("csrf_token")
 			if err != nil || cookie.Value == "" {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusForbidden)
-				_ = json.NewEncoder(w).Encode(map[string]string{"error": "missing CSRF token"})
+				writeJSONError(w, http.StatusForbidden, "missing CSRF token")
 				return
 			}
 
 			headerToken := r.Header.Get("X-CSRF-Token")
 			if subtle.ConstantTimeCompare([]byte(cookie.Value), []byte(headerToken)) != 1 {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusForbidden)
-				_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid CSRF token"})
+				writeJSONError(w, http.StatusForbidden, "invalid CSRF token")
 				return
 			}
 

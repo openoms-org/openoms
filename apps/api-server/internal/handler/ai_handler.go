@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -32,8 +31,7 @@ func (h *AIHandler) Categorize(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ProductID uuid.UUID `json:"product_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if req.ProductID == uuid.Nil {
@@ -71,8 +69,7 @@ func (h *AIHandler) Describe(w http.ResponseWriter, r *http.Request) {
 		Marketplace string    `json:"marketplace"`
 		Format      string    `json:"format"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if req.ProductID == uuid.Nil {
@@ -114,8 +111,7 @@ func (h *AIHandler) Improve(w http.ResponseWriter, r *http.Request) {
 		Language    string `json:"language"`
 		Format      string `json:"format"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if req.Description == "" {
@@ -143,8 +139,7 @@ func (h *AIHandler) Translate(w http.ResponseWriter, r *http.Request) {
 		Description    string `json:"description"`
 		TargetLanguage string `json:"target_language"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if req.Description == "" {
@@ -177,8 +172,7 @@ func (h *AIHandler) BulkCategorize(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		ProductIDs []uuid.UUID `json:"product_ids"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 	if len(req.ProductIDs) == 0 {
