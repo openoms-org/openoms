@@ -316,6 +316,9 @@ func run() error {
 
 	userService := service.NewUserService(userRepo, auditRepo, passwordSvc, pool)
 	roleService := service.NewRoleService(roleRepo, auditRepo, pool)
+	// Seed default system roles (Owner/Administrator/Employee) for every newly
+	// registered tenant via AuthService.Register (DEAD-02). Best-effort inside Register.
+	authService.SetRoleService(roleService)
 	emailService := service.NewEmailService(tenantRepo, pool)
 	smsService := service.NewSMSService(tenantRepo, pool)
 	webhookDispatchService := service.NewWebhookDispatchService(tenantRepo, webhookDeliveryRepo, pool)

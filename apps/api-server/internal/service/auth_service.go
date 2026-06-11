@@ -61,6 +61,7 @@ type AuthService struct {
 	tenantRepo    repository.TenantRepo
 	auditRepo     repository.AuditRepo
 	roleRepo      repository.RoleRepo
+	roleSvc       *RoleService
 	tokenService  *TokenService
 	passwordSvc   *PasswordService
 	pool          *pgxpool.Pool
@@ -72,6 +73,12 @@ type AuthService struct {
 // SetRoleRepo configures role permission resolution for access-token claims.
 func (s *AuthService) SetRoleRepo(roleRepo repository.RoleRepo) {
 	s.roleRepo = roleRepo
+}
+
+// SetRoleService configures the RoleService used to seed a new tenant's default
+// system roles (Owner/Administrator/Employee) during Register.
+func (s *AuthService) SetRoleService(roleSvc *RoleService) {
+	s.roleSvc = roleSvc
 }
 
 // SetLoginLockout configures per-account login lockout tracking.
@@ -368,6 +375,20 @@ func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest, i
 	if err != nil {
 		return nil, "", err
 	}
+
+	// Seed the new tenant's default system roles (Owner/Administrator/Employee) so the
+	// RBAC UI is populated. EnsureSystemRoles runs in its OWN WithTenant transaction and
+	// is idempotent. Best-effort by design: the tenant + owner user are already committed
+	// (the slug is now taken, so this is un-retryable) and the owner stays fully functional
+	// via the string-role permission fallback (users.role_id stays NULL). Failing here would
+	// orphan the committed tenant for no functional gain, so we log + report and continue.
+	if s.roleSvc != nil {
+		if seedErr := s.roleSvc.EnsureSystemRoles(ctx, tenantID); seedErr != nil {
+			slog.Error("failed to seed tenant system roles", "error", seedErr, "tenant_id", tenantID)
+			sentry.CaptureException(seedErr)
+		}
+	}
+
 	if err := s.applyEffectivePermissions(ctx, user); err != nil {
 		return nil, "", err
 	}
