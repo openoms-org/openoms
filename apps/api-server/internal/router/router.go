@@ -1317,6 +1317,24 @@ func New(deps RouterDeps) *chi.Mux {
 // single-part TLDs (.org, .com, .pl) but NOT for multi-part ccTLDs like .co.uk
 // or .com.pl. This is intentional — openoms.org uses a single-part TLD and we
 // avoid pulling in golang.org/x/net/publicsuffix for this one call site.
+func extractCookieDomain(frontendURL string) string {
+	u, err := url.Parse(frontendURL)
+	if err != nil {
+		return ""
+	}
+	host := u.Hostname()
+	if host == "localhost" || host == "127.0.0.1" || host == "::1" {
+		return ""
+	}
+	parts := strings.Split(host, ".")
+	if len(parts) < 2 {
+		return "" // single-label hostname
+	}
+	// "openoms.org" → ".openoms.org"
+	// "app.openoms.org" → ".openoms.org"
+	return "." + strings.Join(parts[len(parts)-2:], ".")
+}
+
 // apiDocsEnabled reports whether the unauthenticated OpenAPI spec and Swagger UI
 // routes should be served. Docs are always available in development; in other
 // environments they require ENABLE_API_DOCS=true so the API surface is hidden by
@@ -1334,22 +1352,4 @@ func registerDocsRoutes(r chi.Router, docs *handler.DocsHandler, cfg *config.Con
 	}
 	r.Get("/v1/openapi.yaml", docs.ServeSpec)
 	r.Get("/v1/docs", docs.ServeSwaggerUI)
-}
-
-func extractCookieDomain(frontendURL string) string {
-	u, err := url.Parse(frontendURL)
-	if err != nil {
-		return ""
-	}
-	host := u.Hostname()
-	if host == "localhost" || host == "127.0.0.1" || host == "::1" {
-		return ""
-	}
-	parts := strings.Split(host, ".")
-	if len(parts) < 2 {
-		return "" // single-label hostname
-	}
-	// "openoms.org" → ".openoms.org"
-	// "app.openoms.org" → ".openoms.org"
-	return "." + strings.Join(parts[len(parts)-2:], ".")
 }
