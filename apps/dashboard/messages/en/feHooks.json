@@ -31,6 +31,16 @@
     "settlementNotes": "Notes",
     "settlementCreate": "Create settlement",
     "settlementCreated": "Settlement created",
-    "settlementInvalid": "Enter a settlement date and a gross amount"
+    "settlementInvalid": "Enter a settlement date and a gross amount",
+    "dropshipManual": "Create manually",
+    "dropshipManualTitle": "Create dropship order",
+    "dropshipManualDescription": "Forward this order's items to a chosen supplier.",
+    "dropshipSupplier": "Supplier",
+    "dropshipSelectSupplier": "Select supplier",
+    "dropshipUnitCost": "Unit cost",
+    "dropshipCreate": "Create",
+    "dropshipCreated": "Dropship order created",
+    "dropshipNoSupplier": "Select a supplier first",
+    "dropshipNoItems": "This order has no items to forward"
   }
 }

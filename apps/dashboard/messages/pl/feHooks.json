@@ -31,6 +31,16 @@
     "settlementNotes": "Uwagi",
     "settlementCreate": "Utwórz rozliczenie",
     "settlementCreated": "Rozliczenie utworzone",
-    "settlementInvalid": "Podaj datę rozliczenia i kwotę brutto"
+    "settlementInvalid": "Podaj datę rozliczenia i kwotę brutto",
+    "dropshipManual": "Utwórz ręcznie",
+    "dropshipManualTitle": "Utwórz zamówienie dropshipping",
+    "dropshipManualDescription": "Przekaż pozycje tego zamówienia do wybranego dostawcy.",
+    "dropshipSupplier": "Dostawca",
+    "dropshipSelectSupplier": "Wybierz dostawcę",
+    "dropshipUnitCost": "Koszt jedn.",
+    "dropshipCreate": "Utwórz",
+    "dropshipCreated": "Zamówienie dropshipping utworzone",
+    "dropshipNoSupplier": "Najpierw wybierz dostawcę",
+    "dropshipNoItems": "To zamówienie nie ma pozycji do przekazania"
   }
 }

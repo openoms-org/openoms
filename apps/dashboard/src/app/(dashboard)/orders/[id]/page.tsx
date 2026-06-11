@@ -30,6 +30,7 @@ import { OrderForm } from "@/components/orders/order-form";
 import { mapCreateOrderRequestToUpdateOrderRequest } from "@/components/orders/order-request-mappers";
 import { OrderStatusActions } from "@/components/orders/order-status-actions";
 import { OrderInvoicesSection } from "@/components/orders/order-invoices-section";
+import { OrderDropshipManualDialog } from "@/components/orders/order-dropship-manual-dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -113,6 +114,7 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const t = useTranslations("orders");
   const tc = useTranslations("common");
+  const tf = useTranslations("feHooks");
   const { data: order, isLoading } = useOrder(params.id);
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -155,6 +157,7 @@ export default function OrderDetailPage() {
   // Invoicing is a controlled feature; only mount the invoice section (which
   // fetches /orders/{id}/invoices) when visible in the active surface.
   const invoicingVisible = isFeatureVisible("invoicing");
+  const [showDropshipManual, setShowDropshipManual] = useState(false);
 
   // Calculate total order weight from items for rate shopping
   const items = order?.items;
@@ -801,30 +804,40 @@ export default function OrderDetailPage() {
               ) : undefined
             }
             headerAction={
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={autoRouteDropship.isPending}
-                onClick={async () => {
-                  try {
-                    const result = await autoRouteDropship.mutateAsync(params.id);
-                    if (result.length === 0) {
-                      toast.info(t("detail.noDropshipProducts"));
-                    } else {
-                      toast.success(t("detail.dropshipCreated", { count: result.length }));
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDropshipManual(true)}
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  {tf("dropshipManual")}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={autoRouteDropship.isPending}
+                  onClick={async () => {
+                    try {
+                      const result = await autoRouteDropship.mutateAsync(params.id);
+                      if (result.length === 0) {
+                        toast.info(t("detail.noDropshipProducts"));
+                      } else {
+                        toast.success(t("detail.dropshipCreated", { count: result.length }));
+                      }
+                    } catch (error) {
+                      toast.error(getErrorMessage(error));
                     }
-                  } catch (error) {
-                    toast.error(getErrorMessage(error));
-                  }
-                }}
-              >
-                {autoRouteDropship.isPending ? (
-                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                ) : (
-                  <Factory className="mr-1 h-4 w-4" />
-                )}
-                {t("detail.forwardToSuppliers")}
-              </Button>
+                  }}
+                >
+                  {autoRouteDropship.isPending ? (
+                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Factory className="mr-1 h-4 w-4" />
+                  )}
+                  {t("detail.forwardToSuppliers")}
+                </Button>
+              </div>
             }
           >
             {isLoadingDropship ? (
@@ -894,6 +907,13 @@ export default function OrderDetailPage() {
               </div>
             )}
           </CollapsibleSection>
+          )}
+
+          {dropshipVisible && showDropshipManual && (
+            <OrderDropshipManualDialog
+              order={order}
+              onClose={() => setShowDropshipManual(false)}
+            />
           )}
 
           {/* Invoices — manual issuance, guarded against duplicating auto-created invoices */}
