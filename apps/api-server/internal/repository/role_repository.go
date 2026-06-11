@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -16,6 +15,19 @@ type RoleRepository struct{}
 // NewRoleRepository creates a new RoleRepository.
 func NewRoleRepository() *RoleRepository {
 	return &RoleRepository{}
+}
+
+// roleColumns is the canonical column list for SELECTing a role row.
+const roleColumns = "id, tenant_id, name, description, is_system, permissions, created_at, updated_at"
+
+// scanRole scans a single role row in roleColumns order.
+func scanRole(row pgx.Row) (model.Role, error) {
+	var role model.Role
+	err := row.Scan(
+		&role.ID, &role.TenantID, &role.Name, &role.Description,
+		&role.IsSystem, &role.Permissions, &role.CreatedAt, &role.UpdatedAt,
+	)
+	return role, err
 }
 
 // List returns a paginated list of roles matching the filter.
@@ -32,8 +44,7 @@ func (r *RoleRepository) List(ctx context.Context, tx pgx.Tx, filter model.RoleL
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
 	query := fmt.Sprintf(
-		`SELECT id, tenant_id, name, description, is_system, permissions, created_at, updated_at
-		 FROM roles %s LIMIT $1 OFFSET $2`,
+		"SELECT "+roleColumns+" FROM roles %s LIMIT $1 OFFSET $2",
 		orderByClause,
 	)
 
@@ -45,11 +56,8 @@ func (r *RoleRepository) List(ctx context.Context, tx pgx.Tx, filter model.RoleL
 
 	var roles []model.Role
 	for rows.Next() {
-		var role model.Role
-		if err := rows.Scan(
-			&role.ID, &role.TenantID, &role.Name, &role.Description,
-			&role.IsSystem, &role.Permissions, &role.CreatedAt, &role.UpdatedAt,
-		); err != nil {
+		role, err := scanRole(rows)
+		if err != nil {
 			return nil, 0, fmt.Errorf("scan role: %w", err)
 		}
 		roles = append(roles, role)
@@ -59,14 +67,9 @@ func (r *RoleRepository) List(ctx context.Context, tx pgx.Tx, filter model.RoleL
 
 // FindByID returns a role by its ID.
 func (r *RoleRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.Role, error) {
-	var role model.Role
-	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, name, description, is_system, permissions, created_at, updated_at
-		 FROM roles WHERE id = $1`, id,
-	).Scan(
-		&role.ID, &role.TenantID, &role.Name, &role.Description,
-		&role.IsSystem, &role.Permissions, &role.CreatedAt, &role.UpdatedAt,
-	)
+	role, err := scanRole(tx.QueryRow(ctx,
+		"SELECT "+roleColumns+" FROM roles WHERE id = $1", id,
+	))
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -78,14 +81,9 @@ func (r *RoleRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) 
 
 // FindByName returns a role by its name.
 func (r *RoleRepository) FindByName(ctx context.Context, tx pgx.Tx, name string) (*model.Role, error) {
-	var role model.Role
-	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, name, description, is_system, permissions, created_at, updated_at
-		 FROM roles WHERE name = $1`, name,
-	).Scan(
-		&role.ID, &role.TenantID, &role.Name, &role.Description,
-		&role.IsSystem, &role.Permissions, &role.CreatedAt, &role.UpdatedAt,
-	)
+	role, err := scanRole(tx.QueryRow(ctx,
+		"SELECT "+roleColumns+" FROM roles WHERE name = $1", name,
+	))
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -108,35 +106,22 @@ func (r *RoleRepository) Create(ctx context.Context, tx pgx.Tx, role *model.Role
 
 // Update applies partial updates to a role.
 func (r *RoleRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateRoleRequest) error {
-	var setClauses []string
-	var args []any
-	argIdx := 1
-
-	if req.Name != nil {
-		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argIdx))
-		args = append(args, *req.Name)
-		argIdx++
-	}
-	if req.Description != nil {
-		setClauses = append(setClauses, fmt.Sprintf("description = $%d", argIdx))
-		args = append(args, *req.Description)
-		argIdx++
-	}
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "name", req.Name)
+	SetPtr(ub, "description", req.Description)
 	if req.Permissions != nil {
-		setClauses = append(setClauses, fmt.Sprintf("permissions = $%d", argIdx))
-		args = append(args, req.Permissions)
-		argIdx++
+		ub.Set("permissions", req.Permissions)
 	}
 
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
+	ub.SetRaw("updated_at = NOW()")
 
 	query := fmt.Sprintf("UPDATE roles SET %s WHERE id = $%d",
-		joinStrings(setClauses, ", "), argIdx)
-	args = append(args, id)
+		ub.SetClause(), ub.NextArgIdx())
+	args := append(ub.Args(), id)
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {
@@ -158,16 +143,4 @@ func (r *RoleRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) er
 		return fmt.Errorf("role not found")
 	}
 	return nil
-}
-
-// joinStrings joins string slices — avoids importing strings package in this file.
-func joinStrings(parts []string, sep string) string {
-	var result strings.Builder
-	for i, p := range parts {
-		if i > 0 {
-			result.WriteString(sep)
-		}
-		result.WriteString(p)
-	}
-	return result.String()
 }

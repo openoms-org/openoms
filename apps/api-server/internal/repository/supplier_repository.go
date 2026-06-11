@@ -22,24 +22,15 @@ func NewSupplierRepository() *SupplierRepository {
 
 // List returns a paginated list of suppliers matching the filter.
 func (r *SupplierRepository) List(ctx context.Context, tx pgx.Tx, filter model.SupplierListFilter) ([]model.Supplier, int, error) {
-	var conditions []string
-	var args []any
-	argIdx := 1
-
+	qb := NewQueryBuilder()
 	if filter.Status != nil {
-		conditions = append(conditions, fmt.Sprintf("status = $%d", argIdx))
-		args = append(args, *filter.Status)
-		argIdx++
+		qb.Add("status = $%d", *filter.Status)
 	}
-
-	where := ""
-	if len(conditions) > 0 {
-		where = "WHERE " + strings.Join(conditions, " AND ")
-	}
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM suppliers %s", where)
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count suppliers: %w", err)
 	}
 
@@ -50,15 +41,15 @@ func (r *SupplierRepository) List(ctx context.Context, tx pgx.Tx, filter model.S
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
+	limitIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT id, tenant_id, name, code, feed_url, feed_format, status, settings,
 		        sync_interval_minutes, last_sync_at, error_message, portal_enabled, integration_id, default_category_id, created_at, updated_at
 		 FROM suppliers %s %s LIMIT $%d OFFSET $%d`,
-		where, orderByClause, argIdx, argIdx+1,
+		where, orderByClause, limitIdx, limitIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list suppliers: %w", err)
 	}
@@ -114,74 +105,27 @@ func (r *SupplierRepository) Create(ctx context.Context, tx pgx.Tx, supplier *mo
 
 // Update applies partial updates to a supplier.
 func (r *SupplierRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateSupplierRequest) error {
-	var setClauses []string
-	var args []any
-	argIdx := 1
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "name", req.Name)
+	SetPtr(ub, "code", req.Code)
+	SetPtr(ub, "feed_url", req.FeedURL)
+	SetPtr(ub, "feed_format", req.FeedFormat)
+	SetPtr(ub, "status", req.Status)
+	SetPtr(ub, "settings", req.Settings)
+	SetPtr(ub, "error_message", req.ErrorMessage)
+	SetPtr(ub, "sync_interval_minutes", req.SyncIntervalMinutes)
+	SetPtr(ub, "portal_enabled", req.PortalEnabled)
+	SetPtr(ub, "integration_id", req.IntegrationID)
+	SetPtr(ub, "default_category_id", req.DefaultCategoryID)
 
-	if req.Name != nil {
-		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argIdx))
-		args = append(args, *req.Name)
-		argIdx++
-	}
-	if req.Code != nil {
-		setClauses = append(setClauses, fmt.Sprintf("code = $%d", argIdx))
-		args = append(args, *req.Code)
-		argIdx++
-	}
-	if req.FeedURL != nil {
-		setClauses = append(setClauses, fmt.Sprintf("feed_url = $%d", argIdx))
-		args = append(args, *req.FeedURL)
-		argIdx++
-	}
-	if req.FeedFormat != nil {
-		setClauses = append(setClauses, fmt.Sprintf("feed_format = $%d", argIdx))
-		args = append(args, *req.FeedFormat)
-		argIdx++
-	}
-	if req.Status != nil {
-		setClauses = append(setClauses, fmt.Sprintf("status = $%d", argIdx))
-		args = append(args, *req.Status)
-		argIdx++
-	}
-	if req.Settings != nil {
-		setClauses = append(setClauses, fmt.Sprintf("settings = $%d", argIdx))
-		args = append(args, *req.Settings)
-		argIdx++
-	}
-	if req.ErrorMessage != nil {
-		setClauses = append(setClauses, fmt.Sprintf("error_message = $%d", argIdx))
-		args = append(args, *req.ErrorMessage)
-		argIdx++
-	}
-	if req.SyncIntervalMinutes != nil {
-		setClauses = append(setClauses, fmt.Sprintf("sync_interval_minutes = $%d", argIdx))
-		args = append(args, *req.SyncIntervalMinutes)
-		argIdx++
-	}
-	if req.PortalEnabled != nil {
-		setClauses = append(setClauses, fmt.Sprintf("portal_enabled = $%d", argIdx))
-		args = append(args, *req.PortalEnabled)
-		argIdx++
-	}
-	if req.IntegrationID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("integration_id = $%d", argIdx))
-		args = append(args, *req.IntegrationID)
-		argIdx++
-	}
-	if req.DefaultCategoryID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("default_category_id = $%d", argIdx))
-		args = append(args, *req.DefaultCategoryID)
-		argIdx++
-	}
-
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
+	ub.SetRaw("updated_at = NOW()")
 	query := fmt.Sprintf("UPDATE suppliers SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
-	args = append(args, id)
+		ub.SetClause(), ub.NextArgIdx())
+	args := append(ub.Args(), id)
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {
@@ -271,46 +215,31 @@ func scanSupplierProduct(row interface{ Scan(dest ...any) error }) (*model.Suppl
 
 // List returns a paginated list of supplier products matching the filter.
 func (r *SupplierProductRepository) List(ctx context.Context, tx pgx.Tx, filter model.SupplierProductListFilter) ([]model.SupplierProduct, int, error) {
-	var conditions []string
-	var args []any
-	argIdx := 1
-
+	qb := NewQueryBuilder()
 	if filter.SupplierID != nil {
-		conditions = append(conditions, fmt.Sprintf("supplier_id = $%d", argIdx))
-		args = append(args, *filter.SupplierID)
-		argIdx++
+		qb.Add("supplier_id = $%d", *filter.SupplierID)
 	}
 	if filter.EAN != nil {
-		conditions = append(conditions, fmt.Sprintf("ean = $%d", argIdx))
-		args = append(args, *filter.EAN)
-		argIdx++
+		qb.Add("ean = $%d", *filter.EAN)
 	}
 	if filter.Linked != nil {
 		if *filter.Linked {
-			conditions = append(conditions, "product_id IS NOT NULL")
+			qb.AddRaw("product_id IS NOT NULL")
 		} else {
-			conditions = append(conditions, "product_id IS NULL")
+			qb.AddRaw("product_id IS NULL")
 		}
 	}
 	if filter.Search != nil && *filter.Search != "" {
-		conditions = append(conditions, fmt.Sprintf("(name ILIKE $%d OR ean ILIKE $%d OR sku ILIKE $%d)", argIdx, argIdx, argIdx))
-		args = append(args, "%"+*filter.Search+"%")
-		argIdx++
+		qb.AddMultiRef("(name ILIKE $%d OR ean ILIKE $%d OR sku ILIKE $%d)", 3, "%"+*filter.Search+"%")
 	}
 	if filter.SourceCategory != nil && *filter.SourceCategory != "" {
-		conditions = append(conditions, fmt.Sprintf("source_category = $%d", argIdx))
-		args = append(args, *filter.SourceCategory)
-		argIdx++
+		qb.Add("source_category = $%d", *filter.SourceCategory)
 	}
-
-	where := ""
-	if len(conditions) > 0 {
-		where = "WHERE " + strings.Join(conditions, " AND ")
-	}
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM supplier_products %s", where)
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count supplier products: %w", err)
 	}
 
@@ -322,13 +251,13 @@ func (r *SupplierProductRepository) List(ctx context.Context, tx pgx.Tx, filter 
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
+	limitIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT %s FROM supplier_products %s %s LIMIT $%d OFFSET $%d`,
-		supplierProductColumns, where, orderByClause, argIdx, argIdx+1,
+		supplierProductColumns, where, orderByClause, limitIdx, limitIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list supplier products: %w", err)
 	}
@@ -682,40 +611,27 @@ func (r *SupplierProductRepository) FindSupplierIDByProductID(ctx context.Contex
 
 // ListAll returns supplier products across all suppliers with the supplier name included.
 func (r *SupplierProductRepository) ListAll(ctx context.Context, tx pgx.Tx, params model.SupplierProductListAllParams) ([]model.SupplierProductWithSupplier, int, error) {
-	var conditions []string
-	var args []any
-	argIdx := 1
-
+	qb := NewQueryBuilder()
 	if params.SupplierID != nil {
-		conditions = append(conditions, fmt.Sprintf("sp.supplier_id = $%d", argIdx))
-		args = append(args, *params.SupplierID)
-		argIdx++
+		qb.Add("sp.supplier_id = $%d", *params.SupplierID)
 	}
 	if params.Search != "" {
-		conditions = append(conditions, fmt.Sprintf("(sp.name ILIKE $%d OR sp.ean ILIKE $%d OR sp.sku ILIKE $%d)", argIdx, argIdx, argIdx))
-		args = append(args, "%"+params.Search+"%")
-		argIdx++
+		qb.AddMultiRef("(sp.name ILIKE $%d OR sp.ean ILIKE $%d OR sp.sku ILIKE $%d)", 3, "%"+params.Search+"%")
 	}
 	if params.Category != "" {
-		conditions = append(conditions, fmt.Sprintf("sp.source_category = $%d", argIdx))
-		args = append(args, params.Category)
-		argIdx++
+		qb.Add("sp.source_category = $%d", params.Category)
 	}
 	switch params.Linked {
 	case "linked":
-		conditions = append(conditions, "sp.product_id IS NOT NULL")
+		qb.AddRaw("sp.product_id IS NOT NULL")
 	case "unlinked":
-		conditions = append(conditions, "sp.product_id IS NULL")
+		qb.AddRaw("sp.product_id IS NULL")
 	}
-
-	where := ""
-	if len(conditions) > 0 {
-		where = "WHERE " + strings.Join(conditions, " AND ")
-	}
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM supplier_products sp %s", where)
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count all supplier products: %w", err)
 	}
 
@@ -735,6 +651,7 @@ func (r *SupplierProductRepository) ListAll(ctx context.Context, tx pgx.Tx, para
 	}
 	orderByClause := fmt.Sprintf("ORDER BY %s %s", orderCol, direction)
 
+	limitIdx := qb.AddArgs(params.Limit, params.Offset)
 	query := fmt.Sprintf(
 		`SELECT sp.id, sp.tenant_id, sp.supplier_id, sp.product_id, sp.external_id, sp.name, sp.ean, sp.sku,
 		        sp.price, sp.stock_quantity, sp.source_category, sp.metadata, sp.last_synced_at, sp.created_at, sp.updated_at,
@@ -742,11 +659,10 @@ func (r *SupplierProductRepository) ListAll(ctx context.Context, tx pgx.Tx, para
 		 FROM supplier_products sp
 		 JOIN suppliers s ON s.id = sp.supplier_id
 		 %s %s LIMIT $%d OFFSET $%d`,
-		where, orderByClause, argIdx, argIdx+1,
+		where, orderByClause, limitIdx, limitIdx+1,
 	)
-	args = append(args, params.Limit, params.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list all supplier products: %w", err)
 	}

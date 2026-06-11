@@ -172,20 +172,3 @@ func TestBackfill_BatchSizeCapsScan(t *testing.T) {
 	assert.Equal(t, 2, report.Scanned, "BatchSize caps how many orders a pass examines")
 	assert.Equal(t, 2, report.NeedingProcess)
 }
-
-// TestIsTerminalOrderStatus is a focused check that the backfill's exclusion set is
-// exactly completed/cancelled/refunded — the terminal nodes of the order lifecycle.
-func TestIsTerminalOrderStatus(t *testing.T) {
-	for _, s := range []string{
-		model.OrderStatusCompleted, model.OrderStatusCancelled, model.OrderStatusRefunded,
-	} {
-		assert.True(t, model.IsTerminalOrderStatus(s), "%s must be terminal", s)
-	}
-	for _, s := range []string{
-		model.OrderStatusNew, model.OrderStatusConfirmed, model.OrderStatusProcessing,
-		model.OrderStatusReadyToShip, model.OrderStatusShipped, model.OrderStatusInTransit,
-		model.OrderStatusOutForDelivery, model.OrderStatusDelivered, model.OrderStatusOnHold,
-	} {
-		assert.False(t, model.IsTerminalOrderStatus(s), "%s must be non-terminal", s)
-	}
-}

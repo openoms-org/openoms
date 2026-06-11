@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -76,8 +75,7 @@ func (h *PurchaseOrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 	actorID := middleware.UserIDFromContext(r.Context())
 
 	var req model.CreatePurchaseOrderRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -105,8 +103,7 @@ func (h *PurchaseOrderHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req model.UpdatePurchaseOrderRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
@@ -195,8 +192,7 @@ func (h *PurchaseOrderHandler) Receive(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req model.ReceiveItemsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 

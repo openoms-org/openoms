@@ -15,21 +15,12 @@ import (
 
 // AllegroAccountHandler handles Allegro account, billing, and offer management endpoints.
 type AllegroAccountHandler struct {
-	integrationService *service.IntegrationService
-	encryptionKey      []byte
+	allegroClientBase
 }
 
 // NewAllegroAccountHandler creates a new AllegroAccountHandler.
 func NewAllegroAccountHandler(integrationService *service.IntegrationService, encryptionKey []byte) *AllegroAccountHandler {
-	return &AllegroAccountHandler{
-		integrationService: integrationService,
-		encryptionKey:      encryptionKey,
-	}
-}
-
-// newAllegroClient creates an authenticated Allegro SDK client from the integration credentials.
-func (h *AllegroAccountHandler) newAllegroClient(r *http.Request) (*allegrosdk.Client, error) {
-	return buildAllegroClient(r, h.integrationService, h.encryptionKey)
+	return &AllegroAccountHandler{allegroClientBase{integrationService: integrationService, encryptionKey: encryptionKey}}
 }
 
 // GetAccount retrieves the seller's account info and quality metrics.

@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -32,24 +31,15 @@ func scanPriceList(row interface{ Scan(dest ...any) error }) (*model.PriceList, 
 
 // List returns a paginated list of price lists matching the filter.
 func (r *PriceListRepository) List(ctx context.Context, tx pgx.Tx, filter model.PriceListListFilter) ([]model.PriceList, int, error) {
-	var conditions []string
-	var args []any
-	argIdx := 1
-
+	qb := NewQueryBuilder()
 	if filter.Active != nil {
-		conditions = append(conditions, fmt.Sprintf("active = $%d", argIdx))
-		args = append(args, *filter.Active)
-		argIdx++
+		qb.Add("active = $%d", *filter.Active)
 	}
-
-	where := ""
-	if len(conditions) > 0 {
-		where = "WHERE " + strings.Join(conditions, " AND ")
-	}
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM price_lists %s", where)
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count price lists: %w", err)
 	}
 
@@ -59,13 +49,13 @@ func (r *PriceListRepository) List(ctx context.Context, tx pgx.Tx, filter model.
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
+	limitIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT %s FROM price_lists %s %s LIMIT $%d OFFSET $%d`,
-		priceListColumns, where, orderByClause, argIdx, argIdx+1,
+		priceListColumns, where, orderByClause, limitIdx, limitIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list price lists: %w", err)
 	}
@@ -109,59 +99,24 @@ func (r *PriceListRepository) Create(ctx context.Context, tx pgx.Tx, pl *model.P
 
 // Update applies partial updates to a price list.
 func (r *PriceListRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdatePriceListRequest) error {
-	var setClauses []string
-	var args []any
-	argIdx := 1
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "name", req.Name)
+	SetPtr(ub, "description", req.Description)
+	SetPtr(ub, "currency", req.Currency)
+	SetPtr(ub, "is_default", req.IsDefault)
+	SetPtr(ub, "discount_type", req.DiscountType)
+	SetPtr(ub, "active", req.Active)
+	SetPtr(ub, "valid_from", req.ValidFrom)
+	SetPtr(ub, "valid_to", req.ValidTo)
 
-	if req.Name != nil {
-		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argIdx))
-		args = append(args, *req.Name)
-		argIdx++
-	}
-	if req.Description != nil {
-		setClauses = append(setClauses, fmt.Sprintf("description = $%d", argIdx))
-		args = append(args, *req.Description)
-		argIdx++
-	}
-	if req.Currency != nil {
-		setClauses = append(setClauses, fmt.Sprintf("currency = $%d", argIdx))
-		args = append(args, *req.Currency)
-		argIdx++
-	}
-	if req.IsDefault != nil {
-		setClauses = append(setClauses, fmt.Sprintf("is_default = $%d", argIdx))
-		args = append(args, *req.IsDefault)
-		argIdx++
-	}
-	if req.DiscountType != nil {
-		setClauses = append(setClauses, fmt.Sprintf("discount_type = $%d", argIdx))
-		args = append(args, *req.DiscountType)
-		argIdx++
-	}
-	if req.Active != nil {
-		setClauses = append(setClauses, fmt.Sprintf("active = $%d", argIdx))
-		args = append(args, *req.Active)
-		argIdx++
-	}
-	if req.ValidFrom != nil {
-		setClauses = append(setClauses, fmt.Sprintf("valid_from = $%d", argIdx))
-		args = append(args, *req.ValidFrom)
-		argIdx++
-	}
-	if req.ValidTo != nil {
-		setClauses = append(setClauses, fmt.Sprintf("valid_to = $%d", argIdx))
-		args = append(args, *req.ValidTo)
-		argIdx++
-	}
-
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
+	ub.SetRaw("updated_at = NOW()")
 	query := fmt.Sprintf("UPDATE price_lists SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
-	args = append(args, id)
+		ub.SetClause(), ub.NextArgIdx())
+	args := append(ub.Args(), id)
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {

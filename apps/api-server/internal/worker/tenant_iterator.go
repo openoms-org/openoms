@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
@@ -16,6 +17,37 @@ import (
 // checkWorkerContext returns the context cancellation error when a worker should stop.
 func checkWorkerContext(ctx context.Context) error {
 	return ctx.Err()
+}
+
+// listAllTenantIDs returns every tenant ID using the privileged worker pool, bypassing
+// RLS (no set_config). It honors context cancellation between rows and skips — logging via
+// the supplied logger — any row that fails to scan so a single malformed row never aborts a
+// cross-tenant worker pass. Shared by the recurring cross-tenant workers.
+func listAllTenantIDs(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger) ([]uuid.UUID, error) {
+	rows, err := pool.Query(ctx, "SELECT id FROM tenants")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tenantIDs []uuid.UUID
+	for rows.Next() {
+		if err := checkWorkerContext(ctx); err != nil {
+			return nil, err
+		}
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			if logger != nil {
+				logger.Error("list tenants: scan tenant id", "error", err)
+			}
+			continue
+		}
+		tenantIDs = append(tenantIDs, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return tenantIDs, nil
 }
 
 // TenantIntegration holds data needed for cross-tenant worker operations.
@@ -28,20 +60,11 @@ type TenantIntegration struct {
 	Settings      json.RawMessage
 }
 
-// ListActiveIntegrations queries all active integrations for a given provider.
-// This bypasses RLS -- runs directly on pool without set_config.
-func ListActiveIntegrations(ctx context.Context, pool *pgxpool.Pool, provider string) ([]TenantIntegration, error) {
-	rows, err := pool.Query(ctx,
-		`SELECT tenant_id, id, provider, sync_cursor, credentials, settings
-		   FROM integrations
-		  WHERE provider = $1 AND status = 'active'`,
-		provider,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
+// scanTenantIntegrations drains a tenant-integration result set into []TenantIntegration.
+// It honors context cancellation between rows and skips — logging — any integration whose
+// credentials JSONB fails to decode so one bad row never aborts a worker pass. Shared by
+// ListActiveIntegrations and ListAllActiveMarketplaceIntegrations; the caller owns rows.Close.
+func scanTenantIntegrations(ctx context.Context, rows pgx.Rows) ([]TenantIntegration, error) {
 	var result []TenantIntegration
 	for rows.Next() {
 		if err := checkWorkerContext(ctx); err != nil {
@@ -69,6 +92,23 @@ func ListActiveIntegrations(ctx context.Context, pool *pgxpool.Pool, provider st
 		result = append(result, ti)
 	}
 	return result, rows.Err()
+}
+
+// ListActiveIntegrations queries all active integrations for a given provider.
+// This bypasses RLS -- runs directly on pool without set_config.
+func ListActiveIntegrations(ctx context.Context, pool *pgxpool.Pool, provider string) ([]TenantIntegration, error) {
+	rows, err := pool.Query(ctx,
+		`SELECT tenant_id, id, provider, sync_cursor, credentials, settings
+		   FROM integrations
+		  WHERE provider = $1 AND status = 'active'`,
+		provider,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return scanTenantIntegrations(ctx, rows)
 }
 
 // providerCloser is implemented by providers that hold resources (e.g., rate limiter goroutines).
@@ -119,33 +159,7 @@ func ListAllActiveMarketplaceIntegrations(ctx context.Context, pool *pgxpool.Poo
 	}
 	defer rows.Close()
 
-	var result []TenantIntegration
-	for rows.Next() {
-		if err := checkWorkerContext(ctx); err != nil {
-			return nil, err
-		}
-		var ti TenantIntegration
-		var credsJSON json.RawMessage
-		if err := rows.Scan(
-			&ti.TenantID,
-			&ti.IntegrationID,
-			&ti.Provider,
-			&ti.SyncCursor,
-			&credsJSON,
-			&ti.Settings,
-		); err != nil {
-			return nil, err
-		}
-		credentials, err := decodeIntegrationCredentialsJSONB(credsJSON)
-		if err != nil {
-			slog.Warn("failed to decode integration credentials",
-				"integration_id", ti.IntegrationID, "error", err)
-			continue
-		}
-		ti.Credentials = credentials
-		result = append(result, ti)
-	}
-	return result, rows.Err()
+	return scanTenantIntegrations(ctx, rows)
 }
 
 func decodeIntegrationCredentialsJSONB(raw json.RawMessage) (string, error) {

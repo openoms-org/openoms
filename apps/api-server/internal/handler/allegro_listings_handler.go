@@ -30,12 +30,11 @@ import (
 
 // AllegroListingsHandler handles publishing products as Allegro marketplace listings.
 type AllegroListingsHandler struct {
-	integrationService *service.IntegrationService
-	productService     *service.ProductService
-	listingRepo        *repository.ProductListingRepository
-	encryptionKey      []byte
-	pool               *pgxpool.Pool
-	cfg                *config.Config
+	allegroClientBase
+	productService *service.ProductService
+	listingRepo    *repository.ProductListingRepository
+	pool           *pgxpool.Pool
+	cfg            *config.Config
 }
 
 // NewAllegroListingsHandler creates a new AllegroListingsHandler.
@@ -48,12 +47,11 @@ func NewAllegroListingsHandler(
 	cfg *config.Config,
 ) *AllegroListingsHandler {
 	return &AllegroListingsHandler{
-		integrationService: integrationService,
-		productService:     productService,
-		listingRepo:        listingRepo,
-		encryptionKey:      encryptionKey,
-		pool:               pool,
-		cfg:                cfg,
+		allegroClientBase: allegroClientBase{integrationService: integrationService, encryptionKey: encryptionKey},
+		productService:    productService,
+		listingRepo:       listingRepo,
+		pool:              pool,
+		cfg:               cfg,
 	}
 }
 
@@ -77,11 +75,6 @@ type locationRequest struct {
 	Province    string `json:"province"`
 	PostCode    string `json:"post_code"`
 	CountryCode string `json:"country_code"`
-}
-
-// newAllegroClient creates an authenticated Allegro SDK client from the integration credentials.
-func (h *AllegroListingsHandler) newAllegroClient(r *http.Request) (*allegrosdk.Client, error) {
-	return buildAllegroClient(r, h.integrationService, h.encryptionKey)
 }
 
 // CreateListing publishes a product as an Allegro offer and records the listing.

@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -39,13 +38,13 @@ func RequirePlatformAdmin(lookup PlatformAdminLookup) func(http.Handler) http.Ha
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			userID := UserIDFromContext(r.Context())
 			if userID == uuid.Nil {
-				writePlatformError(w, http.StatusUnauthorized, "authentication required")
+				writeJSONError(w, http.StatusUnauthorized, "authentication required")
 				return
 			}
 
 			admin, err := lookup.GetByUserID(r.Context(), userID)
 			if err != nil || admin == nil {
-				writePlatformError(w, http.StatusForbidden, "platform administration access required")
+				writeJSONError(w, http.StatusForbidden, "platform administration access required")
 				return
 			}
 
@@ -62,20 +61,14 @@ func RequirePlatformPermission(required string) func(http.Handler) http.Handler 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			admin := PlatformAdminFromContext(r.Context())
 			if admin == nil {
-				writePlatformError(w, http.StatusForbidden, "platform administration access required")
+				writeJSONError(w, http.StatusForbidden, "platform administration access required")
 				return
 			}
 			if !admin.HasPermission(required) {
-				writePlatformError(w, http.StatusForbidden, "insufficient platform permissions")
+				writeJSONError(w, http.StatusForbidden, "insufficient platform permissions")
 				return
 			}
 			next.ServeHTTP(w, r)
 		})
 	}
-}
-
-func writePlatformError(w http.ResponseWriter, status int, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(map[string]string{"error": message})
 }

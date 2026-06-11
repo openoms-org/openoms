@@ -17,23 +17,16 @@ import (
 
 // AllegroCatalogHandler handles Allegro catalog browsing, product search, and fee calculation endpoints.
 type AllegroCatalogHandler struct {
-	integrationService *service.IntegrationService
-	encryptionKey      []byte
-	cache              *allegroCache
+	allegroClientBase
+	cache *allegroCache
 }
 
 // NewAllegroCatalogHandler creates a new AllegroCatalogHandler.
 func NewAllegroCatalogHandler(integrationService *service.IntegrationService, encryptionKey []byte) *AllegroCatalogHandler {
 	return &AllegroCatalogHandler{
-		integrationService: integrationService,
-		encryptionKey:      encryptionKey,
-		cache:              newAllegroCache(24 * time.Hour),
+		allegroClientBase: allegroClientBase{integrationService: integrationService, encryptionKey: encryptionKey},
+		cache:             newAllegroCache(24 * time.Hour),
 	}
-}
-
-// newAllegroClient creates an authenticated Allegro SDK client with auto-refresh.
-func (h *AllegroCatalogHandler) newAllegroClient(r *http.Request) (*allegrosdk.Client, error) {
-	return buildAllegroClient(r, h.integrationService, h.encryptionKey)
 }
 
 // ListCategories lists Allegro categories. Accepts optional query param "parent_id".

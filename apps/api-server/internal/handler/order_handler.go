@@ -295,7 +295,7 @@ func (h *OrderHandler) DuplicateOrder(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 		if existing == nil {
-			return errors.New("order not found")
+			return service.ErrOrderNotFound
 		}
 
 		// Sanitize user-facing text fields to prevent stored XSS
@@ -353,7 +353,7 @@ func (h *OrderHandler) DuplicateOrder(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, service.ErrOrderLimitExceeded):
 			writeError(w, http.StatusForbidden, fmt.Sprintf(
 				"Monthly order limit reached for current plan (max: %d). Upgrade to increase.", maxOrdersMonthly))
-		case err.Error() == "order not found":
+		case errors.Is(err, service.ErrOrderNotFound):
 			writeError(w, http.StatusNotFound, "order not found")
 		default:
 			writeServerError(w, "failed to duplicate order", err)
