@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
-import { ArrowLeft, Eraser, Layers, Package, PackageOpen, Pencil, Plus, Store, Trash2, X, Sparkles, Loader2, TrendingUp } from "lucide-react";
+import { ArrowLeft, Check, Eraser, Layers, Package, PackageOpen, Pencil, Plus, RefreshCw, Store, Trash2, Upload, X, Sparkles, Loader2, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -37,8 +37,13 @@ import {
   useBundleComponents,
   useBundleStock,
   useAddBundleComponent,
+  useUpdateBundleComponent,
   useRemoveBundleComponent,
 } from "@/hooks/use-bundles";
+import {
+  usePushProductStock,
+  useReconcileProductStock,
+} from "@/hooks/use-stock-sync";
 import { useProducts } from "@/hooks/use-products";
 import { ProductForm } from "@/components/products/product-form";
 import {
@@ -110,7 +115,35 @@ export default function ProductDetailPage() {
   const { data: bundleComponents, isLoading: isLoadingBundle } = useBundleComponents(params.id);
   const { data: bundleStockData } = useBundleStock(params.id, (bundleComponents?.length ?? 0) > 0);
   const addComponent = useAddBundleComponent(params.id);
+  const updateComponent = useUpdateBundleComponent(params.id);
   const removeComponent = useRemoveBundleComponent(params.id);
+
+  // Inline bundle-component quantity editing.
+  const [editingComponentId, setEditingComponentId] = useState<string | null>(null);
+  const [editingQuantity, setEditingQuantity] = useState<string>("");
+
+  // Per-product stock-sync (feature-gated, beta). Hidden in client-ready surface.
+  const stockSyncVisible = isFeatureVisible("stock_sync");
+  const pushStock = usePushProductStock();
+  const reconcileStock = useReconcileProductStock();
+
+  const handleSaveComponentQuantity = (componentId: string) => {
+    const qty = Number(editingQuantity);
+    if (!Number.isFinite(qty) || qty < 1) {
+      toast.error(t("componentQuantityInvalid"));
+      return;
+    }
+    updateComponent.mutate(
+      { componentId, data: { quantity: qty } },
+      {
+        onSuccess: () => {
+          toast.success(t("componentQuantityUpdated"));
+          setEditingComponentId(null);
+        },
+        onError: (error) => toast.error(getErrorMessage(error)),
+      }
+    );
+  };
   const { data: priceHistory } = useRepricingLog(
     { product_id: params.id, limit: 10 },
     { enabled: repricingVisible }
@@ -455,6 +488,40 @@ export default function ProductDetailPage() {
                 >
                   {product.stock_quantity}
                 </p>
+                {stockSyncVisible && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={pushStock.isPending}
+                      title={t("pushStockHint")}
+                      onClick={() =>
+                        pushStock.mutate(params.id, {
+                          onSuccess: () => toast.success(t("stockPushed")),
+                          onError: (error) => toast.error(getErrorMessage(error)),
+                        })
+                      }
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      {t("pushStock")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={reconcileStock.isPending}
+                      title={t("reconcileStockHint")}
+                      onClick={() =>
+                        reconcileStock.mutate(params.id, {
+                          onSuccess: () => toast.success(t("stockReconciled")),
+                          onError: (error) => toast.error(getErrorMessage(error)),
+                        })
+                      }
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      {t("reconcileStock")}
+                    </Button>
+                  </div>
+                )}
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">{t("source")}</p>
@@ -629,7 +696,56 @@ export default function ProductDetailPage() {
                           <TableCell className="font-mono text-xs text-muted-foreground">
                             {comp.component_sku || "-"}
                           </TableCell>
-                          <TableCell className="text-right">{comp.quantity}</TableCell>
+                          <TableCell className="text-right">
+                            {editingComponentId === comp.id ? (
+                              <div className="flex items-center justify-end gap-1">
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  value={editingQuantity}
+                                  onChange={(e) => setEditingQuantity(e.target.value)}
+                                  className="h-7 w-20 text-right"
+                                  autoFocus
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") handleSaveComponentQuantity(comp.id);
+                                    if (e.key === "Escape") setEditingComponentId(null);
+                                  }}
+                                />
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  disabled={updateComponent.isPending}
+                                  onClick={() => handleSaveComponentQuantity(comp.id)}
+                                  aria-label={tc("save")}
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => setEditingComponentId(null)}
+                                  aria-label={tc("cancel")}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                className="inline-flex items-center gap-1 hover:underline"
+                                onClick={() => {
+                                  setEditingComponentId(comp.id);
+                                  setEditingQuantity(String(comp.quantity));
+                                }}
+                                title={t("editQuantity")}
+                              >
+                                {comp.quantity}
+                                <Pencil className="h-3 w-3 text-muted-foreground" />
+                              </button>
+                            )}
+                          </TableCell>
                           <TableCell className="text-right">{comp.component_stock}</TableCell>
                           <TableCell>
                             <Button
