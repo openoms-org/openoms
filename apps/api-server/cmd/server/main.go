@@ -469,6 +469,13 @@ func run() error {
 	segmentService := service.NewSegmentService(segmentRepo, auditRepo, pool, slog.Default())
 	loyaltyService := service.NewLoyaltyService(loyaltyRepo, auditRepo, pool, slog.Default())
 
+	// OPE-538: order-lifecycle dependencies wired into the order service via setters
+	// (customer link/stats, B2B pricing, loyalty accrual, bundle stock).
+	orderService.SetCustomerRepo(customerRepo)
+	orderService.SetPriceListService(priceListService)
+	orderService.SetLoyaltyService(loyaltyService)
+	orderService.SetBundleService(bundleService)
+
 	// Automation engine
 	automationRuleRepo := repository.NewAutomationRuleRepository()
 	automationRuleLogRepo := repository.NewAutomationRuleLogRepository()

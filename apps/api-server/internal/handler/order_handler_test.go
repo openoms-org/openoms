@@ -162,6 +162,28 @@ func TestOrderHandler_GetAudit_InvalidOrderID(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
+func TestOrderHandler_DuplicateOrder_InvalidID(t *testing.T) {
+	// The handler is now a thin parse->call->respond wrapper; an invalid id is
+	// rejected before any service call, so nil deps are fine.
+	h := NewOrderHandler(nil, nil, nil)
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", "not-a-uuid")
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/orders/not-a-uuid/duplicate", nil)
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	req = req.WithContext(newContextWithTenantAndUser(req.Context(), uuid.New(), uuid.New()))
+	rr := httptest.NewRecorder()
+
+	h.DuplicateOrder(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	var resp map[string]string
+	err := json.NewDecoder(rr.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "invalid order ID", resp["error"])
+}
+
 func TestOrderHandler_Create_ValidationError(t *testing.T) {
 	// OrderService with nil pool will fail at WithTenant, but validation error happens before
 	svc := service.NewOrderService(nil, nil, nil, nil, nil, nil, nil)
