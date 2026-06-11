@@ -83,6 +83,14 @@ func (ub *UpdateBuilder) Set(column string, value any) {
 	ub.argIdx++
 }
 
+// SetExpr appends a parameterized SET expression from a printf template containing a single
+// %d placeholder for the arg index (e.g., "settings = $%d::jsonb") and advances the arg index.
+func (ub *UpdateBuilder) SetExpr(template string, value any) {
+	ub.setClauses = append(ub.setClauses, fmt.Sprintf(template, ub.argIdx))
+	ub.args = append(ub.args, value)
+	ub.argIdx++
+}
+
 // SetRaw appends a raw SET expression with no parameter (e.g., "updated_at = NOW()").
 func (ub *UpdateBuilder) SetRaw(clause string) {
 	ub.setClauses = append(ub.setClauses, clause)
