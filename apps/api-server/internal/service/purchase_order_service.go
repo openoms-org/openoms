@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
@@ -207,9 +206,7 @@ func (s *PurchaseOrderService) Create(ctx context.Context, tenantID uuid.UUID, r
 		return nil, err
 	}
 
-	if s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "purchase_order.created", po) })
-	}
+	DispatchWebhookAsync(s.webhookDispatch, tenantID, "purchase_order.created", po)
 	return po, nil
 }
 
@@ -290,9 +287,7 @@ func (s *PurchaseOrderService) Update(ctx context.Context, tenantID, poID uuid.U
 		return nil, err
 	}
 
-	if s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "purchase_order.updated", po) })
-	}
+	DispatchWebhookAsync(s.webhookDispatch, tenantID, "purchase_order.updated", po)
 	return po, nil
 }
 
@@ -324,10 +319,8 @@ func (s *PurchaseOrderService) Delete(ctx context.Context, tenantID, poID uuid.U
 			IPAddress:  ip,
 		})
 	})
-	if err == nil && s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() {
-			s.webhookDispatch.Dispatch(context.Background(), tenantID, "purchase_order.deleted", map[string]any{"id": poID.String()})
-		})
+	if err == nil {
+		DispatchWebhookAsync(s.webhookDispatch, tenantID, "purchase_order.deleted", map[string]any{"id": poID.String()})
 	}
 	return err
 }
@@ -378,9 +371,7 @@ func (s *PurchaseOrderService) Send(ctx context.Context, tenantID, poID uuid.UUI
 		return nil, err
 	}
 
-	if s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "purchase_order.sent", po) })
-	}
+	DispatchWebhookAsync(s.webhookDispatch, tenantID, "purchase_order.sent", po)
 	return po, nil
 }
 
@@ -495,11 +486,7 @@ func (s *PurchaseOrderService) ReceiveItems(ctx context.Context, tenantID, poID 
 		return nil, err
 	}
 
-	if s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() {
-			s.webhookDispatch.Dispatch(context.Background(), tenantID, "purchase_order.items_received", po)
-		})
-	}
+	DispatchWebhookAsync(s.webhookDispatch, tenantID, "purchase_order.items_received", po)
 	return po, nil
 }
 
@@ -552,8 +539,6 @@ func (s *PurchaseOrderService) Cancel(ctx context.Context, tenantID, poID uuid.U
 		return nil, err
 	}
 
-	if s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "purchase_order.cancelled", po) })
-	}
+	DispatchWebhookAsync(s.webhookDispatch, tenantID, "purchase_order.cancelled", po)
 	return po, nil
 }

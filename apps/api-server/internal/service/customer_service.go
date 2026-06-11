@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
@@ -121,9 +120,7 @@ func (s *CustomerService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 	if err != nil {
 		return nil, err
 	}
-	if s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "customer.created", customer) })
-	}
+	DispatchWebhookAsync(s.webhookDispatch, tenantID, "customer.created", customer)
 	return customer, nil
 }
 
@@ -164,8 +161,8 @@ func (s *CustomerService) Update(ctx context.Context, tenantID, customerID uuid.
 	if err != nil {
 		return nil, err
 	}
-	if customer != nil && s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "customer.updated", customer) })
+	if customer != nil {
+		DispatchWebhookAsync(s.webhookDispatch, tenantID, "customer.updated", customer)
 	}
 	return customer, err
 }
@@ -195,10 +192,8 @@ func (s *CustomerService) Delete(ctx context.Context, tenantID, customerID uuid.
 			IPAddress:  ip,
 		})
 	})
-	if err == nil && s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() {
-			s.webhookDispatch.Dispatch(context.Background(), tenantID, "customer.deleted", map[string]any{"customer_id": customerID.String()})
-		})
+	if err == nil {
+		DispatchWebhookAsync(s.webhookDispatch, tenantID, "customer.deleted", map[string]any{"customer_id": customerID.String()})
 	}
 	return err
 }

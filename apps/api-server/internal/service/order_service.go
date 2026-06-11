@@ -336,9 +336,7 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 		}
 	}
 
-	if s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.created", order) })
-	}
+	DispatchWebhookAsync(s.webhookDispatch, tenantID, "order.created", order)
 	FireAutomationEvent(s.automationService, tenantID, "order", "order.created", order.ID, map[string]any{
 		"status": order.Status, "source": order.Source,
 		"customer_name": order.CustomerName, "total_amount": order.TotalAmount,
@@ -401,9 +399,7 @@ func (s *OrderService) Update(ctx context.Context, tenantID, orderID uuid.UUID, 
 		})
 	})
 	if err == nil && order != nil {
-		if s.webhookDispatch != nil {
-			asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.updated", order) })
-		}
+		DispatchWebhookAsync(s.webhookDispatch, tenantID, "order.updated", order)
 		FireAutomationEvent(s.automationService, tenantID, "order", "order.updated", order.ID, map[string]any{
 			"status": order.Status, "source": order.Source,
 			"customer_name": order.CustomerName, "total_amount": order.TotalAmount,
@@ -439,11 +435,7 @@ func (s *OrderService) Delete(ctx context.Context, tenantID, orderID, actorID uu
 		})
 	})
 	if err == nil {
-		if s.webhookDispatch != nil {
-			asyncutil.SafeGo(func() {
-				s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.deleted", map[string]any{"order_id": orderID.String()})
-			})
-		}
+		DispatchWebhookAsync(s.webhookDispatch, tenantID, "order.deleted", map[string]any{"order_id": orderID.String()})
 	}
 	return err
 }
@@ -521,11 +513,7 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 				s.emailService.SendOrderStatusEmail(context.Background(), tenantID, order, oldStatus, req.Status)
 			})
 		}
-		if s.webhookDispatch != nil {
-			asyncutil.SafeGo(func() {
-				s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": orderID.String(), "from": oldStatus, "to": req.Status})
-			})
-		}
+		DispatchWebhookAsync(s.webhookDispatch, tenantID, "order.status_changed", map[string]any{"order_id": orderID.String(), "from": oldStatus, "to": req.Status})
 		if s.invoiceService != nil {
 			asyncutil.SafeGo(func() { s.invoiceService.HandleOrderStatusChange(context.Background(), tenantID, order) })
 		}
@@ -693,11 +681,7 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 		}
 	}
 	for _, n := range pendingWebhooks {
-		if s.webhookDispatch != nil {
-			asyncutil.SafeGo(func() {
-				s.webhookDispatch.Dispatch(context.Background(), tenantID, "order.status_changed", map[string]any{"order_id": n.orderID.String(), "from": n.oldStatus, "to": n.newStatus})
-			})
-		}
+		DispatchWebhookAsync(s.webhookDispatch, tenantID, "order.status_changed", map[string]any{"order_id": n.orderID.String(), "from": n.oldStatus, "to": n.newStatus})
 	}
 
 	return resp, nil

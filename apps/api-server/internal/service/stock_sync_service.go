@@ -305,9 +305,7 @@ func (s *StockSyncService) OnStockChange(ctx context.Context, tenantID, productI
 	}
 
 	// Dispatch webhook for stock change
-	if s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "stock.changed", event) })
-	}
+	DispatchWebhookAsync(s.webhookDispatch, tenantID, "stock.changed", event)
 
 	// Detect stock restored: stock was 0, now > 0.
 	// If automation engine is wired, fire the event and let user-configured rules handle relisting.

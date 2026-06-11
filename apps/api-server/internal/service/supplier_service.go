@@ -181,9 +181,7 @@ func (s *SupplierService) Create(ctx context.Context, tenantID uuid.UUID, req mo
 	if err != nil {
 		return nil, err
 	}
-	if s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "supplier.created", supplier) })
-	}
+	DispatchWebhookAsync(s.webhookDispatch, tenantID, "supplier.created", supplier)
 	return supplier, nil
 }
 
@@ -231,8 +229,8 @@ func (s *SupplierService) Update(ctx context.Context, tenantID, supplierID uuid.
 	if err != nil {
 		return nil, err
 	}
-	if supplier != nil && s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "supplier.updated", supplier) })
+	if supplier != nil {
+		DispatchWebhookAsync(s.webhookDispatch, tenantID, "supplier.updated", supplier)
 	}
 	return supplier, err
 }
@@ -262,10 +260,8 @@ func (s *SupplierService) Delete(ctx context.Context, tenantID, supplierID uuid.
 			IPAddress:  ip,
 		})
 	})
-	if err == nil && s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() {
-			s.webhookDispatch.Dispatch(context.Background(), tenantID, "supplier.deleted", map[string]any{"supplier_id": supplierID.String()})
-		})
+	if err == nil {
+		DispatchWebhookAsync(s.webhookDispatch, tenantID, "supplier.deleted", map[string]any{"supplier_id": supplierID.String()})
 	}
 	return err
 }

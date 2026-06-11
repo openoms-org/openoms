@@ -446,9 +446,7 @@ func (s *StocktakeService) CompleteStocktake(ctx context.Context, tenantID, stoc
 	}
 
 	// Dispatch webhook asynchronously
-	if s.webhookDispatch != nil {
-		asyncutil.SafeGo(func() { s.webhookDispatch.Dispatch(context.Background(), tenantID, "stocktake.completed", stocktake) })
-	}
+	DispatchWebhookAsync(s.webhookDispatch, tenantID, "stocktake.completed", stocktake)
 
 	// Trigger stock sync for all products with discrepancies
 	if s.stockSyncService != nil {
