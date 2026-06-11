@@ -18,6 +18,37 @@ func checkWorkerContext(ctx context.Context) error {
 	return ctx.Err()
 }
 
+// listAllTenantIDs returns every tenant ID using the privileged worker pool, bypassing
+// RLS (no set_config). It honors context cancellation between rows and skips — logging via
+// the supplied logger — any row that fails to scan so a single malformed row never aborts a
+// cross-tenant worker pass. Shared by the recurring cross-tenant workers.
+func listAllTenantIDs(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger) ([]uuid.UUID, error) {
+	rows, err := pool.Query(ctx, "SELECT id FROM tenants")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tenantIDs []uuid.UUID
+	for rows.Next() {
+		if err := checkWorkerContext(ctx); err != nil {
+			return nil, err
+		}
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			if logger != nil {
+				logger.Error("list tenants: scan tenant id", "error", err)
+			}
+			continue
+		}
+		tenantIDs = append(tenantIDs, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return tenantIDs, nil
+}
+
 // TenantIntegration holds data needed for cross-tenant worker operations.
 type TenantIntegration struct {
 	TenantID      uuid.UUID
