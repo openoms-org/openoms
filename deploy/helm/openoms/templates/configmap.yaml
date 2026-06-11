@@ -22,7 +22,7 @@ data:
   FEATURE_ALLEGRO: {{ .Values.apiServer.features.allegro | quote }}
   FEATURE_INPOST: {{ .Values.apiServer.features.inpost | quote }}
   OPENAI_MODEL: {{ .Values.apiServer.openai.model | quote }}
-  REGISTRATION_MODE: {{ .Values.apiServer.registrationMode | default "open" | quote }}
+  REGISTRATION_MODE: {{ .Values.apiServer.registrationMode | default "invite" | quote }}
   OPENOMS_API_SURFACE: {{ .Values.apiServer.apiSurfaceMode | default "client-ready" | quote }}
   REDIS_URL: {{ .Values.redis.url | quote }}
   ALLOW_IN_MEMORY_STATE: {{ .Values.apiServer.allowInMemoryState | default false | quote }}

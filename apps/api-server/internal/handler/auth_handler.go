@@ -28,7 +28,7 @@ type AuthHandler struct {
 
 // NewAuthHandler creates a new AuthHandler.
 func NewAuthHandler(authService *service.AuthService, isDev bool, blacklist ...*middleware.TokenBlacklist) *AuthHandler {
-	h := &AuthHandler{authService: authService, isDev: isDev, registrationMode: "open"}
+	h := &AuthHandler{authService: authService, isDev: isDev, registrationMode: "invite"}
 	if len(blacklist) > 0 {
 		h.tokenBlacklist = blacklist[0]
 	}

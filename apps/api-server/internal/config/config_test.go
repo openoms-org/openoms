@@ -26,12 +26,28 @@ func validConfigForValidation(registrationMode string) *Config {
 }
 
 func TestConfig_Validate_RegistrationModes(t *testing.T) {
-	for _, mode := range []string{"open", "invite", "closed", "disabled"} {
+	// Outside development only the non-open modes validate; "open" is covered
+	// separately because it is rejected in non-development environments.
+	for _, mode := range []string{"invite", "closed", "disabled"} {
 		t.Run(mode, func(t *testing.T) {
 			err := validConfigForValidation(mode).Validate()
 			require.NoError(t, err)
 		})
 	}
+}
+
+func TestConfig_Validate_RejectsOpenRegistrationOutsideDevelopment(t *testing.T) {
+	err := validConfigForValidation("open").Validate()
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "REGISTRATION_MODE must not be 'open' outside development")
+}
+
+func TestConfig_Validate_AllowsOpenRegistrationInDevelopment(t *testing.T) {
+	cfg := validConfigForValidation("open")
+	cfg.Env = "development"
+
+	require.NoError(t, cfg.Validate())
 }
 
 func TestConfig_Validate_RegistrationModeRejectsUnknown(t *testing.T) {

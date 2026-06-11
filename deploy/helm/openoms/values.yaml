@@ -25,7 +25,7 @@ apiServer:
     port: 8080  # K8s Service port (match containerPort for Cloudflare Tunnel)
   env: production
   allowInMemoryState: false  # set true only for explicit single-node deployments without Redis
-  registrationMode: open  # override to "invite" in production values
+  registrationMode: invite  # "invite" (token required), "open" (dev only — rejected by the API outside development), "closed"
   # Server-side feature readiness gate. "client-ready" exposes only certified
   # features over the API; "full" disables gating (escape hatch). Keep in sync with
   # the dashboard NEXT_PUBLIC_OPENOMS_DASHBOARD_SURFACE.
