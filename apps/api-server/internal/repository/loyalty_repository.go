@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -92,34 +91,21 @@ func (r *LoyaltyRepository) CreateProgram(ctx context.Context, tx pgx.Tx, progra
 
 // UpdateProgram applies partial updates to a loyalty program.
 func (r *LoyaltyRepository) UpdateProgram(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateLoyaltyProgramRequest) error {
-	var setClauses []string
-	var args []any
-	argIdx := 1
-
-	if req.Name != nil {
-		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argIdx))
-		args = append(args, *req.Name)
-		argIdx++
-	}
-	if req.Status != nil {
-		setClauses = append(setClauses, fmt.Sprintf("status = $%d", argIdx))
-		args = append(args, *req.Status)
-		argIdx++
-	}
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "name", req.Name)
+	SetPtr(ub, "status", req.Status)
 	if req.Config != nil {
-		setClauses = append(setClauses, fmt.Sprintf("config = $%d", argIdx))
-		args = append(args, req.Config)
-		argIdx++
+		ub.Set("config", req.Config)
 	}
 
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
+	ub.SetRaw("updated_at = NOW()")
 	query := fmt.Sprintf("UPDATE loyalty_programs SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
-	args = append(args, id)
+		ub.SetClause(), ub.NextArgIdx())
+	args := append(ub.Args(), id)
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {
