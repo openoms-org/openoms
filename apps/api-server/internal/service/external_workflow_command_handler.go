@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -46,7 +45,7 @@ func NewExternalWorkflowCommandHandler(orders ExternalWorkflowCommandOrders) *Ex
 
 // Handle applies the follow-on command for one EventExternalWorkflowCommand event.
 func (h *ExternalWorkflowCommandHandler) Handle(ctx context.Context, event model.OrchestrationOutboxEvent) error {
-	p, err := decodeExternalWorkflowCommandPayload(event.Payload)
+	p, err := decodeOutboxPayload[externalWorkflowCommandPayload](event.Payload)
 	if err != nil {
 		return model.Permanent(fmt.Errorf("external_workflow command: %w", err))
 	}
@@ -144,23 +143,6 @@ func (h *ExternalWorkflowCommandHandler) applyAddNote(ctx context.Context, tenan
 		return fmt.Errorf("external_workflow command: add_note: %w", err)
 	}
 	return nil
-}
-
-// decodeExternalWorkflowCommandPayload normalises the outbox payload (jsonb -> any) into the
-// typed command payload.
-func decodeExternalWorkflowCommandPayload(raw any) (externalWorkflowCommandPayload, error) {
-	var p externalWorkflowCommandPayload
-	if raw == nil {
-		return p, errors.New("missing payload")
-	}
-	b, err := json.Marshal(raw)
-	if err != nil {
-		return p, fmt.Errorf("marshal payload: %w", err)
-	}
-	if err := json.Unmarshal(b, &p); err != nil {
-		return p, fmt.Errorf("unmarshal payload: %w", err)
-	}
-	return p, nil
 }
 
 // Compile-time assertion that this handler satisfies OrchestrationHandler.
