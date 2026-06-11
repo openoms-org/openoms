@@ -1,11 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 import { ArrowLeft, Plus, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AdminGuard } from "@/components/shared/admin-guard";
-import { useCreatePurchaseOrder, useSendPurchaseOrder } from "@/hooks/use-purchase-orders";
+import {
+  useCreatePurchaseOrder,
+  useSendPurchaseOrder,
+  usePurchaseOrder,
+  useUpdatePurchaseOrder,
+} from "@/hooks/use-purchase-orders";
 import { useAllSuppliers } from "@/hooks/use-suppliers";
 import { useAllWarehouses } from "@/hooks/use-warehouses";
 import { useProducts } from "@/hooks/use-products";
@@ -52,19 +58,46 @@ interface ItemRow extends CreatePurchaseOrderItemReq {
 export default function NewPurchaseOrderPage() {
   const t = useTranslations("purchaseOrders");
   const tc = useTranslations("common");
+  const tf = useTranslations("feHooks");
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("edit") ?? "";
+  const isEditMode = !!editId;
   const createPO = useCreatePurchaseOrder();
   const sendPO = useSendPurchaseOrder();
+  const updatePO = useUpdatePurchaseOrder(editId);
+  const { data: editPO } = usePurchaseOrder(editId);
   const { data: suppliersData } = useAllSuppliers();
   const { data: warehousesData } = useAllWarehouses();
 
-  const [supplierID, setSupplierID] = useState("");
-  const [supplierName, setSupplierName] = useState("");
-  const [warehouseID, setWarehouseID] = useState("");
-  const [expectedDate, setExpectedDate] = useState("");
-  const [currency, setCurrency] = useState("PLN");
-  const [notes, setNotes] = useState("");
-  const [items, setItems] = useState<ItemRow[]>([]);
+  // Edit mode: each editable field is a local draft that resets to the loaded
+  // purchase order whenever a new record id arrives (useEffectSyncedState is the
+  // codebase's sanctioned reset-on-external-record primitive). In create mode
+  // editPO is undefined, so the reset key stays null and drafts persist.
+  const resetKey = editPO?.id ?? null;
+  const [supplierID, setSupplierID] = useEffectSyncedState(editPO?.supplier_id ?? "", resetKey);
+  const [supplierName, setSupplierName] = useEffectSyncedState(editPO?.supplier_name ?? "", resetKey);
+  const [warehouseID, setWarehouseID] = useEffectSyncedState(editPO?.warehouse_id ?? "", resetKey);
+  const [expectedDate, setExpectedDate] = useEffectSyncedState(
+    editPO?.expected_delivery_date ? editPO.expected_delivery_date.slice(0, 10) : "",
+    resetKey
+  );
+  const [currency, setCurrency] = useEffectSyncedState(editPO?.currency ?? "PLN", resetKey);
+  const [notes, setNotes] = useEffectSyncedState(editPO?.notes ?? "", resetKey);
+  const sourceItems = useMemo<ItemRow[]>(
+    () =>
+      (editPO?.items ?? []).map((it) => ({
+        _key: crypto.randomUUID(),
+        product_id: it.product_id,
+        sku: it.sku,
+        product_name: it.product_name,
+        quantity: it.quantity_ordered,
+        unit_cost: it.unit_cost,
+        notes: it.notes,
+      })),
+    [editPO]
+  );
+  const [items, setItems] = useEffectSyncedState<ItemRow[]>(sourceItems, resetKey);
 
   // Product search dialog
   const [showProductSearch, setShowProductSearch] = useState(false);
@@ -135,6 +168,19 @@ export default function NewPurchaseOrderPage() {
       items: items.map(({ _key, ...item }) => item),
     };
 
+    if (isEditMode) {
+      updatePO.mutate(payload, {
+        onSuccess: () => {
+          toast.success(tf("purchaseOrderUpdated"));
+          router.push(`/purchase-orders/${editId}`);
+        },
+        onError: (error) => {
+          toast.error(getErrorMessage(error));
+        },
+      });
+      return;
+    }
+
     createPO.mutate(payload, {
       onSuccess: (po) => {
         if (sendAfterCreate) {
@@ -171,7 +217,7 @@ export default function NewPurchaseOrderPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-2xl font-bold tracking-tight">
-            {t("noweZamowienieZakupu")}
+            {isEditMode ? tf("editPurchaseOrder") : t("noweZamowienieZakupu")}
           </h1>
         </div>
 
@@ -404,25 +450,40 @@ export default function NewPurchaseOrderPage() {
         <div className="flex gap-2 mt-6 justify-end">
           <Button
             variant="outline"
-            onClick={() => router.push("/purchase-orders")}
+            onClick={() =>
+              router.push(
+                isEditMode ? `/purchase-orders/${editId}` : "/purchase-orders"
+              )
+            }
           >
             {tc("cancel")}
           </Button>
-          <Button
-            variant="secondary"
-            disabled={createPO.isPending}
-            onClick={() => handleSubmit(false)}
-          >
-            {createPO.isPending ? tc("creating") : t("saveAsDraft")}
-          </Button>
-          <Button
-            disabled={createPO.isPending || sendPO.isPending}
-            onClick={() => handleSubmit(true)}
-          >
-            {createPO.isPending || sendPO.isPending
-              ? tc("creating")
-              : t("zapiszIWyslij")}
-          </Button>
+          {isEditMode ? (
+            <Button
+              disabled={updatePO.isPending}
+              onClick={() => handleSubmit(false)}
+            >
+              {updatePO.isPending ? tc("saving") : tc("saveChanges")}
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="secondary"
+                disabled={createPO.isPending}
+                onClick={() => handleSubmit(false)}
+              >
+                {createPO.isPending ? tc("creating") : t("saveAsDraft")}
+              </Button>
+              <Button
+                disabled={createPO.isPending || sendPO.isPending}
+                onClick={() => handleSubmit(true)}
+              >
+                {createPO.isPending || sendPO.isPending
+                  ? tc("creating")
+                  : t("zapiszIWyslij")}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

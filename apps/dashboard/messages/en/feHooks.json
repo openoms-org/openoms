@@ -1,0 +1,8 @@
+{
+  "feHooks": {
+    "editPurchaseOrder": "Edit purchase order",
+    "purchaseOrderUpdated": "Purchase order updated",
+    "editRecurringOrder": "Edit recurring order",
+    "recurringOrderUpdated": "Recurring order updated"
+  }
+}

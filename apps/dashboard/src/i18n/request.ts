@@ -51,6 +51,7 @@ const MODULES = [
   "common",
   "customers",
   "dashboard",
+  "feHooks",
   "integrations",
   "invoices",
   "layout",

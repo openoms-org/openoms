@@ -1,13 +1,18 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
-import { useCreateRecurringOrder } from "@/hooks/use-recurring-orders";
+import {
+  useCreateRecurringOrder,
+  useRecurringOrder,
+  useUpdateRecurringOrder,
+} from "@/hooks/use-recurring-orders";
 import { getErrorMessage } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,9 +56,15 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function NewRecurringOrderPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("edit") ?? "";
+  const isEditMode = !!editId;
   const t = useTranslations("recurringOrders");
   const tc = useTranslations("common");
+  const tf = useTranslations("feHooks");
   const createRecurringOrder = useCreateRecurringOrder();
+  const updateRecurringOrder = useUpdateRecurringOrder(editId);
+  const { data: editOrder } = useRecurringOrder(editId);
 
   const {
     register,
@@ -61,6 +72,7 @@ export default function NewRecurringOrderPage() {
     control,
     setValue,
     watch,
+    reset,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -83,6 +95,34 @@ export default function NewRecurringOrderPage() {
   // eslint-disable-next-line react-hooks/incompatible-library
   const frequency = watch("frequency");
 
+  // Edit mode: reset the form to the loaded subscription once per record. Uses a
+  // ref guard (not state) so a background refetch never clobbers user edits, and
+  // RHF reset() (not setState) so the set-state-in-effect rule does not apply.
+  const prefilledRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (editOrder && prefilledRef.current !== editOrder.id) {
+      prefilledRef.current = editOrder.id;
+      reset({
+        customer_name: editOrder.customer_name,
+        customer_email: editOrder.customer_email ?? "",
+        frequency: editOrder.frequency,
+        next_order_date: editOrder.next_order_date
+          ? editOrder.next_order_date.slice(0, 10)
+          : "",
+        end_date: editOrder.end_date ? editOrder.end_date.slice(0, 10) : "",
+        max_orders: editOrder.max_orders,
+        notes: editOrder.notes ?? "",
+        items: (editOrder.items ?? []).map((it) => ({
+          sku: it.sku,
+          product_name: it.product_name,
+          quantity: it.quantity,
+          unit_price: it.unit_price,
+          product_id: it.product_id,
+        })),
+      });
+    }
+  }, [editOrder, reset]);
+
   const onSubmit = (data: FormValues) => {
     const payload = {
       customer_name: data.customer_name,
@@ -101,6 +141,19 @@ export default function NewRecurringOrderPage() {
       })),
     };
 
+    if (isEditMode) {
+      updateRecurringOrder.mutate(payload, {
+        onSuccess: () => {
+          toast.success(tf("recurringOrderUpdated"));
+          router.push(`/recurring-orders/${editId}`);
+        },
+        onError: (error) => {
+          toast.error(getErrorMessage(error));
+        },
+      });
+      return;
+    }
+
     createRecurringOrder.mutate(payload, {
       onSuccess: () => {
         toast.success(t("subscriptionCreated"));
@@ -118,7 +171,9 @@ export default function NewRecurringOrderPage() {
         <Button variant="ghost" size="icon" onClick={() => router.push("/recurring-orders")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight">Nowa subskrypcja</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {isEditMode ? tf("editRecurringOrder") : "Nowa subskrypcja"}
+        </h1>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -318,10 +373,24 @@ export default function NewRecurringOrderPage() {
         </Card>
 
         <div className="flex gap-2">
-          <Button type="submit" disabled={createRecurringOrder.isPending}>
-            {createRecurringOrder.isPending ? tc("creating") : t("createSubscription")}
-          </Button>
-          <Button type="button" variant="outline" onClick={() => router.push("/recurring-orders")}>
+          {isEditMode ? (
+            <Button type="submit" disabled={updateRecurringOrder.isPending}>
+              {updateRecurringOrder.isPending ? tc("saving") : tc("saveChanges")}
+            </Button>
+          ) : (
+            <Button type="submit" disabled={createRecurringOrder.isPending}>
+              {createRecurringOrder.isPending ? tc("creating") : t("createSubscription")}
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() =>
+              router.push(
+                isEditMode ? `/recurring-orders/${editId}` : "/recurring-orders"
+              )
+            }
+          >
             {tc("cancel")}
           </Button>
         </div>

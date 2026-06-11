@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, Send, PackageCheck, Ban } from "lucide-react";
+import { ArrowLeft, Send, PackageCheck, Ban, Pencil } from "lucide-react";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import {
   usePurchaseOrder,
@@ -49,6 +49,7 @@ import { useTranslations } from "next-intl";
 
 export default function PurchaseOrderDetailPage() {
   const t = useTranslations("purchaseOrders");
+  const tc = useTranslations("common");
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const id = params.id;
@@ -159,6 +160,15 @@ export default function PurchaseOrderDetailPage() {
           </div>
           <StatusBadge status={po.status} statusMap={PURCHASE_ORDER_STATUSES} />
           <div className="flex gap-2">
+            {canSend && (
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/purchase-orders/new?edit=${id}`)}
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                {tc("edit")}
+              </Button>
+            )}
             {canSend && (
               <Button onClick={handleSend} disabled={sendPO.isPending}>
                 <Send className="h-4 w-4 mr-2" />

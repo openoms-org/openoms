@@ -2,7 +2,7 @@
 
 import { use } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Pause, Play, XCircle } from "lucide-react";
+import { ArrowLeft, Pause, Play, Pencil, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   useRecurringOrder,
@@ -60,6 +60,7 @@ export default function RecurringOrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const t = useTranslations("recurringOrders");
+  const tc = useTranslations("common");
   const { id } = use(params);
   const router = useRouter();
   const { data: order, isLoading, refetch } = useRecurringOrder(id);
@@ -136,6 +137,16 @@ export default function RecurringOrderDetailPage({
           {statusLabels[order.status] || order.status}
         </Badge>
         <div className="flex items-center gap-2">
+          {(order.status === "active" || order.status === "paused") && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/recurring-orders/new?edit=${id}`)}
+            >
+              <Pencil className="h-4 w-4 mr-1" />
+              {tc("edit")}
+            </Button>
+          )}
           {order.status === "active" && (
             <Button variant="outline" size="sm" onClick={handlePause}>
               <Pause className="h-4 w-4 mr-1" />

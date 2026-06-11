@@ -1,0 +1,8 @@
+{
+  "feHooks": {
+    "editPurchaseOrder": "Edytuj zamówienie zakupu",
+    "purchaseOrderUpdated": "Zamówienie zakupu zaktualizowane",
+    "editRecurringOrder": "Edytuj zamówienie cykliczne",
+    "recurringOrderUpdated": "Zamówienie cykliczne zaktualizowane"
+  }
+}
