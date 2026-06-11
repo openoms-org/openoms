@@ -111,13 +111,6 @@ var TerminalOrderStatuses = []string{
 	OrderStatusRefunded,
 }
 
-// IsTerminalOrderStatus reports whether status is a terminal order status (the
-// lifecycle does not advance further). Used to exclude finished/closed orders from
-// fulfillment-process backfill.
-func IsTerminalOrderStatus(status string) bool {
-	return slices.Contains(TerminalOrderStatuses, status)
-}
-
 // IsValidPriority reports whether p is a recognised order priority string.
 func IsValidPriority(p string) bool {
 	return validPriorities[p]
