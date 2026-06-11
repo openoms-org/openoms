@@ -37,7 +37,7 @@ var (
 	// Mirrors the distinct values of model.blockerCategories
 	// (internal/model/fulfillment.go); keep in sync when a category is added (OPE-527).
 	allowedCategories         = set("integration", "supplier", "operator", "capability", "mapping", "automation")
-	allowedOutboxResults      = set("claimed", "processed", "failed")
+	allowedOutboxResults      = set("claimed", "processed", "failed", "reaped")
 	allowedValidationVerdicts = set("pending", "passed", "failed", "error")
 	allowedPublicationStates  = set("research", "designed", "adapter_in_progress", "internal_validation",
 		"private_beta", "available", "deprecated", "retired")
@@ -164,7 +164,7 @@ func (m *FulfillmentMetrics) RecordBlocker(category string) {
 }
 
 // RecordOutboxEvent counts an orchestration outbox event by bounded result
-// (claimed | processed | failed).
+// (claimed | processed | failed | reaped).
 func (m *FulfillmentMetrics) RecordOutboxEvent(result string) {
 	if m == nil {
 		return
