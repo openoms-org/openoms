@@ -1,5 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
+import { createCrudHooks } from "./create-crud-hooks";
 import type {
   ProductCategory,
   CreateCategoryRequest,
@@ -27,41 +28,15 @@ export function useCategoryTree() {
   return useCategories({ tree: true });
 }
 
-export function useCreateCategory() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: CreateCategoryRequest) =>
-      apiClient<ProductCategory>("/v1/categories", {
-        method: "POST",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
-    },
-  });
-}
+const categoryHooks = createCrudHooks<
+  ProductCategory,
+  CreateCategoryRequest,
+  UpdateCategoryRequest
+>({
+  resourceKey: "categories",
+  basePath: "/v1/categories",
+});
 
-export function useUpdateCategory(id: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: UpdateCategoryRequest) =>
-      apiClient<ProductCategory>(`/v1/categories/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify(data),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
-    },
-  });
-}
-
-export function useDeleteCategory() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) =>
-      apiClient<void>(`/v1/categories/${id}`, { method: "DELETE" }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
-    },
-  });
-}
+export const useCreateCategory = categoryHooks.useCreate;
+export const useUpdateCategory = categoryHooks.useUpdate;
+export const useDeleteCategory = categoryHooks.useDelete;
