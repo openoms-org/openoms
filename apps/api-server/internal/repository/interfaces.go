@@ -73,6 +73,8 @@ type UserRepo interface {
 	DisableTOTP(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
 	GetTOTPStatus(ctx context.Context, tx pgx.Tx, id uuid.UUID) (bool, *string, error)
 	GetTOTPSecret(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*string, error)
+	GetTOTPLastUsedStep(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*int64, error)
+	SetTOTPLastUsedStep(ctx context.Context, tx pgx.Tx, id uuid.UUID, step int64) (bool, error)
 }
 
 // TenantRepo defines the interface for tenant persistence operations.
