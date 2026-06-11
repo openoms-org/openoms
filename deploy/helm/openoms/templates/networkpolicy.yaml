@@ -45,6 +45,14 @@ spec:
 {{- $httpsPorts := list (dict "protocol" "TCP" "port" 443) }}
 {{- $databasePorts := list (dict "protocol" "TCP" "port" 5432) (dict "protocol" "TCP" "port" 6543) }}
 {{- $redisPorts := list (dict "protocol" "TCP" "port" 6379) }}
+{{- /* When HTTPS egress has no explicit `to`, fall back to public-only egress by
+       excluding internal/cluster + cloud-metadata ranges (SSRF/exfil guard).
+       Overridable via networkPolicy.egress.https.except (set to [] to opt out). */}}
+{{- $defaultHttpsExcept := list "10.0.0.0/8" "100.64.0.0/10" "127.0.0.0/8" "169.254.0.0/16" "172.16.0.0/12" "192.168.0.0/16" "224.0.0.0/4" "240.0.0.0/4" }}
+{{- $httpsExcept := $defaultHttpsExcept }}
+{{- if hasKey $https "except" }}
+{{-   $httpsExcept = $https.except }}
+{{- end }}
 # Restrict egress: allow DNS, HTTPS, database, Redis, and intra-namespace access
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -71,6 +79,16 @@ spec:
       {{- with $https.to }}
       to:
         {{- toYaml . | nindent 8 }}
+      {{- else }}
+      # No explicit destinations configured: allow public HTTPS but exclude
+      # internal/cluster and cloud-metadata ranges to mitigate SSRF/exfil.
+      to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            {{- with $httpsExcept }}
+            except:
+              {{- toYaml . | nindent 14 }}
+            {{- end }}
       {{- end }}
     # PostgreSQL — in-cluster or external (e.g. Supabase managed)
     - ports:

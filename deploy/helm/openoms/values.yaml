@@ -223,7 +223,20 @@ networkPolicy:
           port: 53
     https:
       # Keep empty unless all required external API/S3/Sentry CIDRs are known.
+      # When `to` is empty the template still constrains 443 egress to public
+      # IPs by rendering an ipBlock 0.0.0.0/0 minus the `except` ranges below
+      # (blocks SSRF/exfil to cluster + cloud-metadata). Set `except: []` to
+      # restore fully unscoped HTTPS egress.
       to: []
+      except:
+        - 10.0.0.0/8
+        - 100.64.0.0/10
+        - 127.0.0.0/8
+        - 169.254.0.0/16
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+        - 224.0.0.0/4
+        - 240.0.0.0/4
       ports:
         - protocol: TCP
           port: 443
