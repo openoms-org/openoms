@@ -316,6 +316,9 @@ func run() error {
 
 	userService := service.NewUserService(userRepo, auditRepo, passwordSvc, pool)
 	roleService := service.NewRoleService(roleRepo, auditRepo, pool)
+	// Seed default system roles (Owner/Administrator/Employee) for every newly
+	// registered tenant via AuthService.Register (DEAD-02). Best-effort inside Register.
+	authService.SetRoleService(roleService)
 	emailService := service.NewEmailService(tenantRepo, pool)
 	smsService := service.NewSMSService(tenantRepo, pool)
 	webhookDispatchService := service.NewWebhookDispatchService(tenantRepo, webhookDeliveryRepo, pool)
@@ -465,6 +468,13 @@ func run() error {
 	loyaltyRepo := repository.NewLoyaltyRepository()
 	segmentService := service.NewSegmentService(segmentRepo, auditRepo, pool, slog.Default())
 	loyaltyService := service.NewLoyaltyService(loyaltyRepo, auditRepo, pool, slog.Default())
+
+	// OPE-538: order-lifecycle dependencies wired into the order service via setters
+	// (customer link/stats, B2B pricing, loyalty accrual, bundle stock).
+	orderService.SetCustomerRepo(customerRepo)
+	orderService.SetPriceListService(priceListService)
+	orderService.SetLoyaltyService(loyaltyService)
+	orderService.SetBundleService(bundleService)
 
 	// Automation engine
 	automationRuleRepo := repository.NewAutomationRuleRepository()
@@ -919,7 +929,8 @@ func run() error {
 
 	// Listing sync service & handler
 	listingSyncRepo := repository.NewListingSyncRepository()
-	listingSyncService := service.NewListingSyncService(listingSyncRepo, productRepo, productListingRepo, auditRepo, pool, slog.Default())
+	listingSyncService := service.NewListingSyncService(listingSyncRepo, productRepo, productListingRepo, auditRepo, integrationRepo, pool, encryptionKey, slog.Default())
+	listingSyncService.SetStockSyncService(stockSyncService)
 	listingSyncHandler := handler.NewListingSyncHandler(listingSyncService)
 
 	// Prometheus metrics collector
