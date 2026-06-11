@@ -24,6 +24,7 @@ data:
   OPENAI_MODEL: {{ .Values.apiServer.openai.model | quote }}
   REGISTRATION_MODE: {{ .Values.apiServer.registrationMode | default "invite" | quote }}
   OPENOMS_API_SURFACE: {{ .Values.apiServer.apiSurfaceMode | default "client-ready" | quote }}
+  ENABLE_API_DOCS: {{ .Values.apiServer.enableApiDocs | default false | quote }}
   REDIS_URL: {{ .Values.redis.url | quote }}
   ALLOW_IN_MEMORY_STATE: {{ .Values.apiServer.allowInMemoryState | default false | quote }}
   SENTRY_RELEASE: {{ .Values.sentry.release | default "" | quote }}

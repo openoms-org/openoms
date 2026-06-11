@@ -122,6 +122,11 @@ type Config struct {
 
 	MetricsToken string `env:"METRICS_TOKEN"` // Bearer token for /metrics; if empty, metrics are disabled in production
 
+	// EnableAPIDocs exposes the unauthenticated OpenAPI spec (/v1/openapi.yaml) and
+	// Swagger UI (/v1/docs). Default false so the API surface is hidden in production;
+	// development always serves the docs regardless of this flag.
+	EnableAPIDocs bool `env:"ENABLE_API_DOCS" envDefault:"false"`
+
 	// RegistrationMode controls public registration: "invite" (default, token required),
 	// "open", "closed". "disabled" is accepted as a legacy alias for closed registration.
 	// Defaults to "invite" so a missing/empty value never silently opens public

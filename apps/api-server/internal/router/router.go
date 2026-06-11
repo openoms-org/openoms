@@ -160,11 +160,11 @@ func New(deps RouterDeps) *chi.Mux {
 		r.With(middleware.MetricsAuth(deps.Config.MetricsToken)).Get("/metrics", deps.MetricsCollector.Handler())
 	}
 
-	// OpenAPI spec and Swagger UI — no auth
-	if deps.Docs != nil {
-		r.Get("/v1/openapi.yaml", deps.Docs.ServeSpec)
-		r.Get("/v1/docs", deps.Docs.ServeSwaggerUI)
-	}
+	// OpenAPI spec and Swagger UI — no auth. Gated: served only in development or
+	// when ENABLE_API_DOCS is explicitly set, so the API surface is hidden in
+	// production by default. When disabled the routes are not registered and chi
+	// returns 404.
+	registerDocsRoutes(r, deps.Docs, deps.Config)
 
 	// Serve uploaded files (authenticated, tenant-scoped)
 	fileServer := http.StripPrefix("/uploads/", http.FileServer(http.Dir(deps.Config.UploadDir)))
@@ -1311,6 +1311,25 @@ func New(deps RouterDeps) *chi.Mux {
 // single-part TLDs (.org, .com, .pl) but NOT for multi-part ccTLDs like .co.uk
 // or .com.pl. This is intentional — openoms.org uses a single-part TLD and we
 // avoid pulling in golang.org/x/net/publicsuffix for this one call site.
+// apiDocsEnabled reports whether the unauthenticated OpenAPI spec and Swagger UI
+// routes should be served. Docs are always available in development; in other
+// environments they require ENABLE_API_DOCS=true so the API surface is hidden by
+// default. A nil config fails closed (docs disabled).
+func apiDocsEnabled(cfg *config.Config) bool {
+	return cfg != nil && (cfg.IsDevelopment() || cfg.EnableAPIDocs)
+}
+
+// registerDocsRoutes wires the OpenAPI spec and Swagger UI routes when docs are
+// enabled. When the handler is nil or docs are disabled the routes are not
+// registered, so chi returns 404 for them.
+func registerDocsRoutes(r chi.Router, docs *handler.DocsHandler, cfg *config.Config) {
+	if docs == nil || !apiDocsEnabled(cfg) {
+		return
+	}
+	r.Get("/v1/openapi.yaml", docs.ServeSpec)
+	r.Get("/v1/docs", docs.ServeSwaggerUI)
+}
+
 func extractCookieDomain(frontendURL string) string {
 	u, err := url.Parse(frontendURL)
 	if err != nil {
