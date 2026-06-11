@@ -84,8 +84,8 @@ github.com/microcosm-cc/bluemonday v1.0.27 h1:MpEUotklkwCSLeH+Qdx1VJgNqLlpY2KXwX
 github.com/microcosm-cc/bluemonday v1.0.27/go.mod h1:jFi9vgW+H7c3V0lb6nR74Ib/DIB5OBs92Dimizgw2cA=
 github.com/openoms-org/openoms/packages/allegro-go-sdk v0.0.0-20260609181423-714eacb983d6 h1:Mimkfas+NDbx/d5lf40+ShpxQ3ZkGXOmguxF3+TC2gE=
 github.com/openoms-org/openoms/packages/allegro-go-sdk v0.0.0-20260609181423-714eacb983d6/go.mod h1:Bpuh3j3kBnJcvMNnm59CoQnzL5F1dxcm9UbZvPH6dgU=
-github.com/openoms-org/openoms/packages/amazon-sp-sdk v0.0.0-20260213093925-f69d292073cb h1:8zqu6OHxcU9uny8QS7AvSqMlL4/YB7QmgzuZG45x+Bs=
-github.com/openoms-org/openoms/packages/amazon-sp-sdk v0.0.0-20260213093925-f69d292073cb/go.mod h1:LQ1WIuIP312+F0WLFS7ZYFsbGwP9ACc+Q0wtS0m9VNI=
+github.com/openoms-org/openoms/packages/amazon-sp-sdk v0.0.0-20260610182332-faabfa52a481 h1:Jha/rvx7wbxIkslzJByll+hkGITdbKWNttPMbsVdnA4=
+github.com/openoms-org/openoms/packages/amazon-sp-sdk v0.0.0-20260610182332-faabfa52a481/go.mod h1:Bg6i91ZuerfHsl1XSO2Zmagzl0PGYaH+9D197s4pqAk=
 github.com/openoms-org/openoms/packages/dhl-go-sdk v0.0.0-20260213093925-f69d292073cb h1:AVJ/KPATIZ4fppNqkJkn+jLKL+i15/jE3xfNpAjNnwM=
 github.com/openoms-org/openoms/packages/dhl-go-sdk v0.0.0-20260213093925-f69d292073cb/go.mod h1:o8kaXnE91eFheR+Ol1vd1xVRNpaGcb1cDxQX+DA/79U=
 github.com/openoms-org/openoms/packages/dpd-go-sdk v0.0.0-20260213093925-f69d292073cb h1:JxlnFGP5bhAsprEaY08jFCVFLCTnYrX+DzaznipGyvc=
