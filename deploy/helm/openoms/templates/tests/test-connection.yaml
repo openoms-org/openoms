@@ -9,10 +9,22 @@ metadata:
     helm.sh/hook: test
 spec:
   restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    runAsGroup: 65534
+    seccompProfile:
+      type: RuntimeDefault
   containers:
     - name: test-api
-      image: busybox:1.36
+      image: busybox:1.36.1
       command: ["sh", "-c"]
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: ["ALL"]
       args:
         - |
           echo "Testing API server health endpoint..."
