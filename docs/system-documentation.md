@@ -2133,9 +2133,9 @@ DPD uzywa dwoch powierzchni API: DPD Services REST do tworzenia przesylek i etyk
 
 ---
 
-## 11. Background Workers (25 plikow)
+## 11. Background Workers (26 plikow)
 
-### Workery (21 zarejestrowanych)
+### Workery (22 zarejestrowanych)
 
 | Worker | Interwal | Cel |
 |--------|----------|-----|
@@ -2158,11 +2158,12 @@ DPD uzywa dwoch powierzchni API: DPD Services REST do tworzenia przesylek i etyk
 | KSeFStatusWorker | 5min | Sprawdzanie statusu faktur wyslanych do KSeF |
 | DelayedActionWorker | 30s | Wykonywanie opoznionych akcji automatyzacji |
 | RecurringOrderWorker | konfigurowalny | Tworzenie zamowien cyklicznych |
+| SegmentRefreshWorker | 1h | Przeliczanie czlonkostwa segmentow rule_based dla wszystkich tenantow (pelny recompute clear-then-repopulate, idempotentny) |
 | RepricingWorker | konfigurowalny | Automatyczna zmiana cen wg regul |
 | ListingSyncWorker | konfigurowalny | Synchronizacja listingow marketplace |
 | BillingReconciliationWorker | 15min | Naprawia sesje checkout, ktore zarejestrowaly tenanta, ale nie utworzyly rekordow billing/subskrypcji (powtarza idempotentna finalizacje); rejestrowany tylko gdy billing jest skonfigurowany |
 
-Workery zarejestrowane w managerze: 21. Liczba plikow zrodlowych w `internal/worker/`: 25. `AllegroWebhookSyncer` jest podpiety do handlera webhookow Allegro (wyzwalany eventem), a nie rejestrowany w managerze workerow -- dlatego nie liczy sie do 21 cyklicznych workerow.
+Workery zarejestrowane w managerze: 22. Liczba plikow zrodlowych w `internal/worker/`: 26. `AllegroWebhookSyncer` jest podpiety do handlera webhookow Allegro (wyzwalany eventem), a nie rejestrowany w managerze workerow -- dlatego nie liczy sie do 22 cyklicznych workerow.
 
 #### Workery orchestracji (gated, rejestrowane warunkowo — tor B, OPE-415/423)
 

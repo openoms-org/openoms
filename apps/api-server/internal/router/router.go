@@ -975,6 +975,7 @@ func New(deps RouterDeps) *chi.Mux {
 					r.With(requirePermission(model.PermCustomersDelete)).Delete("/{id}", deps.Segment.Delete)
 					r.With(requirePermission(model.PermCustomersEdit)).Post("/{id}/members", deps.Segment.AddMember)
 					r.With(requirePermission(model.PermCustomersEdit)).Delete("/{id}/members/{customer_id}", deps.Segment.RemoveMember)
+					r.With(requirePermission(model.PermCustomersEdit)).Post("/{id}/refresh", deps.Segment.RefreshSegment)
 				})
 			}
 

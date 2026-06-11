@@ -326,11 +326,7 @@
     "statusArchived": "Status Archived",
     "statusPaused": "Status Paused",
     "stockParams": "Stock Params",
-    "strategiaKonkurencyjnaJestWPrzygotowaniuDaneOCenac": "Competitive strategy is in preparation. Competitor price data is not yet available.",
     "strategy": "Strategy",
-    "strategyCompetitive": "Strategy Competitive",
-    "strategyCompetitiveDesc": "Strategy Competitive Desc",
-    "strategyCompetitiveSoon": "Strategy Competitive Soon",
     "strategyMargin": "Strategy Margin",
     "strategyMarginDesc": "Strategy Margin Desc",
     "strategyParams": "Strategy Params",
@@ -342,7 +338,6 @@
     "utworzPierwszaReguleDynamicznegoUstalaniaCen": "Create your first dynamic pricing rule.",
     "wartoscZakresu": "Range value",
     "weekdaysLabel": "Weekdays Label",
-    "wkrotce": "Coming soon",
     "zakresProduktow": "Product range"
   },
   "stockSync": {
