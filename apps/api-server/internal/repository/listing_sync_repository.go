@@ -38,59 +38,24 @@ func (r *ListingSyncRepository) CreateConfig(ctx context.Context, tx pgx.Tx, cfg
 
 // UpdateConfig applies partial updates to a listing sync configuration.
 func (r *ListingSyncRepository) UpdateConfig(ctx context.Context, tx pgx.Tx, id uuid.UUID, req *model.UpdateListingSyncConfigRequest) error {
-	var setClauses []string
-	var args []any
-	argIdx := 1
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "sync_direction", req.SyncDirection)
+	SetPtr(ub, "auto_sync", req.AutoSync)
+	SetPtr(ub, "sync_interval_minutes", req.SyncIntervalMinutes)
+	SetPtr(ub, "field_mapping", req.FieldMapping)
+	SetPtr(ub, "price_rule", req.PriceRule)
+	SetPtr(ub, "price_modifier", req.PriceModifier)
+	SetPtr(ub, "stock_buffer", req.StockBuffer)
+	SetPtr(ub, "status", req.Status)
 
-	if req.SyncDirection != nil {
-		setClauses = append(setClauses, fmt.Sprintf("sync_direction = $%d", argIdx))
-		args = append(args, *req.SyncDirection)
-		argIdx++
-	}
-	if req.AutoSync != nil {
-		setClauses = append(setClauses, fmt.Sprintf("auto_sync = $%d", argIdx))
-		args = append(args, *req.AutoSync)
-		argIdx++
-	}
-	if req.SyncIntervalMinutes != nil {
-		setClauses = append(setClauses, fmt.Sprintf("sync_interval_minutes = $%d", argIdx))
-		args = append(args, *req.SyncIntervalMinutes)
-		argIdx++
-	}
-	if req.FieldMapping != nil {
-		setClauses = append(setClauses, fmt.Sprintf("field_mapping = $%d", argIdx))
-		args = append(args, *req.FieldMapping)
-		argIdx++
-	}
-	if req.PriceRule != nil {
-		setClauses = append(setClauses, fmt.Sprintf("price_rule = $%d", argIdx))
-		args = append(args, *req.PriceRule)
-		argIdx++
-	}
-	if req.PriceModifier != nil {
-		setClauses = append(setClauses, fmt.Sprintf("price_modifier = $%d", argIdx))
-		args = append(args, *req.PriceModifier)
-		argIdx++
-	}
-	if req.StockBuffer != nil {
-		setClauses = append(setClauses, fmt.Sprintf("stock_buffer = $%d", argIdx))
-		args = append(args, *req.StockBuffer)
-		argIdx++
-	}
-	if req.Status != nil {
-		setClauses = append(setClauses, fmt.Sprintf("status = $%d", argIdx))
-		args = append(args, *req.Status)
-		argIdx++
-	}
-
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
+	ub.SetRaw("updated_at = NOW()")
 	query := fmt.Sprintf("UPDATE listing_sync_configs SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
-	args = append(args, id)
+		ub.SetClause(), ub.NextArgIdx())
+	args := append(ub.Args(), id)
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {

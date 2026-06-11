@@ -9,6 +9,15 @@ import (
 	"github.com/google/uuid"
 )
 
+// validSegmentTypes are the accepted customer segment types.
+var validSegmentTypes = map[string]bool{"manual": true, "rfm_auto": true, "rule_based": true}
+
+// validLoyaltyProgramTypes are the accepted loyalty program types.
+var validLoyaltyProgramTypes = map[string]bool{"points": true, "tier": true, "discount_after_n": true}
+
+// validLoyaltyProgramStatuses are the accepted loyalty program statuses.
+var validLoyaltyProgramStatuses = map[string]bool{"active": true, "paused": true, "ended": true}
+
 // CustomerSegment represents a group of customers defined by manual assignment or rules.
 type CustomerSegment struct {
 	ID            uuid.UUID       `json:"id"`
@@ -81,8 +90,7 @@ func (r *CreateSegmentRequest) Validate() error {
 	if err := validateMaxLength("name", r.Name, 255); err != nil {
 		return err
 	}
-	validTypes := map[string]bool{"manual": true, "rfm_auto": true, "rule_based": true}
-	if !validTypes[r.SegmentType] {
+	if !validSegmentTypes[r.SegmentType] {
 		return errors.New("segment_type must be 'manual', 'rfm_auto', or 'rule_based'")
 	}
 	if r.Color == "" {
@@ -190,8 +198,7 @@ func (r *CreateLoyaltyProgramRequest) Validate() error {
 	if err := validateMaxLength("name", r.Name, 255); err != nil {
 		return err
 	}
-	validTypes := map[string]bool{"points": true, "tier": true, "discount_after_n": true}
-	if !validTypes[r.ProgramType] {
+	if !validLoyaltyProgramTypes[r.ProgramType] {
 		return errors.New("program_type must be 'points', 'tier', or 'discount_after_n'")
 	}
 	if r.Config == nil {
@@ -213,8 +220,7 @@ func (r *UpdateLoyaltyProgramRequest) Validate() error {
 		return errors.New("name cannot be empty")
 	}
 	if r.Status != nil {
-		validStatuses := map[string]bool{"active": true, "paused": true, "ended": true}
-		if !validStatuses[*r.Status] {
+		if !validLoyaltyProgramStatuses[*r.Status] {
 			return errors.New("status must be 'active', 'paused', or 'ended'")
 		}
 	}

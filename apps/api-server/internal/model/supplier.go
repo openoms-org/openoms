@@ -9,6 +9,15 @@ import (
 	"github.com/google/uuid"
 )
 
+// validFeedFormats are the accepted supplier feed formats.
+var validFeedFormats = map[string]bool{
+	"iof":    true,
+	"csv":    true,
+	"custom": true,
+	"btp":    true,
+	"xml":    true,
+}
+
 // Supplier represents a product supplier or dropship vendor.
 type Supplier struct {
 	ID                  uuid.UUID       `json:"id"`
@@ -67,10 +76,7 @@ func (r *CreateSupplierRequest) Validate() error {
 	if r.FeedFormat == "" {
 		r.FeedFormat = "iof"
 	}
-	switch r.FeedFormat {
-	case "iof", "csv", "custom", "btp", "xml":
-		// valid
-	default:
+	if !validFeedFormats[r.FeedFormat] {
 		return errors.New("feed_format must be one of: iof, csv, custom, btp, xml")
 	}
 	if r.SyncIntervalMinutes != nil && (*r.SyncIntervalMinutes < 5 || *r.SyncIntervalMinutes > 1440) {
@@ -105,13 +111,8 @@ func (r *UpdateSupplierRequest) Validate() error {
 		r.IntegrationID == nil && r.DefaultCategoryID == nil {
 		return errors.New("at least one field must be provided")
 	}
-	if r.FeedFormat != nil {
-		switch *r.FeedFormat {
-		case "iof", "csv", "custom", "btp", "xml":
-			// valid
-		default:
-			return errors.New("feed_format must be one of: iof, csv, custom, btp, xml")
-		}
+	if r.FeedFormat != nil && !validFeedFormats[*r.FeedFormat] {
+		return errors.New("feed_format must be one of: iof, csv, custom, btp, xml")
 	}
 	if r.Status != nil {
 		switch *r.Status {

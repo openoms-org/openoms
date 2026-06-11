@@ -100,12 +100,6 @@ func RateLimitByAuthenticatedUserWith(limiter RateLimiter, maxRequests int, wind
 	}
 }
 
-// RateLimit is the legacy constructor using in-memory backend.
-// Kept for backward compatibility with existing router.go calls.
-func RateLimit(maxRequests int, window time.Duration) func(http.Handler) http.Handler {
-	return RateLimitWith(NewMemoryRateLimiter(), maxRequests, window)
-}
-
 func clientIPForRateLimit(r *http.Request) string {
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
 	if ip == "" {

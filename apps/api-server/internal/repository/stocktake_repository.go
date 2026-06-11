@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -52,29 +51,18 @@ func (r *StocktakeRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.U
 
 // List returns a paginated list of stocktakes matching the filter.
 func (r *StocktakeRepository) List(ctx context.Context, tx pgx.Tx, filter model.StocktakeListFilter) ([]model.Stocktake, int, error) {
-	var conditions []string
-	var args []any
-	argIdx := 1
-
+	qb := NewQueryBuilder()
 	if filter.WarehouseID != nil {
-		conditions = append(conditions, fmt.Sprintf("warehouse_id = $%d", argIdx))
-		args = append(args, *filter.WarehouseID)
-		argIdx++
+		qb.Add("warehouse_id = $%d", *filter.WarehouseID)
 	}
 	if filter.Status != nil {
-		conditions = append(conditions, fmt.Sprintf("status = $%d", argIdx))
-		args = append(args, *filter.Status)
-		argIdx++
+		qb.Add("status = $%d", *filter.Status)
 	}
-
-	where := ""
-	if len(conditions) > 0 {
-		where = "WHERE " + strings.Join(conditions, " AND ")
-	}
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM stocktakes %s", where)
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count stocktakes: %w", err)
 	}
 
@@ -85,15 +73,15 @@ func (r *StocktakeRepository) List(ctx context.Context, tx pgx.Tx, filter model.
 	}
 	orderByClause := model.BuildOrderByClause(filter.SortBy, filter.SortOrder, allowedSortColumns)
 
+	limitIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT id, tenant_id, warehouse_id, name, status, started_at, completed_at,
 		        notes, created_by, created_at, updated_at
 		 FROM stocktakes %s %s LIMIT $%d OFFSET $%d`,
-		where, orderByClause, argIdx, argIdx+1,
+		where, orderByClause, limitIdx, limitIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list stocktakes: %w", err)
 	}
@@ -200,29 +188,25 @@ func (r *StocktakeItemRepository) CreateBulk(ctx context.Context, tx pgx.Tx, ite
 
 // List returns paginated stocktake items for the given stocktake.
 func (r *StocktakeItemRepository) List(ctx context.Context, tx pgx.Tx, stocktakeID uuid.UUID, filter model.StocktakeItemListFilter) ([]model.StocktakeItem, int, error) {
-	var conditions []string
-	var args []any
-	argIdx := 1
-
-	conditions = append(conditions, fmt.Sprintf("si.stocktake_id = $%d", argIdx))
-	args = append(args, stocktakeID)
-	argIdx++
+	qb := NewQueryBuilder()
+	qb.Add("si.stocktake_id = $%d", stocktakeID)
 
 	switch filter.Filter {
 	case "uncounted":
-		conditions = append(conditions, "si.counted_quantity IS NULL")
+		qb.AddRaw("si.counted_quantity IS NULL")
 	case "discrepancies":
-		conditions = append(conditions, "si.counted_quantity IS NOT NULL AND si.difference != 0")
+		qb.AddRaw("si.counted_quantity IS NOT NULL AND si.difference != 0")
 	}
 
-	where := "WHERE " + strings.Join(conditions, " AND ")
+	where := qb.WhereClause()
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM stocktake_items si %s", where)
-	if err := tx.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := tx.QueryRow(ctx, countQuery, qb.Args()...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count stocktake_items: %w", err)
 	}
 
+	limitIdx := qb.AddArgs(filter.Limit, filter.Offset)
 	query := fmt.Sprintf(
 		`SELECT si.id, si.tenant_id, si.stocktake_id, si.product_id,
 		        si.expected_quantity, si.counted_quantity, si.difference,
@@ -233,11 +217,10 @@ func (r *StocktakeItemRepository) List(ctx context.Context, tx pgx.Tx, stocktake
 		 %s
 		 ORDER BY p.name ASC NULLS LAST
 		 LIMIT $%d OFFSET $%d`,
-		where, argIdx, argIdx+1,
+		where, limitIdx, limitIdx+1,
 	)
-	args = append(args, filter.Limit, filter.Offset)
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, query, qb.Args()...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("list stocktake_items: %w", err)
 	}

@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -193,51 +192,29 @@ func (r *DropshipOrderRepository) UpdateStatus(ctx context.Context, tx pgx.Tx, i
 
 // UpdateFields updates mutable fields on a dropship order.
 func (r *DropshipOrderRepository) UpdateFields(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateDropshipStatusRequest) error {
-	var setClauses []string
-	var args []any
-	argIdx := 1
-
-	setClauses = append(setClauses, fmt.Sprintf("status = $%d", argIdx))
-	args = append(args, req.Status)
-	argIdx++
-
-	if req.TrackingNumber != nil {
-		setClauses = append(setClauses, fmt.Sprintf("tracking_number = $%d", argIdx))
-		args = append(args, *req.TrackingNumber)
-		argIdx++
-	}
-	if req.Carrier != nil {
-		setClauses = append(setClauses, fmt.Sprintf("carrier = $%d", argIdx))
-		args = append(args, *req.Carrier)
-		argIdx++
-	}
-	if req.SupplierReference != nil {
-		setClauses = append(setClauses, fmt.Sprintf("supplier_reference = $%d", argIdx))
-		args = append(args, *req.SupplierReference)
-		argIdx++
-	}
-	if req.Notes != nil {
-		setClauses = append(setClauses, fmt.Sprintf("notes = $%d", argIdx))
-		args = append(args, *req.Notes)
-		argIdx++
-	}
+	ub := NewUpdateBuilder()
+	ub.Set("status", req.Status)
+	SetPtr(ub, "tracking_number", req.TrackingNumber)
+	SetPtr(ub, "carrier", req.Carrier)
+	SetPtr(ub, "supplier_reference", req.SupplierReference)
+	SetPtr(ub, "notes", req.Notes)
 
 	// Set timestamp columns based on status
 	switch req.Status {
 	case "sent":
-		setClauses = append(setClauses, "sent_at = NOW()")
+		ub.SetRaw("sent_at = NOW()")
 	case "confirmed":
-		setClauses = append(setClauses, "confirmed_at = NOW()")
+		ub.SetRaw("confirmed_at = NOW()")
 	case "shipped":
-		setClauses = append(setClauses, "shipped_at = NOW()")
+		ub.SetRaw("shipped_at = NOW()")
 	case "delivered":
-		setClauses = append(setClauses, "delivered_at = NOW()")
+		ub.SetRaw("delivered_at = NOW()")
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
+	ub.SetRaw("updated_at = NOW()")
 	query := fmt.Sprintf("UPDATE dropship_orders SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
-	args = append(args, id)
+		ub.SetClause(), ub.NextArgIdx())
+	args := append(ub.Args(), id)
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {

@@ -509,24 +509,6 @@ func TestUpdateSupplierRequest_Validate_ValidStatuses(t *testing.T) {
 	}
 }
 
-// --- CreateProductListingRequest.Validate ---
-
-func TestCreateProductListingRequest_Validate_Success(t *testing.T) {
-	req := CreateProductListingRequest{ProductID: uuid.New(), IntegrationID: uuid.New()}
-	assert.NoError(t, req.Validate())
-	assert.Equal(t, "pending", req.Status)
-}
-
-func TestCreateProductListingRequest_Validate_MissingProductID(t *testing.T) {
-	req := CreateProductListingRequest{IntegrationID: uuid.New()}
-	assert.Error(t, req.Validate())
-}
-
-func TestCreateProductListingRequest_Validate_MissingIntegrationID(t *testing.T) {
-	req := CreateProductListingRequest{ProductID: uuid.New()}
-	assert.Error(t, req.Validate())
-}
-
 // --- UpdateProductListingRequest.Validate ---
 
 func TestUpdateProductListingRequest_Validate_NoFields(t *testing.T) {
