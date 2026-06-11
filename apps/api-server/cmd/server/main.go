@@ -1099,6 +1099,7 @@ func run() error {
 	workerMgr.Register(worker.NewKSeFStatusWorker(workerPool, ksefService, slog.Default()))
 	workerMgr.Register(worker.NewDelayedActionWorker(workerPool, delayedActionRepo, automationExecutor, slog.Default()))
 	workerMgr.Register(worker.NewRecurringOrderWorker(workerPool, recurringOrderService, slog.Default()))
+	workerMgr.Register(worker.NewSegmentRefreshWorker(workerPool, segmentService, slog.Default()))
 	workerMgr.Register(worker.NewRepricingWorker(workerPool, repricingService, slog.Default()))
 	workerMgr.Register(worker.NewListingSyncWorker(workerPool, listingSyncRepo, listingSyncService, slog.Default()))
 	if cfg.BillingEnabled() && checkoutSvc != nil {
