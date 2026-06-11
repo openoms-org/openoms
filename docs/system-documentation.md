@@ -1287,6 +1287,7 @@ Standalone maszyna stanow zamowien i przesylek:
 | poczta-polska-go-sdk | Poczta Polska | REST | Paczki pocztowe |
 | orlen-paczka-go-sdk | Orlen Paczka | REST | Paczkomaty Orlen |
 | fedex-go-sdk | FedEx | REST | Miedzynarodowe |
+| apaczka-go-sdk | Apaczka (broker) | REST v2 + HMAC-SHA256 | Tworzenie przesylek, etykiety (waybill PDF), tracking, wycena (rate-shopping), punkty odbioru; broker fronting InPost/DPD/DHL/UPS/GLS/Poczta Polska/Orlen Paczka |
 
 ### Inne SDK-i
 
@@ -1561,6 +1562,10 @@ Dispatcher:  OrchestrationDispatcher (mapa event_type → handler). OPE-415 dost
              realne handlery = OPE-416/417/418. Nieznany event_type → PermanentError.
 Retry:       sukces→succeeded; błąd retryable→pending + next_attempt_at = now+backoff (30s×2^n,
              cap 1h); permanent (PermanentError) lub wyczerpane attempts→failed + fulfillment_blocker.
+Reaper:      każdy tick zaczyna się od reap-pass (OPE-534): wiersze 'claimed' starsze niż
+             10 min (crash workera między claim a mark) wracają do 'pending' z backoffem
+             (przerwana próba liczy się do attempts); wyczerpane attempts → failed +
+             fulfillment_blocker; wiszące 'running' attempts zamykane jako failed.
 ```
 
 ### Routing tworzenia zamówień przez fulfillment (OPE-416, tor B)
@@ -2096,6 +2101,7 @@ EbayImportService.ImportOffers()
 | | Poczta Polska | Paczki |
 | | Orlen Paczka | Paczkomaty |
 | | FedEx | Miedzynarodowe |
+| | Apaczka (broker) | Broker meta-carrier: jedna integracja REST API v2 (HMAC-SHA256) fronting wielu przewoznikow (InPost, DPD, DHL, UPS, GLS, Poczta Polska, Orlen Paczka); tworzenie przesylek, etykiety (waybill PDF), tracking, rate-shopping (service_structure + order_valuation), punkty odbioru |
 | **Fakturowanie** | Fakturownia | Faktury VAT |
 | **e-Fakturowanie** | KSeF | Krajowy System e-Faktur (wysylka, UPO, status) |
 | **Marketing** | Mailchimp | Sync klientow, kampanie |
@@ -2105,7 +2111,7 @@ EbayImportService.ImportOffers()
 | **AI** | OpenAI | Kategoryzacja, opisy, ulepszanie, tlumaczenie |
 | **Kursy walut** | NBP | Narodowy Bank Polski |
 
-Rate shopping dla DPD, GLS, UPS, Poczta Polska, Orlen Paczka, FedEx i DHL jest wylaczony do czasu realnej wyceny kontraktowej/rating API. Providerzy pozostaja dostepni dla obslugiwanych przeplywow, np. etykiet, trackingu lub punktow odbioru, ale nie zwracaja sztucznych stawek.
+Rate shopping dla DPD, GLS, UPS, Poczta Polska, Orlen Paczka, FedEx i DHL jest wylaczony do czasu realnej wyceny kontraktowej/rating API. Providerzy pozostaja dostepni dla obslugiwanych przeplywow, np. etykiet, trackingu lub punktow odbioru, ale nie zwracaja sztucznych stawek. Apaczka jako broker meta-carrier zwraca rzeczywiste stawki dla wszystkich aktywnych uslug (service_structure + order_valuation) i jest w pelni uwzgledniany w endpoint rate-shopping `/v1/shipping/rates`.
 
 DPD uzywa dwoch powierzchni API: DPD Services REST do tworzenia przesylek i etykiet oraz DPD InfoServices SOAP do sledzenia przesylek. Opcjonalne dane `info_login`, `info_password` i `info_channel` pozwalaja zapisac osobne dane InfoServices; gdy sa puste, OpenOMS uzywa glownego loginu/hasla DPD oraz `master_fid` jako kanalu InfoServices.
 

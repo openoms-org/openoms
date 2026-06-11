@@ -21,7 +21,26 @@ type RateLimiter interface {
 }
 
 // RateLimitWith creates rate limiting middleware using the provided RateLimiter.
+// On a limiter backend error it FAILS OPEN (allows the request) to preserve
+// availability for non-critical routes. Use RateLimitCriticalWith for
+// security-critical endpoints that must fail closed instead.
 func RateLimitWith(limiter RateLimiter, maxRequests int, window time.Duration) func(http.Handler) http.Handler {
+	return rateLimitByIP(limiter, maxRequests, window, false)
+}
+
+// RateLimitCriticalWith creates rate limiting middleware that FAILS CLOSED: on a
+// limiter backend error it denies the request (503 Service Unavailable) instead
+// of allowing it. Use for security-critical unauthenticated endpoints (login,
+// 2FA login, token refresh, registration, checkout creation) where availability
+// must not silently disable brute-force / abuse protection.
+func RateLimitCriticalWith(limiter RateLimiter, maxRequests int, window time.Duration) func(http.Handler) http.Handler {
+	return rateLimitByIP(limiter, maxRequests, window, true)
+}
+
+// rateLimitByIP is the shared per-IP rate limiting implementation. failClosed
+// selects the behavior when the limiter backend returns an error: when true the
+// request is denied (503), when false it is allowed (fail open).
+func rateLimitByIP(limiter RateLimiter, maxRequests int, window time.Duration, failClosed bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ip := clientIPForRateLimit(r)
@@ -29,6 +48,11 @@ func RateLimitWith(limiter RateLimiter, maxRequests int, window time.Duration) f
 			key := fmt.Sprintf("rl:%s:%s:%d", ip, route, maxRequests)
 			allowed, err := limiter.Allow(r.Context(), key, maxRequests, window)
 			if err != nil {
+				if failClosed {
+					slog.Error("rate limiter error, failing closed", "error", err, "ip", ip) // #nosec G706 -- ip is logged as a structured field, not interpolated
+					writeRateLimitUnavailable(w)
+					return
+				}
 				slog.Error("rate limiter error, failing open", "error", err, "ip", ip) // #nosec G706 -- ip is logged as a structured field, not interpolated
 				next.ServeHTTP(w, r)
 				return
@@ -105,6 +129,15 @@ func writeRateLimitExceeded(w http.ResponseWriter) {
 	w.Header().Set("Retry-After", "60")
 	w.WriteHeader(http.StatusTooManyRequests)
 	_, _ = w.Write([]byte(`{"error":"too many requests"}`))
+}
+
+// writeRateLimitUnavailable is the fail-closed response: the rate-limit backend
+// is unavailable, so the request is refused rather than admitted unprotected.
+func writeRateLimitUnavailable(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Retry-After", "60")
+	w.WriteHeader(http.StatusServiceUnavailable)
+	_, _ = w.Write([]byte(`{"error":"rate limiter unavailable"}`))
 }
 
 // --- Memory implementation ---

@@ -96,6 +96,54 @@ func (r *OrchestrationRepository) ClaimDue(ctx context.Context, q Querier, limit
 	return result, rows.Err()
 }
 
+// ListStaleClaimed returns claimed outbox rows whose claim is older than olderThan —
+// evidence of a worker that crashed between ClaimDue and Mark* (OPE-534). Cross-tenant
+// by design (same privileged-pool justification as ClaimDue): the reaper must see every
+// tenant's stranded rows. FOR UPDATE SKIP LOCKED only de-conflicts reapers running in
+// the same instant — this is an autocommit statement, so its locks release at statement
+// end and do NOT serialize list-then-mark across instances. Claims are not held in a tx
+// either, so the REAL protections are the age threshold (claimed_at) plus the worker
+// Manager's per-worker serialization (in-process atomic + cross-pod Redis lease).
+func (r *OrchestrationRepository) ListStaleClaimed(ctx context.Context, q Querier, olderThan time.Duration, limit int) ([]model.OrchestrationOutboxEvent, error) {
+	rows, err := q.Query(ctx,
+		`SELECT `+orchestrationOutboxColumns+`
+		   FROM orchestration_outbox
+		  WHERE status = 'claimed' AND claimed_at < now() - make_interval(secs => $1)
+		  ORDER BY claimed_at
+		  LIMIT $2
+		    FOR UPDATE SKIP LOCKED`,
+		olderThan.Seconds(), limit)
+	if err != nil {
+		return nil, fmt.Errorf("list stale claimed outbox events: %w", err)
+	}
+	defer rows.Close()
+	result := []model.OrchestrationOutboxEvent{}
+	for rows.Next() {
+		e, err := scanOutbox(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan stale outbox event: %w", err)
+		}
+		result = append(result, *e)
+	}
+	return result, rows.Err()
+}
+
+// FailRunningAttempts closes every dangling 'running' attempt row for an outbox event
+// as failed (OPE-534). A worker crash mid-attempt leaves the attempt 'running' forever;
+// the reaper closes it so the attempt timeline stays truthful. Returns the number of
+// rows closed.
+func (r *OrchestrationRepository) FailRunningAttempts(ctx context.Context, q Querier, outboxID uuid.UUID, errMsg string) (int, error) {
+	tag, err := q.Exec(ctx,
+		`UPDATE orchestration_attempts
+		    SET status = 'failed', error = $2, finished_at = now()
+		  WHERE outbox_id = $1 AND status = 'running'`,
+		outboxID, errMsg)
+	if err != nil {
+		return 0, fmt.Errorf("fail running outbox attempts: %w", err)
+	}
+	return int(tag.RowsAffected()), nil
+}
+
 // CountPending returns the number of pending outbox rows across all tenants. It is
 // used by the orchestration worker to publish a queue-depth gauge and, like ClaimDue,
 // runs on the privileged cross-tenant pool (not RLS-scoped).

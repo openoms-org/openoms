@@ -25,11 +25,14 @@ apiServer:
     port: 8080  # K8s Service port (match containerPort for Cloudflare Tunnel)
   env: production
   allowInMemoryState: false  # set true only for explicit single-node deployments without Redis
-  registrationMode: open  # override to "invite" in production values
+  registrationMode: invite  # "invite" (token required), "open" (dev only — rejected by the API outside development), "closed"
   # Server-side feature readiness gate. "client-ready" exposes only certified
   # features over the API; "full" disables gating (escape hatch). Keep in sync with
   # the dashboard NEXT_PUBLIC_OPENOMS_DASHBOARD_SURFACE.
   apiSurfaceMode: "client-ready"
+  # Expose the unauthenticated OpenAPI spec (/v1/openapi.yaml) and Swagger UI (/v1/docs).
+  # Keep false in production; the API serves them in development regardless of this flag.
+  enableApiDocs: false
   baseUrl: https://api.openoms.example.com
   frontendUrl: https://app.openoms.example.com
   # Comma-rendered to TRUSTED_PROXY_CIDRS. Empty means forwarded headers are ignored.

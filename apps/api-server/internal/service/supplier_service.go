@@ -6,6 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -1643,9 +1646,49 @@ func (s *SupplierService) BTPWizardGetImportProgress(ctx context.Context, tenant
 	return &resp, err
 }
 
+// validateBTPBaseURL performs an early, defense-in-depth check on a user-supplied BTP
+// base URL before it is handed to the SDK client. It is intentionally a pure, DNS-free
+// check (literal parse only) so it never blocks on network I/O; the authoritative SSRF
+// guard remains netutil.SafeHTTPClient, whose dialer re-resolves the host at connect time
+// and rejects private/loopback/link-local/metadata IPs (including DNS-rebinding cases).
+// An empty base_url is allowed — the SDK falls back to its public default endpoint.
+func validateBTPBaseURL(raw string) error {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("base_url is not a valid URL: %w", err)
+	}
+	if u.Scheme != "https" {
+		return errors.New("base_url must use the https scheme")
+	}
+	host := u.Hostname()
+	if host == "" {
+		return errors.New("base_url must include a host")
+	}
+	if strings.EqualFold(host, "localhost") || strings.EqualFold(host, "localhost.") {
+		return errors.New("base_url host is not allowed")
+	}
+	// Reject literal private/loopback/link-local/metadata IP addresses early.
+	if ip := net.ParseIP(host); ip != nil && netutil.IsPrivateIP(ip) {
+		return errors.New("base_url host is not allowed")
+	}
+	return nil
+}
+
 // BTPWizardSetAPIKeys validates and saves BTP API credentials (step 2).
 func (s *SupplierService) BTPWizardSetAPIKeys(ctx context.Context, tenantID, supplierID uuid.UUID, req model.BTPWizardSetAPIKeysRequest, actorID uuid.UUID, ip string) (*model.Supplier, error) {
 	if err := req.Validate(); err != nil {
+		return nil, NewValidationError(err)
+	}
+
+	// Defense-in-depth SSRF check on the user-supplied base URL before it reaches the
+	// SDK client. The authoritative guard is netutil.SafeHTTPClient below (re-resolves
+	// DNS at connect time and blocks private/loopback/link-local/metadata targets,
+	// defeating DNS rebinding); this rejects the obvious cases early with a clear error.
+	if err := validateBTPBaseURL(req.BaseURL); err != nil {
 		return nil, NewValidationError(err)
 	}
 
@@ -1670,8 +1713,11 @@ func (s *SupplierService) BTPWizardSetAPIKeys(ctx context.Context, tenantID, sup
 		return nil, NewValidationError(fmt.Errorf("cannot set API keys: current step is %q, expected api_keys", step))
 	}
 
-	// Validate credentials via BTP health check
-	opts := []btpsdk.Option{}
+	// Validate credentials via BTP health check. The SDK client MUST use the
+	// SSRF-guarded transport (netutil.SafeHTTPClient) so a user-controlled base_url
+	// cannot make the server reach internal/metadata endpoints — matching every other
+	// btpsdk.NewClient call site in the codebase.
+	opts := []btpsdk.Option{btpsdk.WithHTTPClient(netutil.SafeHTTPClient(30 * time.Second))}
 	if req.BaseURL != "" {
 		opts = append(opts, btpsdk.WithBaseURL(req.BaseURL))
 	}

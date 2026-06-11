@@ -29,4 +29,5 @@ use (
 	./packages/shoper-go-sdk
 	./packages/prestashop-go-sdk
 	./packages/shopify-go-sdk
+	./packages/apaczka-go-sdk
 )

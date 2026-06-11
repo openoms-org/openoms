@@ -122,9 +122,16 @@ type Config struct {
 
 	MetricsToken string `env:"METRICS_TOKEN"` // Bearer token for /metrics; if empty, metrics are disabled in production
 
-	// RegistrationMode controls public registration: "open" (default), "invite" (token required), "closed".
-	// "disabled" is accepted as a legacy alias for closed registration.
-	RegistrationMode string `env:"REGISTRATION_MODE" envDefault:"open"`
+	// EnableAPIDocs exposes the unauthenticated OpenAPI spec (/v1/openapi.yaml) and
+	// Swagger UI (/v1/docs). Default false so the API surface is hidden in production;
+	// development always serves the docs regardless of this flag.
+	EnableAPIDocs bool `env:"ENABLE_API_DOCS" envDefault:"false"`
+
+	// RegistrationMode controls public registration: "invite" (default, token required),
+	// "open", "closed". "disabled" is accepted as a legacy alias for closed registration.
+	// Defaults to "invite" so a missing/empty value never silently opens public
+	// registration; "open" is rejected outside development by Validate().
+	RegistrationMode string `env:"REGISTRATION_MODE" envDefault:"invite"`
 
 	// LicensePublicKey is the base64-encoded Ed25519 public key for verifying license tokens.
 	// Empty = license token feature disabled (self-hosted mode).
@@ -252,9 +259,10 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("OPENOMS_API_SURFACE must be one of: client-ready, full (got %q)", c.APISurfaceMode)
 	}
 
-	// Warn if registration is open in non-development environments.
+	// Reject open public registration outside development. Failing open here would let
+	// anyone create tenants/users in production; require an explicit, safe mode instead.
 	if c.RegistrationMode == "open" && !c.IsDevelopment() {
-		slog.Warn("REGISTRATION_MODE is 'open' in non-development environment — consider using 'invite' or 'closed'", "env", c.Env)
+		return fmt.Errorf("REGISTRATION_MODE must not be 'open' outside development; use 'invite' or 'closed' (env=%q)", c.Env)
 	}
 
 	if c.AllowInMemoryState && !c.IsDevelopment() {

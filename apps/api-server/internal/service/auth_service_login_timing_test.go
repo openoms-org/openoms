@@ -85,6 +85,12 @@ func (r loginTimingUserRepo) GetTOTPStatus(context.Context, pgx.Tx, uuid.UUID) (
 func (r loginTimingUserRepo) GetTOTPSecret(context.Context, pgx.Tx, uuid.UUID) (*string, error) {
 	return nil, nil
 }
+func (r loginTimingUserRepo) GetTOTPLastUsedStep(context.Context, pgx.Tx, uuid.UUID) (*int64, error) {
+	return nil, nil
+}
+func (r loginTimingUserRepo) SetTOTPLastUsedStep(context.Context, pgx.Tx, uuid.UUID, int64) (bool, error) {
+	return true, nil
+}
 
 func TestAuthService_Login_MissingTenantBurnsBcryptCompare(t *testing.T) {
 	svc := NewAuthService(nil, loginTimingTenantRepo{}, nil, nil, NewPasswordService(), nil)

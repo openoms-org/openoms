@@ -75,12 +75,16 @@ func TestFulfillmentMetrics_OutboxCountersAndGauge(t *testing.T) {
 	m.RecordOutboxEvent("claimed")
 	m.RecordOutboxEvent("processed")
 	m.RecordOutboxEvent("failed")
+	m.RecordOutboxEvent("reaped")
 	m.SetOutboxQueueDepth(7)
 	out := render(m)
 	assert.Contains(t, out, "# TYPE openoms_orchestration_outbox_events_total counter")
 	assert.Contains(t, out, `openoms_orchestration_outbox_events_total{result="claimed"} 1`)
 	assert.Contains(t, out, `openoms_orchestration_outbox_events_total{result="processed"} 1`)
 	assert.Contains(t, out, `openoms_orchestration_outbox_events_total{result="failed"} 1`)
+	assert.Contains(t, out, `openoms_orchestration_outbox_events_total{result="reaped"} 1`,
+		"reaped (OPE-534) must be an allow-listed outbox result, not coerced to other")
+	assert.NotContains(t, out, `result="other"`)
 	assert.Contains(t, out, "# TYPE openoms_orchestration_outbox_queue_depth gauge")
 	assert.Contains(t, out, "openoms_orchestration_outbox_queue_depth 7")
 }
