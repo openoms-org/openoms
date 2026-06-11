@@ -184,6 +184,7 @@
       "saved": "Ustawienia zostały zapisane",
       "settingsExported": "Ustawienia wyeksportowane",
       "settingsImported": "Ustawienia zaimportowane pomyślnie",
+      "settingsImportInvalid": "Wybrany plik nie jest prawidłowym plikiem JSON",
       "subtitle": "Ustawienia firmy",
       "title": "Firma",
       "uploadLogo": "Wgraj logo",
