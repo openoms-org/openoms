@@ -72,16 +72,6 @@ func NewOrderService(
 	}
 }
 
-// OrderRepo returns the underlying order repository for direct access.
-func (s *OrderService) OrderRepo() repository.OrderRepo {
-	return s.orderRepo
-}
-
-// AuditRepo returns the underlying audit repository for direct access.
-func (s *OrderService) AuditRepo() repository.AuditRepo {
-	return s.auditRepo
-}
-
 // MonthlyOrderCounter provides the order count needed for plan-limit enforcement.
 type MonthlyOrderCounter interface {
 	CountThisMonth(ctx context.Context, tx pgx.Tx) (int, error)
@@ -111,11 +101,6 @@ func EnforceMonthlyOrderLimit(ctx context.Context, tx pgx.Tx, orderCounter Month
 		return ErrOrderLimitExceeded
 	}
 	return nil
-}
-
-// WebhookDispatch returns the webhook dispatch service for direct access.
-func (s *OrderService) WebhookDispatch() *WebhookDispatchService {
-	return s.webhookDispatch
 }
 
 // SetInvoiceService sets the invoice service for auto-invoicing on status change.
@@ -447,6 +432,87 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 	}
 
 	return order, nil
+}
+
+// Duplicate creates a copy of an existing order as a fresh "new" order, with a new ID
+// and no external reference. It enforces the monthly order limit inside the same
+// transaction (mirroring Create) and writes an "order.duplicated" audit entry, then
+// dispatches an order.created webhook after commit. Behavior matches the previous
+// handler-based duplicate: it is webhook-only (no fulfillment process, stock reserve,
+// or automation event) and intentionally non-idempotent — each call mints a new order.
+func (s *OrderService) Duplicate(ctx context.Context, tenantID, orderID uuid.UUID, maxOrdersMonthly int, actorID uuid.UUID, ip string) (*model.Order, error) {
+	var newOrder *model.Order
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		if err := EnforceMonthlyOrderLimit(ctx, tx, s.orderRepo, tenantID, maxOrdersMonthly, 0); err != nil {
+			return err
+		}
+
+		existing, err := s.orderRepo.FindByID(ctx, tx, orderID)
+		if err != nil {
+			return err
+		}
+		if existing == nil {
+			return ErrOrderNotFound
+		}
+
+		// Sanitize user-facing text fields to prevent stored XSS
+		customerName := model.StripHTMLTags(existing.CustomerName)
+		var notes *string
+		if existing.Notes != nil {
+			sanitized := model.StripHTMLTags(*existing.Notes)
+			notes = &sanitized
+		}
+
+		newOrder = &model.Order{
+			ID:              uuid.New(),
+			TenantID:        existing.TenantID,
+			ExternalID:      nil, // Clear ExternalID to avoid duplicate external references
+			Source:          existing.Source,
+			IntegrationID:   existing.IntegrationID,
+			Status:          "new",
+			CustomerName:    customerName,
+			CustomerEmail:   existing.CustomerEmail,
+			CustomerPhone:   existing.CustomerPhone,
+			ShippingAddress: existing.ShippingAddress,
+			BillingAddress:  existing.BillingAddress,
+			Items:           existing.Items,
+			TotalAmount:     existing.TotalAmount,
+			Currency:        existing.Currency,
+			Notes:           notes,
+			Metadata:        existing.Metadata,
+			Tags:            existing.Tags,
+			OrderedAt:       existing.OrderedAt,
+			DeliveryMethod:  existing.DeliveryMethod,
+			PickupPointID:   existing.PickupPointID,
+			PaymentStatus:   existing.PaymentStatus,
+			PaymentMethod:   existing.PaymentMethod,
+			CustomerID:      existing.CustomerID,
+			InternalNotes:   existing.InternalNotes,
+			Priority:        existing.Priority,
+		}
+
+		if err := s.orderRepo.Create(ctx, tx, newOrder); err != nil {
+			return fmt.Errorf("create duplicated order: %w", err)
+		}
+
+		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "order.duplicated",
+			EntityType: "order",
+			EntityID:   newOrder.ID,
+			Changes:    map[string]string{"source_order_id": orderID.String()},
+			IPAddress:  ip,
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Dispatch webhook for the duplicated order (async, best-effort)
+	DispatchWebhookAsync(s.webhookDispatch, tenantID, "order.created", newOrder)
+
+	return newOrder, nil
 }
 
 // Update modifies an existing order.

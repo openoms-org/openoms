@@ -16,7 +16,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/openoms-org/openoms/apps/api-server/internal/asyncutil"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
@@ -284,70 +283,7 @@ func (h *OrderHandler) DuplicateOrder(w http.ResponseWriter, r *http.Request) {
 		maxOrdersMonthly = limits.MaxOrdersMonthly
 	}
 
-	var newOrder *model.Order
-	err = database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
-		if err := service.EnforceMonthlyOrderLimit(r.Context(), tx, h.orderService.OrderRepo(), tenantID, maxOrdersMonthly, 0); err != nil {
-			return err
-		}
-
-		existing, err := h.orderService.OrderRepo().FindByID(r.Context(), tx, orderID)
-		if err != nil {
-			return err
-		}
-		if existing == nil {
-			return service.ErrOrderNotFound
-		}
-
-		// Sanitize user-facing text fields to prevent stored XSS
-		customerName := model.StripHTMLTags(existing.CustomerName)
-		var notes *string
-		if existing.Notes != nil {
-			sanitized := model.StripHTMLTags(*existing.Notes)
-			notes = &sanitized
-		}
-
-		newOrder = &model.Order{
-			ID:              uuid.New(),
-			TenantID:        existing.TenantID,
-			ExternalID:      nil, // Clear ExternalID to avoid duplicate external references
-			Source:          existing.Source,
-			IntegrationID:   existing.IntegrationID,
-			Status:          "new",
-			CustomerName:    customerName,
-			CustomerEmail:   existing.CustomerEmail,
-			CustomerPhone:   existing.CustomerPhone,
-			ShippingAddress: existing.ShippingAddress,
-			BillingAddress:  existing.BillingAddress,
-			Items:           existing.Items,
-			TotalAmount:     existing.TotalAmount,
-			Currency:        existing.Currency,
-			Notes:           notes,
-			Metadata:        existing.Metadata,
-			Tags:            existing.Tags,
-			OrderedAt:       existing.OrderedAt,
-			DeliveryMethod:  existing.DeliveryMethod,
-			PickupPointID:   existing.PickupPointID,
-			PaymentStatus:   existing.PaymentStatus,
-			PaymentMethod:   existing.PaymentMethod,
-			CustomerID:      existing.CustomerID,
-			InternalNotes:   existing.InternalNotes,
-			Priority:        existing.Priority,
-		}
-
-		if err := h.orderService.OrderRepo().Create(r.Context(), tx, newOrder); err != nil {
-			return fmt.Errorf("create duplicated order: %w", err)
-		}
-
-		return h.orderService.AuditRepo().Log(r.Context(), tx, model.AuditEntry{
-			TenantID:   tenantID,
-			UserID:     actorID,
-			Action:     "order.duplicated",
-			EntityType: "order",
-			EntityID:   newOrder.ID,
-			Changes:    map[string]string{"source_order_id": orderID.String()},
-			IPAddress:  clientIP(r),
-		})
-	})
+	newOrder, err := h.orderService.Duplicate(r.Context(), tenantID, orderID, maxOrdersMonthly, actorID, clientIP(r))
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrOrderLimitExceeded):
@@ -359,11 +295,6 @@ func (h *OrderHandler) DuplicateOrder(w http.ResponseWriter, r *http.Request) {
 			writeServerError(w, "failed to duplicate order", err)
 		}
 		return
-	}
-
-	// Dispatch webhook for the duplicated order (async, best-effort)
-	if wd := h.orderService.WebhookDispatch(); wd != nil {
-		asyncutil.SafeGo(func() { wd.Dispatch(context.Background(), tenantID, "order.created", newOrder) })
 	}
 
 	writeJSON(w, http.StatusCreated, newOrder)
