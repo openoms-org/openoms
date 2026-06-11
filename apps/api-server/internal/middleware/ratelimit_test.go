@@ -363,6 +363,57 @@ func TestRateLimitWith_LimiterErrorFailsOpen(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code, "should fail open when limiter errors")
 }
 
+// --- Failing-closed behavior (critical routes) ---
+
+func TestRateLimitCriticalWith_LimiterErrorFailsClosed(t *testing.T) {
+	handler := middleware.RateLimitCriticalWith(&errorLimiter{}, 10, time.Minute)(testOKHandler())
+
+	req := httptest.NewRequest("POST", "/v1/auth/login", nil)
+	req.RemoteAddr = "1.2.3.4:5678"
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	// On a limiter backend error a security-critical route must DENY the request.
+	assert.Equal(t, http.StatusServiceUnavailable, rr.Code, "should fail closed when limiter errors")
+	assert.Equal(t, "application/json", rr.Header().Get("Content-Type"))
+	assert.Equal(t, "60", rr.Header().Get("Retry-After"))
+	assert.JSONEq(t, `{"error":"rate limiter unavailable"}`, rr.Body.String())
+}
+
+func TestRateLimitCriticalWith_AllowedRequestsPassThrough(t *testing.T) {
+	limiter := middleware.NewMemoryRateLimiter()
+	handler := middleware.RateLimitCriticalWith(limiter, 5, time.Minute)(testOKHandler())
+
+	for i := range 5 {
+		req := httptest.NewRequest("POST", "/v1/auth/login", nil)
+		req.RemoteAddr = "203.0.113.50:12345"
+		rr := httptest.NewRecorder()
+		handler.ServeHTTP(rr, req)
+		assert.Equal(t, http.StatusOK, rr.Code, "request %d should pass", i+1)
+	}
+}
+
+func TestRateLimitCriticalWith_ExceededReturns429(t *testing.T) {
+	limiter := middleware.NewMemoryRateLimiter()
+	handler := middleware.RateLimitCriticalWith(limiter, 1, time.Minute)(testOKHandler())
+
+	ip := "198.51.100.7:54321"
+	req := httptest.NewRequest("POST", "/v1/auth/login", nil)
+	req.RemoteAddr = ip
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusOK, rr.Code)
+
+	// Exceeding the limit (not a backend error) still returns the normal 429,
+	// not the fail-closed 503.
+	req = httptest.NewRequest("POST", "/v1/auth/login", nil)
+	req.RemoteAddr = ip
+	rr = httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusTooManyRequests, rr.Code)
+	assert.JSONEq(t, `{"error":"too many requests"}`, rr.Body.String())
+}
+
 func TestRateLimitByAuthenticatedUserWith_UsesUserIdentityAcrossIPs(t *testing.T) {
 	limiter := middleware.NewMemoryRateLimiter()
 	handler := middleware.RateLimitByAuthenticatedUserWith(limiter, 1, time.Minute)(testOKHandler())

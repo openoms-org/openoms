@@ -160,11 +160,11 @@ func New(deps RouterDeps) *chi.Mux {
 		r.With(middleware.MetricsAuth(deps.Config.MetricsToken)).Get("/metrics", deps.MetricsCollector.Handler())
 	}
 
-	// OpenAPI spec and Swagger UI — no auth
-	if deps.Docs != nil {
-		r.Get("/v1/openapi.yaml", deps.Docs.ServeSpec)
-		r.Get("/v1/docs", deps.Docs.ServeSwaggerUI)
-	}
+	// OpenAPI spec and Swagger UI — no auth. Gated: served only in development or
+	// when ENABLE_API_DOCS is explicitly set, so the API surface is hidden in
+	// production by default. When disabled the routes are not registered and chi
+	// returns 404.
+	registerDocsRoutes(r, deps.Docs, deps.Config)
 
 	// Serve uploaded files (authenticated, tenant-scoped)
 	fileServer := http.StripPrefix("/uploads/", http.FileServer(http.Dir(deps.Config.UploadDir)))
@@ -195,13 +195,17 @@ func New(deps RouterDeps) *chi.Mux {
 	r.Route("/v1/auth", func(r chi.Router) {
 		r.Use(middleware.MaxBodySize(1 << 20)) // 1MB
 
-		// Login/register — strict rate limit (10 req/min per IP)
-		r.With(middleware.RateLimitWith(deps.RateLimiter, 10, 1*time.Minute)).Post("/register", deps.Auth.Register)
-		r.With(middleware.RateLimitWith(deps.RateLimiter, 10, 1*time.Minute)).Post("/login", deps.Auth.Login)
-		r.With(middleware.RateLimitWith(deps.RateLimiter, 10, 1*time.Minute)).Post("/2fa/login", deps.Auth.TwoFALogin)
+		// Login/register — strict rate limit (10 req/min per IP). Security-critical:
+		// fail CLOSED on a limiter backend error so brute-force protection cannot be
+		// silently disabled by a Redis outage.
+		r.With(middleware.RateLimitCriticalWith(deps.RateLimiter, 10, 1*time.Minute)).Post("/register", deps.Auth.Register)
+		r.With(middleware.RateLimitCriticalWith(deps.RateLimiter, 10, 1*time.Minute)).Post("/login", deps.Auth.Login)
+		r.With(middleware.RateLimitCriticalWith(deps.RateLimiter, 10, 1*time.Minute)).Post("/2fa/login", deps.Auth.TwoFALogin)
 
-		// Token refresh/logout — lighter rate limit (60 req/min per IP)
-		r.With(middleware.RateLimitWith(deps.RateLimiter, 60, 1*time.Minute)).Post("/refresh", deps.Auth.Refresh)
+		// Token refresh — lighter rate limit (60 req/min per IP). Security-critical
+		// (refresh token replay surface): fail CLOSED on limiter error.
+		r.With(middleware.RateLimitCriticalWith(deps.RateLimiter, 60, 1*time.Minute)).Post("/refresh", deps.Auth.Refresh)
+		// Logout — lighter rate limit (60 req/min per IP). Fail open (non-critical).
 		r.With(middleware.RateLimitWith(deps.RateLimiter, 60, 1*time.Minute)).Post("/logout", deps.Auth.Logout)
 
 		// 2FA management — JWT required (inside /v1/auth to avoid chi prefix conflict)
@@ -228,7 +232,9 @@ func New(deps RouterDeps) *chi.Mux {
 	if deps.Checkout != nil {
 		r.With(middleware.RateLimitWith(deps.RateLimiter, 60, 1*time.Minute)).
 			Get("/v1/billing/plans", deps.Checkout.ListPlans)
-		r.With(middleware.RateLimitWith(deps.RateLimiter, 10, 1*time.Minute), middleware.MaxBodySize(1<<20)).
+		// Checkout creation — security-critical (pre-registration abuse surface):
+		// fail CLOSED on a limiter backend error.
+		r.With(middleware.RateLimitCriticalWith(deps.RateLimiter, 10, 1*time.Minute), middleware.MaxBodySize(1<<20)).
 			Post("/v1/billing/checkout", deps.Checkout.CreateCheckoutSession)
 		r.With(middleware.RateLimitWith(deps.RateLimiter, 30, 1*time.Minute)).
 			Get("/v1/billing/checkout/{session_id}", deps.Checkout.GetCheckoutSessionStatus)
@@ -1327,4 +1333,23 @@ func extractCookieDomain(frontendURL string) string {
 	// "openoms.org" → ".openoms.org"
 	// "app.openoms.org" → ".openoms.org"
 	return "." + strings.Join(parts[len(parts)-2:], ".")
+}
+
+// apiDocsEnabled reports whether the unauthenticated OpenAPI spec and Swagger UI
+// routes should be served. Docs are always available in development; in other
+// environments they require ENABLE_API_DOCS=true so the API surface is hidden by
+// default. A nil config fails closed (docs disabled).
+func apiDocsEnabled(cfg *config.Config) bool {
+	return cfg != nil && (cfg.IsDevelopment() || cfg.EnableAPIDocs)
+}
+
+// registerDocsRoutes wires the OpenAPI spec and Swagger UI routes when docs are
+// enabled. When the handler is nil or docs are disabled the routes are not
+// registered, so chi returns 404 for them.
+func registerDocsRoutes(r chi.Router, docs *handler.DocsHandler, cfg *config.Config) {
+	if docs == nil || !apiDocsEnabled(cfg) {
+		return
+	}
+	r.Get("/v1/openapi.yaml", docs.ServeSpec)
+	r.Get("/v1/docs", docs.ServeSwaggerUI)
 }
