@@ -54,15 +54,7 @@ func (s *CustomerService) List(ctx context.Context, tenantID uuid.UUID, filter m
 		if err != nil {
 			return err
 		}
-		if customers == nil {
-			customers = []model.Customer{}
-		}
-		resp = model.ListResponse[model.Customer]{
-			Items:  customers,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(customers, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err
@@ -227,15 +219,7 @@ func (s *CustomerService) ListOrders(ctx context.Context, tenantID, customerID u
 		if err != nil {
 			return err
 		}
-		if orders == nil {
-			orders = []model.Order{}
-		}
-		resp = model.ListResponse[model.Order]{
-			Items:  orders,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(orders, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err

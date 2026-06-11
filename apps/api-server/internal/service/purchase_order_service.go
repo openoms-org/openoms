@@ -86,15 +86,7 @@ func (s *PurchaseOrderService) List(ctx context.Context, tenantID uuid.UUID, fil
 		if err != nil {
 			return err
 		}
-		if orders == nil {
-			orders = []model.PurchaseOrder{}
-		}
-		resp = model.ListResponse[model.PurchaseOrder]{
-			Items:  orders,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(orders, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err

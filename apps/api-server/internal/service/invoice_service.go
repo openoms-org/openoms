@@ -76,15 +76,7 @@ func (s *InvoiceService) List(ctx context.Context, tenantID uuid.UUID, filter mo
 		if err != nil {
 			return err
 		}
-		if invoices == nil {
-			invoices = []model.Invoice{}
-		}
-		resp = model.ListResponse[model.Invoice]{
-			Items:  invoices,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(invoices, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err

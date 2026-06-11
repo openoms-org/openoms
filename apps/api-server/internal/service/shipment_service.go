@@ -126,15 +126,7 @@ func (s *ShipmentService) List(ctx context.Context, tenantID uuid.UUID, filter m
 		if err != nil {
 			return err
 		}
-		if shipments == nil {
-			shipments = []model.Shipment{}
-		}
-		resp = model.ListResponse[model.Shipment]{
-			Items:  shipments,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(shipments, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err

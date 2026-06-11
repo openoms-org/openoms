@@ -63,15 +63,7 @@ func (s *RecurringOrderService) List(ctx context.Context, tenantID uuid.UUID, fi
 		if err != nil {
 			return err
 		}
-		if orders == nil {
-			orders = []model.RecurringOrder{}
-		}
-		resp = model.ListResponse[model.RecurringOrder]{
-			Items:  orders,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(orders, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err

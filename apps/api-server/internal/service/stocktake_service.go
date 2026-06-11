@@ -557,10 +557,6 @@ func (s *StocktakeService) ListStocktakes(ctx context.Context, tenantID uuid.UUI
 		if err != nil {
 			return err
 		}
-		if stocktakes == nil {
-			stocktakes = []model.Stocktake{}
-		}
-
 		// Enrich each stocktake with stats
 		for i := range stocktakes {
 			stats, err := s.itemRepo.GetStats(ctx, tx, stocktakes[i].ID)
@@ -570,12 +566,7 @@ func (s *StocktakeService) ListStocktakes(ctx context.Context, tenantID uuid.UUI
 			stocktakes[i].Stats = stats
 		}
 
-		resp = model.ListResponse[model.Stocktake]{
-			Items:  stocktakes,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(stocktakes, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err
@@ -598,16 +589,7 @@ func (s *StocktakeService) GetStocktakeItems(ctx context.Context, tenantID, stoc
 		if err != nil {
 			return err
 		}
-		if items == nil {
-			items = []model.StocktakeItem{}
-		}
-
-		resp = model.ListResponse[model.StocktakeItem]{
-			Items:  items,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(items, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err

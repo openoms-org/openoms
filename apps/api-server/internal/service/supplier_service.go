@@ -102,15 +102,7 @@ func (s *SupplierService) List(ctx context.Context, tenantID uuid.UUID, filter m
 		if err != nil {
 			return err
 		}
-		if suppliers == nil {
-			suppliers = []model.Supplier{}
-		}
-		resp = model.ListResponse[model.Supplier]{
-			Items:  suppliers,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(suppliers, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err
@@ -286,15 +278,7 @@ func (s *SupplierService) ListProducts(ctx context.Context, tenantID uuid.UUID, 
 		if err != nil {
 			return err
 		}
-		if products == nil {
-			products = []model.SupplierProduct{}
-		}
-		resp = model.ListResponse[model.SupplierProduct]{
-			Items:  products,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(products, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err
@@ -308,15 +292,7 @@ func (s *SupplierService) ListAllProducts(ctx context.Context, tenantID uuid.UUI
 		if err != nil {
 			return err
 		}
-		if products == nil {
-			products = []model.SupplierProductWithSupplier{}
-		}
-		resp = model.ListResponse[model.SupplierProductWithSupplier]{
-			Items:  products,
-			Total:  total,
-			Limit:  params.Limit,
-			Offset: params.Offset,
-		}
+		resp = model.NewListResponse(products, total, params.Limit, params.Offset)
 		return nil
 	})
 	return resp, err

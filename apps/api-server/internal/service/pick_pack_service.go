@@ -288,10 +288,6 @@ func (s *PickPackService) ListSessions(ctx context.Context, tenantID uuid.UUID, 
 		if err != nil {
 			return err
 		}
-		if sessions == nil {
-			sessions = []model.PickPackSession{}
-		}
-
 		// Enrich each session with stats
 		for i := range sessions {
 			stats, err := s.pickPackRepo.GetSessionStats(ctx, tx, sessions[i].ID)
@@ -301,12 +297,7 @@ func (s *PickPackService) ListSessions(ctx context.Context, tenantID uuid.UUID, 
 			sessions[i].Stats = stats
 		}
 
-		resp = model.ListResponse[model.PickPackSession]{
-			Items:  sessions,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(sessions, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err

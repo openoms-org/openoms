@@ -63,15 +63,7 @@ func (s *ReturnService) List(ctx context.Context, tenantID uuid.UUID, filter mod
 		if err != nil {
 			return err
 		}
-		if returns == nil {
-			returns = []model.Return{}
-		}
-		resp = model.ListResponse[model.Return]{
-			Items:  returns,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(returns, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err

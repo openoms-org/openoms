@@ -104,15 +104,7 @@ func (s *RoleService) List(ctx context.Context, tenantID uuid.UUID, filter model
 		if err != nil {
 			return err
 		}
-		if roles == nil {
-			roles = []model.Role{}
-		}
-		resp = model.ListResponse[model.Role]{
-			Items:  roles,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(roles, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err

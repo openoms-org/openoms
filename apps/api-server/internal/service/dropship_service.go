@@ -264,15 +264,7 @@ func (s *DropshipService) List(ctx context.Context, tenantID uuid.UUID, filter m
 		if err != nil {
 			return err
 		}
-		if orders == nil {
-			orders = []model.DropshipOrder{}
-		}
-		resp = model.ListResponse[model.DropshipOrder]{
-			Items:  orders,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(orders, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err

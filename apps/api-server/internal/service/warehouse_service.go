@@ -92,15 +92,7 @@ func (s *WarehouseService) List(ctx context.Context, tenantID uuid.UUID, filter 
 		if err != nil {
 			return err
 		}
-		if warehouses == nil {
-			warehouses = []model.Warehouse{}
-		}
-		resp = model.ListResponse[model.Warehouse]{
-			Items:  warehouses,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(warehouses, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err
@@ -261,15 +253,7 @@ func (s *WarehouseService) ListStock(ctx context.Context, tenantID, warehouseID 
 		if err != nil {
 			return err
 		}
-		if stocks == nil {
-			stocks = []model.WarehouseStock{}
-		}
-		resp = model.ListResponse[model.WarehouseStock]{
-			Items:  stocks,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(stocks, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err

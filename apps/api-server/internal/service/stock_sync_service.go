@@ -101,12 +101,7 @@ func (s *StockSyncService) ListChannels(ctx context.Context, tenantID uuid.UUID,
 		if err != nil {
 			return err
 		}
-		resp = model.ListResponse[model.StockSyncChannel]{
-			Items:  channels,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(channels, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	if resp.Items == nil {
@@ -1030,12 +1025,7 @@ func (s *StockSyncService) ListEvents(ctx context.Context, tenantID uuid.UUID, f
 		if err != nil {
 			return err
 		}
-		resp = model.ListResponse[model.StockSyncEvent]{
-			Items:  events,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(events, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	if resp.Items == nil {

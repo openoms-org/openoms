@@ -60,15 +60,7 @@ func (s *ListingSyncService) List(ctx context.Context, tenantID uuid.UUID, filte
 		if listErr != nil {
 			return listErr
 		}
-		if configs == nil {
-			configs = []model.ListingSyncConfig{}
-		}
-		resp = model.ListResponse[model.ListingSyncConfig]{
-			Items:  configs,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(configs, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err
@@ -212,15 +204,7 @@ func (s *ListingSyncService) ListLogs(ctx context.Context, tenantID uuid.UUID, f
 		if listErr != nil {
 			return listErr
 		}
-		if logs == nil {
-			logs = []model.ListingSyncLog{}
-		}
-		resp = model.ListResponse[model.ListingSyncLog]{
-			Items:  logs,
-			Total:  total,
-			Limit:  filter.Limit,
-			Offset: filter.Offset,
-		}
+		resp = model.NewListResponse(logs, total, filter.Limit, filter.Offset)
 		return nil
 	})
 	return resp, err
