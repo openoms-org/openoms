@@ -173,6 +173,19 @@ type CustomerLoyaltyWithProgram struct {
 	ProgramType string `json:"program_type"`
 }
 
+// LoyaltyTransaction is a ledger entry recording an order-driven loyalty accrual. It is
+// keyed UNIQUE by (tenant_id, order_id, program_id) so an accrual fires exactly once per
+// order and program, regardless of how many times the order re-enters the accrual status.
+type LoyaltyTransaction struct {
+	ID         uuid.UUID  `json:"id"`
+	TenantID   uuid.UUID  `json:"tenant_id"`
+	CustomerID uuid.UUID  `json:"customer_id"`
+	ProgramID  uuid.UUID  `json:"program_id"`
+	OrderID    *uuid.UUID `json:"order_id,omitempty"`
+	Amount     float64    `json:"amount"`
+	CreatedAt  time.Time  `json:"created_at"`
+}
+
 // LeaderboardEntry represents a customer's rank in a loyalty program.
 type LeaderboardEntry struct {
 	CustomerID   uuid.UUID `json:"customer_id"`
