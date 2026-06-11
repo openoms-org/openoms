@@ -34,6 +34,7 @@ type ListingSyncService struct {
 	integrationRepo repository.IntegrationRepo
 	pool            *pgxpool.Pool
 	encryptionKey   []byte
+	stockSyncSvc    *StockSyncService
 	logger          *slog.Logger
 }
 
@@ -58,6 +59,13 @@ func NewListingSyncService(
 		encryptionKey:   encryptionKey,
 		logger:          logger,
 	}
+}
+
+// SetStockSyncService injects the canonical stock owner. SyncStock delegates stock
+// propagation to it (reading warehouse_stock) rather than pushing a second, stale
+// stock value derived from products.stock_quantity.
+func (s *ListingSyncService) SetStockSyncService(stockSyncSvc *StockSyncService) {
+	s.stockSyncSvc = stockSyncSvc
 }
 
 // List returns paginated listing sync configs for a tenant.
@@ -265,16 +273,12 @@ func (s *ListingSyncService) SyncProducts(ctx context.Context, tenantID uuid.UUI
 					Metadata:      json.RawMessage("{}"),
 				}
 
-				// Apply price rule
+				// Apply price rule. Stock is intentionally NOT written here: stock_override
+				// is owned by StockSyncService (sourced from warehouse_stock); writing it
+				// from products.stock_quantity would corrupt the canonical value.
 				adjustedPrice := s.applyPriceRule(cfg, product.Price)
 				if adjustedPrice != product.Price {
 					listing.PriceOverride = &adjustedPrice
-				}
-
-				// Apply stock buffer
-				if cfg.StockBuffer > 0 {
-					bufferedStock := max(product.StockQuantity-cfg.StockBuffer, 0)
-					listing.StockOverride = &bufferedStock
 				}
 
 				if createErr := s.listingRepo.Create(ctx, tx, listing); createErr != nil {
@@ -294,18 +298,12 @@ func (s *ListingSyncService) SyncProducts(ctx context.Context, tenantID uuid.UUI
 				needsUpdate := false
 				updateReq := &model.UpdateProductListingRequest{}
 
+				// Stock_override is owned by StockSyncService (warehouse_stock source) and
+				// is intentionally not written from products.stock_quantity here.
 				adjustedPrice := s.applyPriceRule(cfg, product.Price)
 				if existing.PriceOverride == nil || *existing.PriceOverride != adjustedPrice {
 					updateReq.PriceOverride = &adjustedPrice
 					needsUpdate = true
-				}
-
-				if cfg.StockBuffer > 0 {
-					bufferedStock := max(product.StockQuantity-cfg.StockBuffer, 0)
-					if existing.StockOverride == nil || *existing.StockOverride != bufferedStock {
-						updateReq.StockOverride = &bufferedStock
-						needsUpdate = true
-					}
 				}
 
 				if needsUpdate {
@@ -527,7 +525,15 @@ func (s *ListingSyncService) dispatchPriceUpdates(ctx context.Context, tenantID,
 	}
 }
 
-// SyncStock pushes stock levels from local products to marketplace listings.
+// SyncStock delegates stock propagation to the canonical owner, StockSyncService.
+//
+// Stock is owned end-to-end by StockSyncWorker/StockSyncService, which read
+// warehouse_stock (the canonical source) and push via the provider's UpdateStock API
+// with async-feed and zero-stock-deactivation handling. ListingSyncService must NOT
+// add a second stock pusher: the previous implementation wrote stock_override from
+// products.stock_quantity — the wrong, stale source — which actively corrupted the
+// override the stock owner reads. Here we only resolve the eligible products and hand
+// each to the stock owner.
 func (s *ListingSyncService) SyncStock(ctx context.Context, tenantID uuid.UUID, configID uuid.UUID) (*SyncResult, error) {
 	cfg, err := s.Get(ctx, tenantID, configID)
 	if err != nil {
@@ -535,49 +541,30 @@ func (s *ListingSyncService) SyncStock(ctx context.Context, tenantID uuid.UUID, 
 	}
 
 	result := &SyncResult{}
+
+	if s.stockSyncSvc == nil {
+		// Stock is delegated; without the stock owner wired there is nothing to push.
+		result.Message = "stock sync service not configured; skipped"
+		return result, nil
+	}
+
+	// Phase 1: gather the distinct eligible product ids inside a short transaction.
+	var productIDs []uuid.UUID
 	err = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		listings, listErr := s.listingRepo.ListByIntegration(ctx, tx, cfg.IntegrationID)
 		if listErr != nil {
 			return fmt.Errorf("list listings: %w", listErr)
 		}
-
-		productMap, err := s.productMapForListings(ctx, tx, listings)
-		if err != nil {
-			return err
-		}
-
+		seen := make(map[uuid.UUID]struct{}, len(listings))
 		for _, listing := range listings {
-			product := productMap[listing.ProductID]
-			if product == nil {
-				s.logSyncEntry(ctx, tx, tenantID, configID, "push", "stock", &listing.ProductID, listing.ExternalID, "failed", "product not found")
-				result.ItemsFailed++
+			if !isPushEligible(listing) {
 				continue
 			}
-
-			bufferedStock := max(product.StockQuantity-cfg.StockBuffer, 0)
-
-			if listing.StockOverride != nil && *listing.StockOverride == bufferedStock {
-				// No change needed
-				result.ItemsProcessed++
+			if _, ok := seen[listing.ProductID]; ok {
 				continue
 			}
-
-			updateReq := &model.UpdateProductListingRequest{
-				StockOverride: &bufferedStock,
-			}
-			if updateErr := s.listingRepo.Update(ctx, tx, listing.ID, updateReq); updateErr != nil {
-				s.logSyncEntry(ctx, tx, tenantID, configID, "push", "stock", &listing.ProductID, listing.ExternalID, "failed", updateErr.Error())
-				result.ItemsFailed++
-				continue
-			}
-
-			changes, _ := json.Marshal(map[string]any{
-				"old_stock":    listing.StockOverride,
-				"new_stock":    bufferedStock,
-				"stock_buffer": cfg.StockBuffer,
-			})
-			s.logSyncEntryWithChanges(ctx, tx, tenantID, configID, "push", "stock", &listing.ProductID, listing.ExternalID, "success", changes)
-			result.ItemsProcessed++
+			seen[listing.ProductID] = struct{}{}
+			productIDs = append(productIDs, listing.ProductID)
 		}
 		return nil
 	})
@@ -585,9 +572,30 @@ func (s *ListingSyncService) SyncStock(ctx context.Context, tenantID uuid.UUID, 
 		return nil, err
 	}
 
+	// Phase 2: delegate each product to the stock owner (warehouse_stock -> UpdateStock).
+	for _, productID := range productIDs {
+		if pushErr := s.stockSyncSvc.PushStockToAllChannels(ctx, tenantID, productID); pushErr != nil {
+			s.logStockDelegation(ctx, tenantID, configID, productID, "failed", truncateServiceErrorMsg(pushErr.Error()))
+			result.ItemsFailed++
+			continue
+		}
+		s.logStockDelegation(ctx, tenantID, configID, productID, "success", "")
+		result.ItemsProcessed++
+	}
+
 	s.updateLastSync(ctx, tenantID, configID, result.ItemsFailed > 0)
-	result.Message = fmt.Sprintf("Synced stock for %d offers, %d errors", result.ItemsProcessed, result.ItemsFailed)
+	result.Message = fmt.Sprintf("Delegated stock sync for %d products, %d errors", result.ItemsProcessed, result.ItemsFailed)
 	return result, nil
+}
+
+// logStockDelegation records a stock-delegation sync-log entry in its own short tx.
+func (s *ListingSyncService) logStockDelegation(ctx context.Context, tenantID, configID, productID uuid.UUID, status, errMsg string) {
+	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		s.logSyncEntry(ctx, tx, tenantID, configID, "push", "stock", &productID, nil, status, errMsg)
+		return nil
+	}); err != nil {
+		s.logger.Error("listing sync: persist stock delegation log failed", "product_id", productID, "error", err)
+	}
 }
 
 // RunFullSync orchestrates a full sync: products, prices, and stock.
