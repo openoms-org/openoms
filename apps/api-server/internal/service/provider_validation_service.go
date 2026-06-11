@@ -61,15 +61,7 @@ func (s *ProviderValidationService) WithMetrics(m *obsmetrics.FulfillmentMetrics
 }
 
 func (s *ProviderValidationService) inTx(ctx context.Context, fn func(pgx.Tx) error) error {
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-	if err := fn(tx); err != nil {
-		return err
-	}
-	return tx.Commit(ctx)
+	return runInTx(ctx, s.pool, fn)
 }
 
 func (s *ProviderValidationService) getVersion(ctx context.Context, versionID uuid.UUID) (*model.ProviderVersion, error) {
