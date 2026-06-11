@@ -69,12 +69,13 @@ func TestCreateRepricingRuleRequest_Validate(t *testing.T) {
 			wantErr: "strategy must be one of",
 		},
 		{
-			name: "valid strategy - competitive",
+			name: "invalid strategy - competitive (removed)",
 			req: func() CreateRepricingRuleRequest {
 				r := valid()
 				r.Strategy = "competitive"
 				return r
 			}(),
+			wantErr: "strategy must be one of",
 		},
 		{
 			name: "valid strategy - time_based",
@@ -236,7 +237,12 @@ func TestUpdateRepricingRuleRequest_Validate(t *testing.T) {
 		},
 		{
 			name: "valid strategy update",
-			req:  UpdateRepricingRuleRequest{Strategy: ptrStr("competitive")},
+			req:  UpdateRepricingRuleRequest{Strategy: ptrStr("stock_based")},
+		},
+		{
+			name:    "invalid strategy update - competitive (removed)",
+			req:     UpdateRepricingRuleRequest{Strategy: ptrStr("competitive")},
+			wantErr: "strategy must be one of",
 		},
 		{
 			name:    "invalid scope_type",

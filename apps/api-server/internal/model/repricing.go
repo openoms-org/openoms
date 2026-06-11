@@ -52,13 +52,6 @@ type MarginParams struct {
 	CostField       string  `json:"cost_field"`
 }
 
-// CompetitiveParams holds configuration for the competitive repricing strategy.
-type CompetitiveParams struct {
-	Position    string  `json:"position"`
-	UndercutPct float64 `json:"undercut_pct"`
-	MinPrice    float64 `json:"min_price"`
-}
-
 // TimeBasedParams holds configuration for the time-based repricing strategy.
 type TimeBasedParams struct {
 	Schedule []TimeScheduleEntry `json:"schedule"`
@@ -81,7 +74,7 @@ type StockBasedParams struct {
 
 // Request types.
 
-var validStrategies = []string{"margin", "competitive", "time_based", "stock_based"}
+var validStrategies = []string{"margin", "time_based", "stock_based"}
 var validStatuses = []string{"active", "paused", "archived"}
 var validScopeTypes = []string{"all", "category", "tag", "product_ids"}
 
@@ -107,7 +100,7 @@ func (r CreateRepricingRuleRequest) Validate() error {
 		return err
 	}
 	if !slices.Contains(validStrategies, r.Strategy) {
-		return errors.New("strategy must be one of: margin, competitive, time_based, stock_based")
+		return errors.New("strategy must be one of: margin, time_based, stock_based")
 	}
 	if !slices.Contains(validScopeTypes, r.ScopeType) {
 		return errors.New("scope_type must be one of: all, category, tag, product_ids")
@@ -155,7 +148,7 @@ func (r UpdateRepricingRuleRequest) Validate() error {
 		return errors.New("status must be one of: active, paused, archived")
 	}
 	if r.Strategy != nil && !slices.Contains(validStrategies, *r.Strategy) {
-		return errors.New("strategy must be one of: margin, competitive, time_based, stock_based")
+		return errors.New("strategy must be one of: margin, time_based, stock_based")
 	}
 	if r.ScopeType != nil && !slices.Contains(validScopeTypes, *r.ScopeType) {
 		return errors.New("scope_type must be one of: all, category, tag, product_ids")

@@ -356,8 +356,6 @@ func (s *RepricingService) calculatePrice(product model.Product, rule model.Repr
 		return s.applyStockStrategy(product, rule)
 	case "time_based":
 		return s.applyTimeStrategy(product, rule)
-	case "competitive":
-		return 0, "", true // Placeholder: competitive data not yet available
 	default:
 		return 0, "", true
 	}
@@ -500,11 +498,6 @@ func (s *RepricingService) SimulateRule(ctx context.Context, tenantID, ruleID uu
 		}
 		if rule == nil {
 			return ErrRepricingRuleNotFound
-		}
-
-		if rule.Strategy == "competitive" {
-			results = []model.SimulationResult{}
-			return nil
 		}
 
 		products, err := s.getMatchingProducts(ctx, tx, *rule)

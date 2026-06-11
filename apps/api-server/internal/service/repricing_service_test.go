@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -8,7 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
@@ -70,15 +73,6 @@ func TestRepricingCalculatePrice_StockBased(t *testing.T) {
 	assert.Contains(t, reason, "low stock")
 }
 
-func TestRepricingCalculatePrice_Competitive(t *testing.T) {
-	svc := newTestRepricingService()
-	product := makeProduct(100, 10, nil)
-	rule := makeRule("competitive", json.RawMessage(`{}`), nil, nil)
-
-	_, _, skip := svc.calculatePrice(product, rule)
-	assert.True(t, skip, "competitive strategy should be skipped (placeholder)")
-}
-
 func TestRepricingCalculatePrice_UnknownStrategy(t *testing.T) {
 	svc := newTestRepricingService()
 	product := makeProduct(100, 10, nil)
@@ -95,6 +89,27 @@ func TestRepricingCalculatePrice_EmptyStrategy(t *testing.T) {
 
 	_, _, skip := svc.calculatePrice(product, rule)
 	assert.True(t, skip, "empty strategy should be skipped")
+}
+
+// Create must reject the removed "competitive" strategy at validation time,
+// before any repository/DB access — so no rule row is ever inserted.
+func TestRepricingCreate_RejectsCompetitive(t *testing.T) {
+	// nil pool/repos are safe here: Validate() fails first and Create returns early.
+	svc := newTestRepricingService()
+	req := model.CreateRepricingRuleRequest{
+		Name:      "Konkurencyjna",
+		Strategy:  "competitive",
+		ScopeType: "all",
+		Priority:  10,
+	}
+
+	rule, err := svc.Create(context.Background(), uuid.New(), req, uuid.New(), "127.0.0.1")
+
+	require.Nil(t, rule, "no rule should be returned (none inserted) for a rejected strategy")
+	require.Error(t, err)
+	var vErr *ValidationError
+	require.ErrorAs(t, err, &vErr, "competitive must be rejected as a validation error (HTTP 400)")
+	assert.Contains(t, err.Error(), "strategy must be one of")
 }
 
 // ---------------------------------------------------------------------------
