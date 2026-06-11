@@ -28,23 +28,6 @@ func (r *OrderGroupRepository) Create(ctx context.Context, tx pgx.Tx, group *mod
 	).Scan(&group.CreatedAt)
 }
 
-// FindByID returns an order group by its ID.
-func (r *OrderGroupRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (*model.OrderGroup, error) {
-	var g model.OrderGroup
-	err := tx.QueryRow(ctx,
-		`SELECT id, tenant_id, group_type, source_order_ids, target_order_ids, notes, created_by, created_at
-		 FROM order_groups WHERE id = $1`, id,
-	).Scan(&g.ID, &g.TenantID, &g.GroupType, &g.SourceOrderIDs, &g.TargetOrderIDs,
-		&g.Notes, &g.CreatedBy, &g.CreatedAt)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("find order group by id: %w", err)
-	}
-	return &g, nil
-}
-
 // ListByOrderID returns all order groups that reference the given order.
 func (r *OrderGroupRepository) ListByOrderID(ctx context.Context, tx pgx.Tx, orderID uuid.UUID) ([]model.OrderGroup, error) {
 	rows, err := tx.Query(ctx,

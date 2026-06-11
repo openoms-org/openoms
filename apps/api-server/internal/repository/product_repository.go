@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -201,129 +200,38 @@ func (r *ProductRepository) Create(ctx context.Context, tx pgx.Tx, product *mode
 
 // Update applies partial updates to a product.
 func (r *ProductRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateProductRequest) error {
-	var setClauses []string
-	var args []any
-	argIdx := 1
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "external_id", req.ExternalID)
+	SetPtr(ub, "source", req.Source)
+	SetPtr(ub, "name", req.Name)
+	SetPtr(ub, "sku", req.SKU)
+	SetPtr(ub, "ean", req.EAN)
+	SetPtr(ub, "price", req.Price)
+	SetPtr(ub, "stock_quantity", req.StockQuantity)
+	SetPtr(ub, "metadata", req.Metadata)
+	SetPtr(ub, "tags", req.Tags)
+	SetPtr(ub, "description_short", req.DescriptionShort)
+	SetPtr(ub, "description_long", req.DescriptionLong)
+	SetPtr(ub, "weight", req.Weight)
+	SetPtr(ub, "width", req.Width)
+	SetPtr(ub, "height", req.Height)
+	SetPtr(ub, "depth", req.Depth)
+	SetPtr(ub, "category", req.Category)
+	SetPtr(ub, "category_id", req.CategoryID)
+	SetPtr(ub, "image_url", req.ImageURL)
+	SetPtr(ub, "images", req.Images)
+	SetPtr(ub, "is_bundle", req.IsBundle)
+	SetPtr(ub, "is_dropship", req.IsDropship)
+	SetPtr(ub, "dropship_supplier_id", req.DropshipSupplierID)
 
-	if req.ExternalID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("external_id = $%d", argIdx))
-		args = append(args, *req.ExternalID)
-		argIdx++
-	}
-	if req.Source != nil {
-		setClauses = append(setClauses, fmt.Sprintf("source = $%d", argIdx))
-		args = append(args, *req.Source)
-		argIdx++
-	}
-	if req.Name != nil {
-		setClauses = append(setClauses, fmt.Sprintf("name = $%d", argIdx))
-		args = append(args, *req.Name)
-		argIdx++
-	}
-	if req.SKU != nil {
-		setClauses = append(setClauses, fmt.Sprintf("sku = $%d", argIdx))
-		args = append(args, *req.SKU)
-		argIdx++
-	}
-	if req.EAN != nil {
-		setClauses = append(setClauses, fmt.Sprintf("ean = $%d", argIdx))
-		args = append(args, *req.EAN)
-		argIdx++
-	}
-	if req.Price != nil {
-		setClauses = append(setClauses, fmt.Sprintf("price = $%d", argIdx))
-		args = append(args, *req.Price)
-		argIdx++
-	}
-	if req.StockQuantity != nil {
-		setClauses = append(setClauses, fmt.Sprintf("stock_quantity = $%d", argIdx))
-		args = append(args, *req.StockQuantity)
-		argIdx++
-	}
-	if req.Metadata != nil {
-		setClauses = append(setClauses, fmt.Sprintf("metadata = $%d", argIdx))
-		args = append(args, *req.Metadata)
-		argIdx++
-	}
-	if req.Tags != nil {
-		setClauses = append(setClauses, fmt.Sprintf("tags = $%d", argIdx))
-		args = append(args, *req.Tags)
-		argIdx++
-	}
-	if req.DescriptionShort != nil {
-		setClauses = append(setClauses, fmt.Sprintf("description_short = $%d", argIdx))
-		args = append(args, *req.DescriptionShort)
-		argIdx++
-	}
-	if req.DescriptionLong != nil {
-		setClauses = append(setClauses, fmt.Sprintf("description_long = $%d", argIdx))
-		args = append(args, *req.DescriptionLong)
-		argIdx++
-	}
-	if req.Weight != nil {
-		setClauses = append(setClauses, fmt.Sprintf("weight = $%d", argIdx))
-		args = append(args, *req.Weight)
-		argIdx++
-	}
-	if req.Width != nil {
-		setClauses = append(setClauses, fmt.Sprintf("width = $%d", argIdx))
-		args = append(args, *req.Width)
-		argIdx++
-	}
-	if req.Height != nil {
-		setClauses = append(setClauses, fmt.Sprintf("height = $%d", argIdx))
-		args = append(args, *req.Height)
-		argIdx++
-	}
-	if req.Depth != nil {
-		setClauses = append(setClauses, fmt.Sprintf("depth = $%d", argIdx))
-		args = append(args, *req.Depth)
-		argIdx++
-	}
-	if req.Category != nil {
-		setClauses = append(setClauses, fmt.Sprintf("category = $%d", argIdx))
-		args = append(args, *req.Category)
-		argIdx++
-	}
-	if req.CategoryID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("category_id = $%d", argIdx))
-		args = append(args, *req.CategoryID)
-		argIdx++
-	}
-	if req.ImageURL != nil {
-		setClauses = append(setClauses, fmt.Sprintf("image_url = $%d", argIdx))
-		args = append(args, *req.ImageURL)
-		argIdx++
-	}
-	if req.Images != nil {
-		setClauses = append(setClauses, fmt.Sprintf("images = $%d", argIdx))
-		args = append(args, *req.Images)
-		argIdx++
-	}
-	if req.IsBundle != nil {
-		setClauses = append(setClauses, fmt.Sprintf("is_bundle = $%d", argIdx))
-		args = append(args, *req.IsBundle)
-		argIdx++
-	}
-	if req.IsDropship != nil {
-		setClauses = append(setClauses, fmt.Sprintf("is_dropship = $%d", argIdx))
-		args = append(args, *req.IsDropship)
-		argIdx++
-	}
-	if req.DropshipSupplierID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("dropship_supplier_id = $%d", argIdx))
-		args = append(args, *req.DropshipSupplierID)
-		argIdx++
-	}
-
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
+	ub.SetRaw("updated_at = NOW()")
 	query := fmt.Sprintf("UPDATE products SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
-	args = append(args, id)
+		ub.SetClause(), ub.NextArgIdx())
+	args := append(ub.Args(), id)
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {

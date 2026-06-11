@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -202,115 +201,44 @@ func (r *OrderRepository) insert(ctx context.Context, tx pgx.Tx, order *model.Or
 
 // Update applies partial updates to an order.
 func (r *OrderRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateOrderRequest) error {
-	setClauses := []string{}
-	args := []any{}
-	argIdx := 1
-
-	if req.ExternalID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("external_id = $%d", argIdx))
-		args = append(args, *req.ExternalID)
-		argIdx++
-	}
-	if req.CustomerName != nil {
-		setClauses = append(setClauses, fmt.Sprintf("customer_name = $%d", argIdx))
-		args = append(args, *req.CustomerName)
-		argIdx++
-	}
-	if req.CustomerEmail != nil {
-		setClauses = append(setClauses, fmt.Sprintf("customer_email = $%d", argIdx))
-		args = append(args, *req.CustomerEmail)
-		argIdx++
-	}
-	if req.CustomerPhone != nil {
-		setClauses = append(setClauses, fmt.Sprintf("customer_phone = $%d", argIdx))
-		args = append(args, *req.CustomerPhone)
-		argIdx++
-	}
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "external_id", req.ExternalID)
+	SetPtr(ub, "customer_name", req.CustomerName)
+	SetPtr(ub, "customer_email", req.CustomerEmail)
+	SetPtr(ub, "customer_phone", req.CustomerPhone)
 	if req.ShippingAddress != nil {
-		setClauses = append(setClauses, fmt.Sprintf("shipping_address = $%d", argIdx))
-		args = append(args, req.ShippingAddress)
-		argIdx++
+		ub.Set("shipping_address", req.ShippingAddress)
 	}
 	if req.BillingAddress != nil {
-		setClauses = append(setClauses, fmt.Sprintf("billing_address = $%d", argIdx))
-		args = append(args, req.BillingAddress)
-		argIdx++
+		ub.Set("billing_address", req.BillingAddress)
 	}
 	if req.Items != nil {
-		setClauses = append(setClauses, fmt.Sprintf("items = $%d", argIdx))
-		args = append(args, req.Items)
-		argIdx++
+		ub.Set("items", req.Items)
 	}
-	if req.TotalAmount != nil {
-		setClauses = append(setClauses, fmt.Sprintf("total_amount = $%d", argIdx))
-		args = append(args, *req.TotalAmount)
-		argIdx++
-	}
-	if req.Currency != nil {
-		setClauses = append(setClauses, fmt.Sprintf("currency = $%d", argIdx))
-		args = append(args, *req.Currency)
-		argIdx++
-	}
-	if req.Notes != nil {
-		setClauses = append(setClauses, fmt.Sprintf("notes = $%d", argIdx))
-		args = append(args, *req.Notes)
-		argIdx++
-	}
+	SetPtr(ub, "total_amount", req.TotalAmount)
+	SetPtr(ub, "currency", req.Currency)
+	SetPtr(ub, "notes", req.Notes)
 	if req.Metadata != nil {
-		setClauses = append(setClauses, fmt.Sprintf("metadata = $%d", argIdx))
-		args = append(args, req.Metadata)
-		argIdx++
+		ub.Set("metadata", req.Metadata)
 	}
-	if req.Tags != nil {
-		setClauses = append(setClauses, fmt.Sprintf("tags = $%d", argIdx))
-		args = append(args, *req.Tags)
-		argIdx++
-	}
-	if req.DeliveryMethod != nil {
-		setClauses = append(setClauses, fmt.Sprintf("delivery_method = $%d", argIdx))
-		args = append(args, *req.DeliveryMethod)
-		argIdx++
-	}
-	if req.PickupPointID != nil {
-		setClauses = append(setClauses, fmt.Sprintf("pickup_point_id = $%d", argIdx))
-		args = append(args, *req.PickupPointID)
-		argIdx++
-	}
-	if req.PaymentStatus != nil {
-		setClauses = append(setClauses, fmt.Sprintf("payment_status = $%d", argIdx))
-		args = append(args, *req.PaymentStatus)
-		argIdx++
-	}
-	if req.PaymentMethod != nil {
-		setClauses = append(setClauses, fmt.Sprintf("payment_method = $%d", argIdx))
-		args = append(args, *req.PaymentMethod)
-		argIdx++
-	}
-	if req.PaidAt != nil {
-		setClauses = append(setClauses, fmt.Sprintf("paid_at = $%d", argIdx))
-		args = append(args, *req.PaidAt)
-		argIdx++
-	}
-	if req.InternalNotes != nil {
-		setClauses = append(setClauses, fmt.Sprintf("internal_notes = $%d", argIdx))
-		args = append(args, *req.InternalNotes)
-		argIdx++
-	}
-	if req.Priority != nil {
-		setClauses = append(setClauses, fmt.Sprintf("priority = $%d", argIdx))
-		args = append(args, *req.Priority)
-		argIdx++
-	}
+	SetPtr(ub, "tags", req.Tags)
+	SetPtr(ub, "delivery_method", req.DeliveryMethod)
+	SetPtr(ub, "pickup_point_id", req.PickupPointID)
+	SetPtr(ub, "payment_status", req.PaymentStatus)
+	SetPtr(ub, "payment_method", req.PaymentMethod)
+	SetPtr(ub, "paid_at", req.PaidAt)
+	SetPtr(ub, "internal_notes", req.InternalNotes)
+	SetPtr(ub, "priority", req.Priority)
 
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
-	args = append(args, id)
+	ub.SetRaw("updated_at = NOW()")
+	args := append(ub.Args(), id)
 
 	query := fmt.Sprintf("UPDATE orders SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
+		ub.SetClause(), ub.NextArgIdx())
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {

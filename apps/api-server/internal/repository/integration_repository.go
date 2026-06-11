@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -120,50 +119,27 @@ func (r *IntegrationRepository) Create(ctx context.Context, tx pgx.Tx, integrati
 
 // Update applies partial updates to an integration.
 func (r *IntegrationRepository) Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateIntegrationRequest, encryptedCreds *string) error {
-	var setClauses []string
-	var args []any
-	argIdx := 1
-
-	if req.Label != nil {
-		setClauses = append(setClauses, fmt.Sprintf("label = $%d", argIdx))
-		args = append(args, *req.Label)
-		argIdx++
-	}
-	if req.Status != nil {
-		setClauses = append(setClauses, fmt.Sprintf("status = $%d", argIdx))
-		args = append(args, *req.Status)
-		argIdx++
-	}
+	ub := NewUpdateBuilder()
+	SetPtr(ub, "label", req.Label)
+	SetPtr(ub, "status", req.Status)
 	if encryptedCreds != nil {
 		credsJSON, _ := json.Marshal(*encryptedCreds)
-		setClauses = append(setClauses, fmt.Sprintf("credentials = $%d::jsonb", argIdx))
-		args = append(args, string(credsJSON))
-		argIdx++
+		ub.SetExpr("credentials = $%d::jsonb", string(credsJSON))
 	}
 	if req.Settings != nil {
-		setClauses = append(setClauses, fmt.Sprintf("settings = $%d::jsonb", argIdx))
-		args = append(args, string(*req.Settings))
-		argIdx++
+		ub.SetExpr("settings = $%d::jsonb", string(*req.Settings))
 	}
-	if req.SyncCursor != nil {
-		setClauses = append(setClauses, fmt.Sprintf("sync_cursor = $%d", argIdx))
-		args = append(args, *req.SyncCursor)
-		argIdx++
-	}
-	if req.ErrorMessage != nil {
-		setClauses = append(setClauses, fmt.Sprintf("error_message = $%d", argIdx))
-		args = append(args, *req.ErrorMessage)
-		argIdx++
-	}
+	SetPtr(ub, "sync_cursor", req.SyncCursor)
+	SetPtr(ub, "error_message", req.ErrorMessage)
 
-	if len(setClauses) == 0 {
+	if ub.IsEmpty() {
 		return nil
 	}
 
-	setClauses = append(setClauses, "updated_at = NOW()")
+	ub.SetRaw("updated_at = NOW()")
 	query := fmt.Sprintf("UPDATE integrations SET %s WHERE id = $%d",
-		strings.Join(setClauses, ", "), argIdx)
-	args = append(args, id)
+		ub.SetClause(), ub.NextArgIdx())
+	args := append(ub.Args(), id)
 
 	ct, err := tx.Exec(ctx, query, args...)
 	if err != nil {
