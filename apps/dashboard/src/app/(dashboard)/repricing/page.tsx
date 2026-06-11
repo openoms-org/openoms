@@ -49,7 +49,6 @@ export default function RepricingPage() {
 
   const STRATEGY_LABELS: Record<string, string> = {
     margin: t("strategyMargin"),
-    competitive: t("strategyCompetitive"),
     time_based: t("strategyTimeBased"),
     stock_based: t("strategyStockBased"),
   };

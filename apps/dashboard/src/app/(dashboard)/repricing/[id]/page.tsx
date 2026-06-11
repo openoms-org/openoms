@@ -59,7 +59,6 @@ export default function RepricingRuleDetailPage() {
 
   const STRATEGY_LABELS: Record<string, string> = {
     margin: t("strategyMargin"),
-    competitive: t("strategyCompetitiveSoon"),
     time_based: t("strategyTimeBased"),
     stock_based: t("strategyStockBased"),
   };
@@ -434,9 +433,7 @@ export default function RepricingRuleDetailPage() {
             </Table>
           ) : (
             <p className="text-sm text-muted-foreground py-8 text-center">
-              {rule.strategy === "competitive"
-                ? t("strategiaKonkurencyjnaJestWPrzygotowaniuDaneOCenac")
-                : t("brakZmianDoZastosowaniaWszystkieCenySaAktualne")}
+              {t("brakZmianDoZastosowaniaWszystkieCenySaAktualne")}
             </p>
           )}
         </DialogContent>
