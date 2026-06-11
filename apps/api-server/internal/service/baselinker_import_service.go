@@ -631,6 +631,16 @@ func (s *BaseLinkerImportService) importOrderGroup(
 		}
 	}
 
+	// Keep the linked customer's denormalized order stats in sync (count on
+	// placement; atomic with the order insert). Best-effort: a failure is logged
+	// but does not fail the import row (mirrors the customer-create handling above).
+	if customerID != nil {
+		if err := s.customerRepo.IncrementOrderStats(ctx, tx, *customerID, totalAmount); err != nil {
+			slog.Warn("bl-import: failed to update customer order stats",
+				"error", err, "tenant_id", tenantID, "order_id", externalID)
+		}
+	}
+
 	result.OrdersCreated++
 	return nil
 }

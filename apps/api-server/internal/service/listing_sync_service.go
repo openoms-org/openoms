@@ -13,7 +13,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/crypto"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
+	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
@@ -25,12 +27,15 @@ var (
 
 // ListingSyncService handles CRUD and sync orchestration for listing sync configs.
 type ListingSyncService struct {
-	syncRepo    *repository.ListingSyncRepository
-	productRepo repository.ProductRepo
-	listingRepo *repository.ProductListingRepository
-	auditRepo   repository.AuditRepo
-	pool        *pgxpool.Pool
-	logger      *slog.Logger
+	syncRepo        *repository.ListingSyncRepository
+	productRepo     repository.ProductRepo
+	listingRepo     *repository.ProductListingRepository
+	auditRepo       repository.AuditRepo
+	integrationRepo repository.IntegrationRepo
+	pool            *pgxpool.Pool
+	encryptionKey   []byte
+	stockSyncSvc    *StockSyncService
+	logger          *slog.Logger
 }
 
 // NewListingSyncService creates a new ListingSyncService.
@@ -39,17 +44,28 @@ func NewListingSyncService(
 	productRepo repository.ProductRepo,
 	listingRepo *repository.ProductListingRepository,
 	auditRepo repository.AuditRepo,
+	integrationRepo repository.IntegrationRepo,
 	pool *pgxpool.Pool,
+	encryptionKey []byte,
 	logger *slog.Logger,
 ) *ListingSyncService {
 	return &ListingSyncService{
-		syncRepo:    syncRepo,
-		productRepo: productRepo,
-		listingRepo: listingRepo,
-		auditRepo:   auditRepo,
-		pool:        pool,
-		logger:      logger,
+		syncRepo:        syncRepo,
+		productRepo:     productRepo,
+		listingRepo:     listingRepo,
+		auditRepo:       auditRepo,
+		integrationRepo: integrationRepo,
+		pool:            pool,
+		encryptionKey:   encryptionKey,
+		logger:          logger,
 	}
+}
+
+// SetStockSyncService injects the canonical stock owner. SyncStock delegates stock
+// propagation to it (reading warehouse_stock) rather than pushing a second, stale
+// stock value derived from products.stock_quantity.
+func (s *ListingSyncService) SetStockSyncService(stockSyncSvc *StockSyncService) {
+	s.stockSyncSvc = stockSyncSvc
 }
 
 // List returns paginated listing sync configs for a tenant.
@@ -257,16 +273,12 @@ func (s *ListingSyncService) SyncProducts(ctx context.Context, tenantID uuid.UUI
 					Metadata:      json.RawMessage("{}"),
 				}
 
-				// Apply price rule
+				// Apply price rule. Stock is intentionally NOT written here: stock_override
+				// is owned by StockSyncService (sourced from warehouse_stock); writing it
+				// from products.stock_quantity would corrupt the canonical value.
 				adjustedPrice := s.applyPriceRule(cfg, product.Price)
 				if adjustedPrice != product.Price {
 					listing.PriceOverride = &adjustedPrice
-				}
-
-				// Apply stock buffer
-				if cfg.StockBuffer > 0 {
-					bufferedStock := max(product.StockQuantity-cfg.StockBuffer, 0)
-					listing.StockOverride = &bufferedStock
 				}
 
 				if createErr := s.listingRepo.Create(ctx, tx, listing); createErr != nil {
@@ -286,18 +298,12 @@ func (s *ListingSyncService) SyncProducts(ctx context.Context, tenantID uuid.UUI
 				needsUpdate := false
 				updateReq := &model.UpdateProductListingRequest{}
 
+				// Stock_override is owned by StockSyncService (warehouse_stock source) and
+				// is intentionally not written from products.stock_quantity here.
 				adjustedPrice := s.applyPriceRule(cfg, product.Price)
 				if existing.PriceOverride == nil || *existing.PriceOverride != adjustedPrice {
 					updateReq.PriceOverride = &adjustedPrice
 					needsUpdate = true
-				}
-
-				if cfg.StockBuffer > 0 {
-					bufferedStock := max(product.StockQuantity-cfg.StockBuffer, 0)
-					if existing.StockOverride == nil || *existing.StockOverride != bufferedStock {
-						updateReq.StockOverride = &bufferedStock
-						needsUpdate = true
-					}
 				}
 
 				if needsUpdate {
@@ -386,7 +392,24 @@ func (s *ListingSyncService) PullListings(ctx context.Context, tenantID uuid.UUI
 	return result, nil
 }
 
-// SyncPrices pushes price updates from local products to marketplace listings.
+// listingPriceJob couples a push-eligible listing with the markup-applied price
+// to push for it. Gathered inside the DB transaction, consumed outside it.
+type listingPriceJob struct {
+	listing       *model.ProductListing
+	adjustedPrice float64
+}
+
+// SyncPrices pushes price updates from local products to the marketplace via the
+// provider's UpdatePrice API. It follows the two-phase pattern mandated after
+// OPE-479 (no marketplace HTTP call held inside a DB transaction): Phase 1 gathers
+// the eligible listings, their markup-applied prices and the integration
+// credentials inside a short transaction; Phase 2 constructs the provider once and
+// pushes with no open transaction; Phase 3 persists each listing's sync status in
+// its own short transaction. Only active, auto-sync listings with an external_id
+// are pushed — the same gate the periodic PriceSyncWorker uses — so manual or
+// inactive offers are never touched. The markup-applied price (applyPriceRule) is
+// written to price_override, which is exactly the per-config value the periodic
+// PriceSyncWorker also pushes, so the two pushers stay consistent.
 func (s *ListingSyncService) SyncPrices(ctx context.Context, tenantID uuid.UUID, configID uuid.UUID) (*SyncResult, error) {
 	cfg, err := s.Get(ctx, tenantID, configID)
 	if err != nil {
@@ -394,18 +417,25 @@ func (s *ListingSyncService) SyncPrices(ctx context.Context, tenantID uuid.UUID,
 	}
 
 	result := &SyncResult{}
+	var jobs []listingPriceJob
+	var integ *model.IntegrationWithCreds
+
+	// Phase 1: gather eligible listings, adjusted prices and integration credentials.
 	err = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		listings, listErr := s.listingRepo.ListByIntegration(ctx, tx, cfg.IntegrationID)
 		if listErr != nil {
 			return fmt.Errorf("list listings: %w", listErr)
 		}
 
-		productMap, err := s.productMapForListings(ctx, tx, listings)
-		if err != nil {
-			return err
+		productMap, mapErr := s.productMapForListings(ctx, tx, listings)
+		if mapErr != nil {
+			return mapErr
 		}
 
 		for _, listing := range listings {
+			if !isPushEligible(listing) {
+				continue
+			}
 			product := productMap[listing.ProductID]
 			if product == nil {
 				s.logSyncEntry(ctx, tx, tenantID, configID, "push", "price", &listing.ProductID, listing.ExternalID, "failed", "product not found")
@@ -414,32 +444,52 @@ func (s *ListingSyncService) SyncPrices(ctx context.Context, tenantID uuid.UUID,
 			}
 
 			adjustedPrice := s.applyPriceRule(cfg, product.Price)
+			// Idempotency / no-duplicate-feed guard: an offer already at the target
+			// price is not re-pushed (each Amazon feed submission is a new feed).
 			if listing.PriceOverride != nil && *listing.PriceOverride == adjustedPrice {
-				// No change needed
 				result.ItemsProcessed++
 				continue
 			}
+			jobs = append(jobs, listingPriceJob{listing: listing, adjustedPrice: adjustedPrice})
+		}
 
-			updateReq := &model.UpdateProductListingRequest{
-				PriceOverride: &adjustedPrice,
-			}
-			if updateErr := s.listingRepo.Update(ctx, tx, listing.ID, updateReq); updateErr != nil {
-				s.logSyncEntry(ctx, tx, tenantID, configID, "push", "price", &listing.ProductID, listing.ExternalID, "failed", updateErr.Error())
-				result.ItemsFailed++
-				continue
-			}
+		if len(jobs) == 0 {
+			return nil
+		}
 
-			changes, _ := json.Marshal(map[string]any{
-				"old_price": listing.PriceOverride,
-				"new_price": adjustedPrice,
-			})
-			s.logSyncEntryWithChanges(ctx, tx, tenantID, configID, "push", "price", &listing.ProductID, listing.ExternalID, "success", changes)
-			result.ItemsProcessed++
+		// One config maps to one integration; load its credentials for the push phase.
+		var findErr error
+		integ, findErr = s.integrationRepo.FindByID(ctx, tx, cfg.IntegrationID)
+		if findErr != nil {
+			return fmt.Errorf("find integration: %w", findErr)
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	// Phase 2 + 3: push to the marketplace API outside any transaction, then persist.
+	if len(jobs) > 0 {
+		switch {
+		case integ == nil || integ.EncryptedCredentials == "":
+			for _, job := range jobs {
+				s.persistPriceError(ctx, tenantID, configID, job.listing, "integration has no credentials")
+				result.ItemsFailed++
+			}
+		default:
+			provider, provErr := s.marketplaceProvider(integ)
+			if provErr != nil {
+				errMsg := truncateServiceErrorMsg(provErr.Error())
+				for _, job := range jobs {
+					s.persistPriceError(ctx, tenantID, configID, job.listing, errMsg)
+					result.ItemsFailed++
+				}
+			} else {
+				s.dispatchPriceUpdates(ctx, tenantID, configID, integ, provider, jobs, result)
+				closeMarketplaceProvider(provider)
+			}
+		}
 	}
 
 	s.updateLastSync(ctx, tenantID, configID, result.ItemsFailed > 0)
@@ -447,7 +497,48 @@ func (s *ListingSyncService) SyncPrices(ctx context.Context, tenantID uuid.UUID,
 	return result, nil
 }
 
-// SyncStock pushes stock levels from local products to marketplace listings.
+// dispatchPriceUpdates performs the marketplace UpdatePrice call for each job (no DB
+// transaction open) and persists the resulting sync status per listing. Async feed
+// providers (e.g. Amazon Feeds API) yield sync_status='pending' plus feed metadata;
+// synchronous providers yield 'synced'.
+func (s *ListingSyncService) dispatchPriceUpdates(ctx context.Context, tenantID, configID uuid.UUID, integ *model.IntegrationWithCreds, provider integration.MarketplaceProvider, jobs []listingPriceJob, result *SyncResult) {
+	syncStatus := "synced"
+	if _, ok := provider.(integration.AsyncPriceUpdater); ok {
+		syncStatus = "pending"
+	}
+
+	for _, job := range jobs {
+		if pushErr := provider.UpdatePrice(ctx, *job.listing.ExternalID, job.adjustedPrice); pushErr != nil {
+			s.logger.Error("listing sync: push price failed",
+				"listing_id", job.listing.ID,
+				"external_id", *job.listing.ExternalID,
+				"provider", integ.Provider,
+				"error", pushErr,
+			)
+			s.persistPriceError(ctx, tenantID, configID, job.listing, truncateServiceErrorMsg(pushErr.Error()))
+			result.ItemsFailed++
+			continue
+		}
+		// Capture feed metadata AFTER each successful push: an async feed provider
+		// (Amazon Feeds API) populates FeedResult() only when UpdatePrice submits a
+		// feed, and each push yields its own feed id. Hoisting this above the loop
+		// would persist a nil/stale feed id and leave pending listings unreconcilable
+		// by the feed-status worker. Mirrors PriceSyncWorker.syncOneByOne.
+		feedMeta := feedMetaForProvider(provider)
+		s.persistPricePush(ctx, tenantID, configID, job.listing, job.adjustedPrice, syncStatus, feedMeta)
+		result.ItemsProcessed++
+	}
+}
+
+// SyncStock delegates stock propagation to the canonical owner, StockSyncService.
+//
+// Stock is owned end-to-end by StockSyncWorker/StockSyncService, which read
+// warehouse_stock (the canonical source) and push via the provider's UpdateStock API
+// with async-feed and zero-stock-deactivation handling. ListingSyncService must NOT
+// add a second stock pusher: the previous implementation wrote stock_override from
+// products.stock_quantity — the wrong, stale source — which actively corrupted the
+// override the stock owner reads. Here we only resolve the eligible products and hand
+// each to the stock owner.
 func (s *ListingSyncService) SyncStock(ctx context.Context, tenantID uuid.UUID, configID uuid.UUID) (*SyncResult, error) {
 	cfg, err := s.Get(ctx, tenantID, configID)
 	if err != nil {
@@ -455,49 +546,30 @@ func (s *ListingSyncService) SyncStock(ctx context.Context, tenantID uuid.UUID, 
 	}
 
 	result := &SyncResult{}
+
+	if s.stockSyncSvc == nil {
+		// Stock is delegated; without the stock owner wired there is nothing to push.
+		result.Message = "stock sync service not configured; skipped"
+		return result, nil
+	}
+
+	// Phase 1: gather the distinct eligible product ids inside a short transaction.
+	var productIDs []uuid.UUID
 	err = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		listings, listErr := s.listingRepo.ListByIntegration(ctx, tx, cfg.IntegrationID)
 		if listErr != nil {
 			return fmt.Errorf("list listings: %w", listErr)
 		}
-
-		productMap, err := s.productMapForListings(ctx, tx, listings)
-		if err != nil {
-			return err
-		}
-
+		seen := make(map[uuid.UUID]struct{}, len(listings))
 		for _, listing := range listings {
-			product := productMap[listing.ProductID]
-			if product == nil {
-				s.logSyncEntry(ctx, tx, tenantID, configID, "push", "stock", &listing.ProductID, listing.ExternalID, "failed", "product not found")
-				result.ItemsFailed++
+			if !isPushEligible(listing) {
 				continue
 			}
-
-			bufferedStock := max(product.StockQuantity-cfg.StockBuffer, 0)
-
-			if listing.StockOverride != nil && *listing.StockOverride == bufferedStock {
-				// No change needed
-				result.ItemsProcessed++
+			if _, ok := seen[listing.ProductID]; ok {
 				continue
 			}
-
-			updateReq := &model.UpdateProductListingRequest{
-				StockOverride: &bufferedStock,
-			}
-			if updateErr := s.listingRepo.Update(ctx, tx, listing.ID, updateReq); updateErr != nil {
-				s.logSyncEntry(ctx, tx, tenantID, configID, "push", "stock", &listing.ProductID, listing.ExternalID, "failed", updateErr.Error())
-				result.ItemsFailed++
-				continue
-			}
-
-			changes, _ := json.Marshal(map[string]any{
-				"old_stock":    listing.StockOverride,
-				"new_stock":    bufferedStock,
-				"stock_buffer": cfg.StockBuffer,
-			})
-			s.logSyncEntryWithChanges(ctx, tx, tenantID, configID, "push", "stock", &listing.ProductID, listing.ExternalID, "success", changes)
-			result.ItemsProcessed++
+			seen[listing.ProductID] = struct{}{}
+			productIDs = append(productIDs, listing.ProductID)
 		}
 		return nil
 	})
@@ -505,9 +577,30 @@ func (s *ListingSyncService) SyncStock(ctx context.Context, tenantID uuid.UUID, 
 		return nil, err
 	}
 
+	// Phase 2: delegate each product to the stock owner (warehouse_stock -> UpdateStock).
+	for _, productID := range productIDs {
+		if pushErr := s.stockSyncSvc.PushStockToAllChannels(ctx, tenantID, productID); pushErr != nil {
+			s.logStockDelegation(ctx, tenantID, configID, productID, "failed", truncateServiceErrorMsg(pushErr.Error()))
+			result.ItemsFailed++
+			continue
+		}
+		s.logStockDelegation(ctx, tenantID, configID, productID, "success", "")
+		result.ItemsProcessed++
+	}
+
 	s.updateLastSync(ctx, tenantID, configID, result.ItemsFailed > 0)
-	result.Message = fmt.Sprintf("Synced stock for %d offers, %d errors", result.ItemsProcessed, result.ItemsFailed)
+	result.Message = fmt.Sprintf("Delegated stock sync for %d products, %d errors", result.ItemsProcessed, result.ItemsFailed)
 	return result, nil
+}
+
+// logStockDelegation records a stock-delegation sync-log entry in its own short tx.
+func (s *ListingSyncService) logStockDelegation(ctx context.Context, tenantID, configID, productID uuid.UUID, status, errMsg string) {
+	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		s.logSyncEntry(ctx, tx, tenantID, configID, "push", "stock", &productID, nil, status, errMsg)
+		return nil
+	}); err != nil {
+		s.logger.Error("listing sync: persist stock delegation log failed", "product_id", productID, "error", err)
+	}
 }
 
 // RunFullSync orchestrates a full sync: products, prices, and stock.
@@ -563,7 +656,12 @@ func (s *ListingSyncService) RunFullSync(ctx context.Context, tenantID uuid.UUID
 // and returns them keyed by product ID.
 func (s *ListingSyncService) productMapForListings(ctx context.Context, tx pgx.Tx, listings []*model.ProductListing) (map[uuid.UUID]*model.Product, error) {
 	productIDs := make([]uuid.UUID, 0, len(listings))
+	seen := make(map[uuid.UUID]struct{}, len(listings))
 	for _, l := range listings {
+		if _, ok := seen[l.ProductID]; ok {
+			continue
+		}
+		seen[l.ProductID] = struct{}{}
 		productIDs = append(productIDs, l.ProductID)
 	}
 	products, err := s.productRepo.FindByIDs(ctx, tx, productIDs)
@@ -585,6 +683,99 @@ func (s *ListingSyncService) applyPriceRule(cfg *model.ListingSyncConfig, basePr
 		return math.Round((basePrice+cfg.PriceModifier)*100) / 100
 	default:
 		return basePrice
+	}
+}
+
+// isPushEligible reports whether a listing may be pushed to the marketplace: it must
+// have a non-empty external offer id, be active, and be in auto sync mode. This is
+// the same gate the wired StockSyncWorker / PriceSyncWorker apply, so listings an
+// operator set to manual or inactive are never pushed.
+func isPushEligible(listing *model.ProductListing) bool {
+	return listing.ExternalID != nil && *listing.ExternalID != "" &&
+		listing.Status == "active" && listing.StockSyncMode == "auto"
+}
+
+// marketplaceProvider decrypts the integration credentials and constructs its
+// marketplace provider. The caller owns the provider lifecycle and must call
+// closeMarketplaceProvider when done.
+func (s *ListingSyncService) marketplaceProvider(integ *model.IntegrationWithCreds) (integration.MarketplaceProvider, error) {
+	credJSON, err := crypto.Decrypt(integ.EncryptedCredentials, s.encryptionKey)
+	if err != nil {
+		return nil, fmt.Errorf("decrypt credentials: %w", err)
+	}
+	provider, err := integration.NewMarketplaceProvider(integ.Provider, credJSON, integ.Settings)
+	if err != nil {
+		return nil, fmt.Errorf("create provider: %w", err)
+	}
+	return provider, nil
+}
+
+// feedMetaForProvider extracts async feed metadata (e.g. an Amazon feed id) from a
+// provider implementing AsyncFeedResult, or nil when there is none. Mirrors the
+// worker's buildFeedMeta so pending listings carry the feed id for status polling.
+func feedMetaForProvider(provider any) []byte {
+	if fr, ok := provider.(integration.AsyncFeedResult); ok {
+		if result := fr.FeedResult(); result != nil {
+			data, _ := json.Marshal(map[string]string{
+				"amazon_feed_id":   result.FeedID,
+				"amazon_feed_type": result.FeedType,
+			})
+			return data
+		}
+	}
+	return nil
+}
+
+// persistPricePush records a successful price push in its own short transaction: it
+// writes the markup-applied price to price_override (the per-config value the
+// periodic PriceSyncWorker also pushes), sets sync_status ('pending' + feed metadata
+// for async feed providers, 'synced' + last_synced_at otherwise) and writes a
+// success sync-log entry.
+func (s *ListingSyncService) persistPricePush(ctx context.Context, tenantID, configID uuid.UUID, listing *model.ProductListing, adjustedPrice float64, syncStatus string, feedMeta []byte) {
+	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		var execErr error
+		switch {
+		case syncStatus == "pending" && feedMeta != nil:
+			_, execErr = tx.Exec(ctx,
+				`UPDATE product_listings SET price_override = $2, sync_status = 'pending', error_message = NULL,
+				 metadata = COALESCE(metadata, '{}'::jsonb) || $3::jsonb, updated_at = NOW() WHERE id = $1`,
+				listing.ID, adjustedPrice, string(feedMeta))
+		case syncStatus == "pending":
+			_, execErr = tx.Exec(ctx,
+				`UPDATE product_listings SET price_override = $2, sync_status = 'pending', error_message = NULL, updated_at = NOW() WHERE id = $1`,
+				listing.ID, adjustedPrice)
+		default:
+			_, execErr = tx.Exec(ctx,
+				`UPDATE product_listings SET price_override = $2, sync_status = 'synced', error_message = NULL, last_synced_at = NOW(), updated_at = NOW() WHERE id = $1`,
+				listing.ID, adjustedPrice)
+		}
+		if execErr != nil {
+			return execErr
+		}
+		changes, _ := json.Marshal(map[string]any{
+			"old_price": listing.PriceOverride,
+			"new_price": adjustedPrice,
+		})
+		s.logSyncEntryWithChanges(ctx, tx, tenantID, configID, "push", "price", &listing.ProductID, listing.ExternalID, "success", changes)
+		return nil
+	}); err != nil {
+		s.logger.Error("listing sync: persist price push failed", "listing_id", listing.ID, "error", err)
+	}
+}
+
+// persistPriceError marks a listing's price push as failed in its own short
+// transaction and writes a failed sync-log entry.
+func (s *ListingSyncService) persistPriceError(ctx context.Context, tenantID, configID uuid.UUID, listing *model.ProductListing, errMsg string) {
+	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		if _, execErr := tx.Exec(ctx,
+			`UPDATE product_listings SET sync_status = 'error', error_message = $2, updated_at = NOW() WHERE id = $1`,
+			listing.ID, errMsg); execErr != nil {
+			return execErr
+		}
+		s.logSyncEntry(ctx, tx, tenantID, configID, "push", "price", &listing.ProductID, listing.ExternalID, "failed", errMsg)
+		return nil
+	}); err != nil {
+		s.logger.Error("listing sync: persist price error failed", "listing_id", listing.ID, "error", err)
 	}
 }
 

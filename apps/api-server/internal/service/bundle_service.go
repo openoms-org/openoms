@@ -232,26 +232,31 @@ func (s *BundleService) CalculateBundleStock(ctx context.Context, tenantID, bund
 	return stock, err
 }
 
-// DecrementComponentStock decrements stock for all components of a bundle.
-// Called when an order with bundle products is confirmed.
-func (s *BundleService) DecrementComponentStock(ctx context.Context, tx pgx.Tx, bundleProductID uuid.UUID, quantity int) error {
-	components, err := s.bundleRepo.ListByBundleProduct(ctx, tx, bundleProductID)
-	if err != nil {
-		return fmt.Errorf("list bundle components: %w", err)
-	}
-
-	for _, c := range components {
-		decrementQty := c.Quantity * quantity
-		tag, err := tx.Exec(ctx,
-			"UPDATE products SET stock_quantity = stock_quantity - $1, updated_at = NOW() WHERE id = $2 AND stock_quantity >= $1",
-			decrementQty, c.ComponentProductID,
-		)
+// ExpandBundleComponents resolves bundle product IDs in productQtys into their component
+// product quantities. It returns the accumulated component quantities (componentProductID
+// -> Σ component_qty * order_qty) and the set of input product IDs that are bundles, so
+// callers can exclude those virtual bundle IDs from direct stock adjustment (a bundle holds
+// no warehouse_stock row of its own — only its components draw down stock). Runs inside the
+// caller's tenant-scoped transaction so it shares the RLS context.
+func (s *BundleService) ExpandBundleComponents(ctx context.Context, tx pgx.Tx, productQtys map[uuid.UUID]int) (map[uuid.UUID]int, map[uuid.UUID]bool, error) {
+	componentQtys := make(map[uuid.UUID]int)
+	bundleIDs := make(map[uuid.UUID]bool)
+	for productID, orderQty := range productQtys {
+		product, err := s.productRepo.FindByID(ctx, tx, productID)
 		if err != nil {
-			return fmt.Errorf("decrement stock for component %s: %w", c.ComponentProductID, err)
+			return nil, nil, fmt.Errorf("load product %s: %w", productID, err)
 		}
-		if tag.RowsAffected() == 0 {
-			return fmt.Errorf("insufficient stock for bundle component %s (need %d)", c.ComponentProductID, decrementQty)
+		if product == nil || !product.IsBundle {
+			continue
+		}
+		bundleIDs[productID] = true
+		components, err := s.bundleRepo.ListByBundleProduct(ctx, tx, productID)
+		if err != nil {
+			return nil, nil, fmt.Errorf("list bundle components for %s: %w", productID, err)
+		}
+		for _, c := range components {
+			componentQtys[c.ComponentProductID] += c.Quantity * orderQty
 		}
 	}
-	return nil
+	return componentQtys, bundleIDs, nil
 }

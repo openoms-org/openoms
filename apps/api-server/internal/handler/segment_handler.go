@@ -238,6 +238,33 @@ func (h *SegmentHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// RefreshSegment recomputes membership for a single rule-based segment.
+func (h *SegmentHandler) RefreshSegment(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	segmentID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid segment ID")
+		return
+	}
+
+	err = h.segmentService.RefreshSegment(r.Context(), tenantID, segmentID)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrSegmentNotFound):
+			writeError(w, http.StatusNotFound, "segment not found")
+		default:
+			if isValidationError(err) {
+				writeError(w, http.StatusBadRequest, err.Error())
+			} else {
+				writeServerError(w, "failed to refresh segment", err)
+			}
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // RunRFMAnalysis triggers RFM scoring and segment assignment for the tenant.
 func (h *SegmentHandler) RunRFMAnalysis(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())

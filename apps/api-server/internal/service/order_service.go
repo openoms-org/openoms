@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -42,6 +44,10 @@ type OrderService struct {
 	allegroSync        *AllegroSyncService
 	stockSyncService   *StockSyncService
 	fulfillment        *FulfillmentService
+	customerRepo       repository.CustomerRepo
+	priceListService   *PriceListService
+	loyaltyService     *LoyaltyService
+	bundleService      *BundleService
 }
 
 // NewOrderService creates a new OrderService. fulfillment may be nil (or a
@@ -65,16 +71,6 @@ func NewOrderService(
 		webhookDispatch: webhookDispatch,
 		fulfillment:     fulfillment,
 	}
-}
-
-// OrderRepo returns the underlying order repository for direct access.
-func (s *OrderService) OrderRepo() repository.OrderRepo {
-	return s.orderRepo
-}
-
-// AuditRepo returns the underlying audit repository for direct access.
-func (s *OrderService) AuditRepo() repository.AuditRepo {
-	return s.auditRepo
 }
 
 // MonthlyOrderCounter provides the order count needed for plan-limit enforcement.
@@ -106,11 +102,6 @@ func EnforceMonthlyOrderLimit(ctx context.Context, tx pgx.Tx, orderCounter Month
 		return ErrOrderLimitExceeded
 	}
 	return nil
-}
-
-// WebhookDispatch returns the webhook dispatch service for direct access.
-func (s *OrderService) WebhookDispatch() *WebhookDispatchService {
-	return s.webhookDispatch
 }
 
 // SetInvoiceService sets the invoice service for auto-invoicing on status change.
@@ -152,6 +143,54 @@ func (s *OrderService) SetWarehouseStockRepo(repo repository.WarehouseStockRepo)
 	s.warehouseStockRepo = repo
 }
 
+// SetCustomerRepo sets the customer repository so order creation can link orders to
+// CRM customers (resolve-or-create by email) and keep customer order statistics.
+func (s *OrderService) SetCustomerRepo(repo repository.CustomerRepo) {
+	s.customerRepo = repo
+}
+
+// SetPriceListService sets the price list service so order creation can apply a linked
+// B2B customer's price list to the order line items. Called after construction to avoid
+// a circular dependency.
+func (s *OrderService) SetPriceListService(priceListSvc *PriceListService) {
+	s.priceListService = priceListSvc
+}
+
+// SetLoyaltyService sets the loyalty service so order completion accrues loyalty points
+// for the linked customer. Called after construction to avoid a circular dependency.
+func (s *OrderService) SetLoyaltyService(loyaltySvc *LoyaltyService) {
+	s.loyaltyService = loyaltySvc
+}
+
+// SetBundleService sets the bundle service so order stock reserve/ship/cancel can expand
+// bundle line items into their component products. Called after construction to avoid a
+// circular dependency.
+func (s *OrderService) SetBundleService(bundleSvc *BundleService) {
+	s.bundleService = bundleSvc
+}
+
+// expandBundleQuantities rewrites productQtys in place: bundle product entries are removed
+// (bundles are virtual and hold no warehouse_stock of their own) and replaced by their
+// component product quantities, so a single warehouse_stock walk covers components AND
+// normal products. No-op when the bundle service is unwired; on expansion failure it logs
+// and leaves productQtys unchanged (best-effort, matching the surrounding side-effects).
+func (s *OrderService) expandBundleQuantities(ctx context.Context, tx pgx.Tx, productQtys map[uuid.UUID]int) {
+	if s.bundleService == nil || len(productQtys) == 0 {
+		return
+	}
+	componentQtys, bundleIDs, err := s.bundleService.ExpandBundleComponents(ctx, tx, productQtys)
+	if err != nil {
+		slog.Error("failed to expand bundle components for stock adjustment", "error", err)
+		return
+	}
+	for id := range bundleIDs {
+		delete(productQtys, id)
+	}
+	for productID, qty := range componentQtys {
+		productQtys[productID] += qty
+	}
+}
+
 func (s *OrderService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (*model.OrderStatusConfig, error) {
 	settings, err := s.tenantRepo.GetSettings(ctx, tx, tenantID)
 	if err != nil {
@@ -174,6 +213,172 @@ func (s *OrderService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID
 
 	cfg := model.DefaultOrderStatusConfig()
 	return &cfg, nil
+}
+
+// findCustomerByOrderEmail resolves an existing CRM customer for the order by email,
+// in a short read-only tenant transaction. Returns nil when customerRepo is unwired,
+// the order carries no email, or no customer matches. Used to link orders to customers
+// and to resolve a B2B price list before the order-create transaction.
+func (s *OrderService) findCustomerByOrderEmail(ctx context.Context, tenantID uuid.UUID, req model.CreateOrderRequest) (*model.Customer, error) {
+	if s.customerRepo == nil || req.CustomerEmail == nil {
+		return nil, nil
+	}
+	email := strings.TrimSpace(*req.CustomerEmail)
+	if email == "" {
+		return nil, nil
+	}
+	var customer *model.Customer
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		var e error
+		customer, e = s.customerRepo.FindByEmail(ctx, tx, email)
+		return e
+	})
+	return customer, err
+}
+
+// ensureOrderCustomer returns the CRM customer to link to a new order: the pre-resolved
+// existing match when present, otherwise a freshly created minimal customer (email + name
+// from the order). Returns nil when customerRepo is unwired or the order has no usable
+// email. Runs inside the caller's order-create transaction so the customer and order rows
+// commit atomically. Dedup is best-effort by email (mirrors the BaseLinker import); there
+// is no unique email constraint, matching existing behavior.
+func (s *OrderService) ensureOrderCustomer(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID, req model.CreateOrderRequest, existing *model.Customer) (*model.Customer, error) {
+	if s.customerRepo == nil {
+		return nil, nil
+	}
+	if existing != nil {
+		return existing, nil
+	}
+	if req.CustomerEmail == nil {
+		return nil, nil
+	}
+	email := strings.TrimSpace(*req.CustomerEmail)
+	if email == "" {
+		return nil, nil
+	}
+	newCustomer := &model.Customer{
+		ID:       uuid.New(),
+		TenantID: tenantID,
+		Name:     req.CustomerName,
+		Email:    &email,
+		Phone:    req.CustomerPhone,
+		Tags:     []string{},
+	}
+	if err := s.customerRepo.Create(ctx, tx, newCustomer); err != nil {
+		return nil, fmt.Errorf("link order to customer: %w", err)
+	}
+	return newCustomer, nil
+}
+
+// applyCustomerPriceList re-prices the order's line items from the linked B2B
+// customer's price list and recomputes the order total. It is a no-op unless the price
+// list service is wired, the customer has a price list, and that list is active and in
+// the order's currency. Each line with a product_id is repriced via CalculatePrice
+// (which derives the effective price from the product's base price, never from the
+// inbound line price — so the transform is idempotent and never compounds discounts);
+// lines whose price cannot be resolved keep their original price (fail-soft). The order
+// total is recomputed only when at least one line was actually repriced. Unknown line
+// keys (name, sku, weight, custom fields) are preserved via a map round-trip.
+func (s *OrderService) applyCustomerPriceList(ctx context.Context, tenantID uuid.UUID, customer *model.Customer, req *model.CreateOrderRequest) {
+	if s.priceListService == nil || customer == nil || customer.PriceListID == nil {
+		return
+	}
+	priceListID := *customer.PriceListID
+
+	pl, err := s.priceListService.Get(ctx, tenantID, priceListID)
+	if err != nil || pl == nil {
+		slog.Warn("B2B pricing: price list lookup failed", "error", err, "price_list_id", priceListID, "tenant_id", tenantID)
+		return
+	}
+	if !pl.Active {
+		return
+	}
+	// Currency guard: never price an order's lines with a price list in another currency.
+	if pl.Currency != "" && req.Currency != "" && !strings.EqualFold(pl.Currency, req.Currency) {
+		slog.Warn("B2B pricing: skipped, price list currency differs from order currency",
+			"price_list_currency", pl.Currency, "order_currency", req.Currency, "tenant_id", tenantID)
+		return
+	}
+
+	var lines []map[string]json.RawMessage
+	if err := json.Unmarshal(req.Items, &lines); err != nil || len(lines) == 0 {
+		return
+	}
+
+	var total float64
+	var anyPriced bool
+	for _, line := range lines {
+		qty := rawMessageInt(line["quantity"])
+		price, hasPrice := rawMessageFloat(line["price"])
+		productID := rawMessageUUID(line["product_id"])
+
+		if productID != nil && *productID != uuid.Nil && qty > 0 {
+			resp, perr := s.priceListService.CalculatePrice(ctx, tenantID, *productID, nil, qty, priceListID)
+			if perr == nil {
+				if pj, mErr := json.Marshal(resp.EffectivePrice); mErr == nil {
+					line["price"] = pj
+					price = resp.EffectivePrice
+					hasPrice = true
+					anyPriced = true
+				}
+			} else {
+				slog.Warn("B2B pricing: CalculatePrice failed, keeping original line price",
+					"error", perr, "product_id", *productID, "tenant_id", tenantID)
+			}
+		}
+		if hasPrice && qty > 0 {
+			total += price * float64(qty)
+		}
+	}
+
+	if !anyPriced {
+		return
+	}
+	repacked, err := json.Marshal(lines)
+	if err != nil {
+		return
+	}
+	req.Items = repacked
+	req.TotalAmount = math.Round(total*100) / 100
+}
+
+// rawMessageInt parses a JSON number RawMessage into an int (truncating), returning 0
+// when absent or not a number.
+func rawMessageInt(raw json.RawMessage) int {
+	if len(raw) == 0 {
+		return 0
+	}
+	var f float64
+	if err := json.Unmarshal(raw, &f); err != nil {
+		return 0
+	}
+	return int(f)
+}
+
+// rawMessageFloat parses a JSON number RawMessage into a float64; the bool reports
+// whether a number was present.
+func rawMessageFloat(raw json.RawMessage) (float64, bool) {
+	if len(raw) == 0 {
+		return 0, false
+	}
+	var f float64
+	if err := json.Unmarshal(raw, &f); err != nil {
+		return 0, false
+	}
+	return f, true
+}
+
+// rawMessageUUID parses a JSON string RawMessage into a *uuid.UUID, returning nil when
+// absent, null, the nil UUID, or not a valid UUID.
+func rawMessageUUID(raw json.RawMessage) *uuid.UUID {
+	if len(raw) == 0 {
+		return nil
+	}
+	var id uuid.UUID
+	if err := json.Unmarshal(raw, &id); err != nil || id == uuid.Nil {
+		return nil
+	}
+	return &id
 }
 
 // List returns a paginated list of orders for a tenant.
@@ -219,6 +424,20 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 		sanitized := model.StripHTMLTags(*req.Notes)
 		req.Notes = &sanitized
 	}
+
+	// Resolve an existing CRM customer by email (read-only) before the order tx. The
+	// match (when any) links the order to the customer and carries the B2B price list.
+	// A read failure is non-fatal: the order is still created, just unlinked.
+	linkedCustomer, custErr := s.findCustomerByOrderEmail(ctx, tenantID, req)
+	if custErr != nil {
+		slog.Warn("failed to resolve order customer by email", "error", custErr, "tenant_id", tenantID)
+		linkedCustomer = nil
+	}
+
+	// Apply the linked B2B customer's price list to the line items + total (no-op when
+	// the customer has no price list). Runs before the order is built so the adjusted
+	// items/total are what gets persisted.
+	s.applyCustomerPriceList(ctx, tenantID, linkedCustomer, &req)
 
 	// Default NOT NULL jsonb fields to avoid inserting NULL
 	shippingAddr := req.ShippingAddress
@@ -283,8 +502,25 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 			return err
 		}
 
+		// Link the order to a CRM customer (resolve-or-create by email) so downstream
+		// per-customer features (stats, loyalty) have a customer to act on.
+		customer, err := s.ensureOrderCustomer(ctx, tx, tenantID, req, linkedCustomer)
+		if err != nil {
+			return err
+		}
+		if customer != nil {
+			order.CustomerID = &customer.ID
+		}
+
 		if err := s.orderRepo.Create(ctx, tx, order); err != nil {
 			return err
+		}
+		// Keep the linked customer's denormalized order stats in sync (count on
+		// placement; atomic with the order insert). No-op for unlinked orders.
+		if s.customerRepo != nil && order.CustomerID != nil {
+			if err := s.customerRepo.IncrementOrderStats(ctx, tx, *order.CustomerID, order.TotalAmount); err != nil {
+				return err
+			}
 		}
 		// Route the new order through the fulfillment commands (OPE-416): create
 		// its fulfillment process + enqueue the orchestration event in the SAME
@@ -314,6 +550,7 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 		if len(productQtys) > 0 {
 			bgCtx := context.Background()
 			if err := database.WithTenant(bgCtx, s.pool, tenantID, func(tx pgx.Tx) error {
+				s.expandBundleQuantities(bgCtx, tx, productQtys)
 				s.adjustStockPerProduct(bgCtx, tx, productQtys, func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) int {
 					available := stock.Quantity - stock.Reserved
 					if available <= 0 {
@@ -362,6 +599,98 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 	}
 
 	return order, nil
+}
+
+// Duplicate creates a copy of an existing order as a fresh "new" order, with a new ID
+// and no external reference. It enforces the monthly order limit inside the same
+// transaction (mirroring Create), increments the linked customer's denormalized order
+// stats, and writes an "order.duplicated" audit entry, then dispatches an order.created
+// webhook after commit. For post-commit side-effects it is webhook-only (no fulfillment
+// process, stock reserve, or automation event) and intentionally non-idempotent — each
+// call mints a new order.
+func (s *OrderService) Duplicate(ctx context.Context, tenantID, orderID uuid.UUID, maxOrdersMonthly int, actorID uuid.UUID, ip string) (*model.Order, error) {
+	var newOrder *model.Order
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		if err := EnforceMonthlyOrderLimit(ctx, tx, s.orderRepo, tenantID, maxOrdersMonthly, 0); err != nil {
+			return err
+		}
+
+		existing, err := s.orderRepo.FindByID(ctx, tx, orderID)
+		if err != nil {
+			return err
+		}
+		if existing == nil {
+			return ErrOrderNotFound
+		}
+
+		// Sanitize user-facing text fields to prevent stored XSS
+		customerName := model.StripHTMLTags(existing.CustomerName)
+		var notes *string
+		if existing.Notes != nil {
+			sanitized := model.StripHTMLTags(*existing.Notes)
+			notes = &sanitized
+		}
+
+		newOrder = &model.Order{
+			ID:              uuid.New(),
+			TenantID:        existing.TenantID,
+			ExternalID:      nil, // Clear ExternalID to avoid duplicate external references
+			Source:          existing.Source,
+			IntegrationID:   existing.IntegrationID,
+			Status:          "new",
+			CustomerName:    customerName,
+			CustomerEmail:   existing.CustomerEmail,
+			CustomerPhone:   existing.CustomerPhone,
+			ShippingAddress: existing.ShippingAddress,
+			BillingAddress:  existing.BillingAddress,
+			Items:           existing.Items,
+			TotalAmount:     existing.TotalAmount,
+			Currency:        existing.Currency,
+			Notes:           notes,
+			Metadata:        existing.Metadata,
+			Tags:            existing.Tags,
+			OrderedAt:       existing.OrderedAt,
+			DeliveryMethod:  existing.DeliveryMethod,
+			PickupPointID:   existing.PickupPointID,
+			PaymentStatus:   existing.PaymentStatus,
+			PaymentMethod:   existing.PaymentMethod,
+			CustomerID:      existing.CustomerID,
+			InternalNotes:   existing.InternalNotes,
+			Priority:        existing.Priority,
+		}
+
+		if err := s.orderRepo.Create(ctx, tx, newOrder); err != nil {
+			return fmt.Errorf("create duplicated order: %w", err)
+		}
+
+		// The duplicate persists the source order's customer_id, so the RFM live aggregate
+		// (COUNT/SUM over orders by customer_id) counts it. Increment the denormalized
+		// customer stats in the same tx — exactly like Create — so the counters stay equal
+		// to that aggregate. No-op for unlinked source orders (customer_id NULL).
+		if s.customerRepo != nil && newOrder.CustomerID != nil {
+			if err := s.customerRepo.IncrementOrderStats(ctx, tx, *newOrder.CustomerID, newOrder.TotalAmount); err != nil {
+				return err
+			}
+		}
+
+		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
+			TenantID:   tenantID,
+			UserID:     actorID,
+			Action:     "order.duplicated",
+			EntityType: "order",
+			EntityID:   newOrder.ID,
+			Changes:    map[string]string{"source_order_id": orderID.String()},
+			IPAddress:  ip,
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Dispatch webhook for the duplicated order (async, best-effort)
+	DispatchWebhookAsync(s.webhookDispatch, tenantID, "order.created", newOrder)
+
+	return newOrder, nil
 }
 
 // Update modifies an existing order.
@@ -448,6 +777,7 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 
 	var order *model.Order
 	var oldStatus string
+	var firstShip bool
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := s.orderRepo.FindByID(ctx, tx, orderID)
 		if err != nil {
@@ -457,6 +787,10 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 			return ErrOrderNotFound
 		}
 		oldStatus = existing.Status
+		// firstShip is true only when the order has not shipped before. shipped_at is set
+		// once (COALESCE on update, never cleared), so this gates the one-time stock
+		// decrement and makes a forced re-ship a no-op.
+		firstShip = existing.ShippedAt == nil
 
 		config, err := s.loadStatusConfig(ctx, tx, tenantID)
 		if err != nil {
@@ -533,12 +867,61 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 		// Stock sync on status change
 		switch req.Status {
 		case "shipped":
-			asyncutil.SafeGo(func() { s.handleStockOnShip(context.Background(), tenantID, order) })
+			// Decrement component/product stock exactly once per order (firstShip gate),
+			// so a forced re-ship does not double-decrement.
+			if firstShip {
+				asyncutil.SafeGo(func() { s.handleStockOnShip(context.Background(), tenantID, order) })
+			}
 		case "cancelled":
-			asyncutil.SafeGo(func() { s.handleStockOnCancel(context.Background(), tenantID, order) })
+			// Release reservations once; skip when the order was already terminal
+			// (cancelled/refunded) to avoid double-releasing.
+			if !isTerminalStockStatus(oldStatus) {
+				asyncutil.SafeGo(func() { s.handleStockOnCancel(context.Background(), tenantID, order) })
+			}
+		case "completed":
+			s.awardLoyaltyOnComplete(tenantID, order)
 		}
 	}
 	return order, err
+}
+
+// isTerminalStockStatus reports whether an order status already released/closed out its
+// stock reservations, so a transition into cancelled from such a status must not release
+// reservations again.
+func isTerminalStockStatus(status string) bool {
+	return status == model.OrderStatusCancelled || status == model.OrderStatusRefunded
+}
+
+// awardLoyaltyOnComplete fires order-completion loyalty accrual asynchronously for the
+// order's linked customer. It is a no-op when the loyalty service is unwired or the order
+// has no linked customer. Accrual is exactly-once per (order, program) via the ledger
+// guard inside AwardPointsForOrder, so re-entry into "completed" (incl. forced
+// re-transitions) never double-awards. Runs in a background context like the other
+// post-commit side-effects so it cannot fail or block the status transition.
+func (s *OrderService) awardLoyaltyOnComplete(tenantID uuid.UUID, order *model.Order) {
+	if s.loyaltyService == nil || order.CustomerID == nil {
+		return
+	}
+	customerID := *order.CustomerID
+	orderID := order.ID
+	amount := order.TotalAmount
+	asyncutil.SafeGo(func() {
+		s.loyaltyService.AwardPointsForOrder(context.Background(), tenantID, customerID, orderID, amount)
+	})
+}
+
+// dedupeOrderIDs returns ids with duplicates removed, preserving first-seen order.
+func dedupeOrderIDs(ids []uuid.UUID) []uuid.UUID {
+	seen := make(map[uuid.UUID]struct{}, len(ids))
+	out := make([]uuid.UUID, 0, len(ids))
+	for _, id := range ids {
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		out = append(out, id)
+	}
+	return out
 }
 
 // BulkTransitionStatus transitions multiple orders to a new status.
@@ -546,6 +929,13 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
 	}
+
+	// Collapse repeated order IDs so each order is processed exactly once. The firstShip
+	// gate reads a single ordersMap snapshot that UpdateStatus never refreshes, so a
+	// repeated ID would re-pass the gate and fire handleStockOnShip (plus emails, webhooks,
+	// audit, and the success counter) once per occurrence — double-decrementing stock for a
+	// single ship. req is passed by value, so this mutation stays local to the call.
+	req.OrderIDs = dedupeOrderIDs(req.OrderIDs)
 
 	resp := &model.BulkStatusTransitionResponse{
 		Results: make([]model.BulkStatusResult, 0, len(req.OrderIDs)),
@@ -556,6 +946,7 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 		order     *model.Order
 		oldStatus string
 		newStatus string
+		firstShip bool
 	}
 	type webhookNotification struct {
 		orderID   uuid.UUID
@@ -637,6 +1028,7 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 			if err == nil && updated != nil {
 				pendingEmails = append(pendingEmails, emailNotification{
 					order: updated, oldStatus: oldStatus, newStatus: req.Status,
+					firstShip: existing.ShippedAt == nil,
 				})
 			}
 
@@ -675,9 +1067,15 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 		// Stock sync on status change
 		switch n.newStatus {
 		case "shipped":
-			asyncutil.SafeGo(func() { s.handleStockOnShip(context.Background(), tenantID, n.order) })
+			if n.firstShip {
+				asyncutil.SafeGo(func() { s.handleStockOnShip(context.Background(), tenantID, n.order) })
+			}
 		case "cancelled":
-			asyncutil.SafeGo(func() { s.handleStockOnCancel(context.Background(), tenantID, n.order) })
+			if !isTerminalStockStatus(n.oldStatus) {
+				asyncutil.SafeGo(func() { s.handleStockOnCancel(context.Background(), tenantID, n.order) })
+			}
+		case "completed":
+			s.awardLoyaltyOnComplete(tenantID, n.order)
 		}
 	}
 	for _, n := range pendingWebhooks {
@@ -764,6 +1162,7 @@ func (s *OrderService) handleStockOnShip(ctx context.Context, tenantID uuid.UUID
 	}
 	productQtys := extractProductQuantities(order.Items)
 	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		s.expandBundleQuantities(ctx, tx, productQtys)
 		s.adjustStockPerProduct(ctx, tx, productQtys, func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) int {
 			deduct := min(remaining, stock.Quantity)
 			// Decrement both quantity and reserved
@@ -792,6 +1191,7 @@ func (s *OrderService) handleStockOnCancel(ctx context.Context, tenantID uuid.UU
 	}
 	productQtys := extractProductQuantities(order.Items)
 	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		s.expandBundleQuantities(ctx, tx, productQtys)
 		s.adjustStockPerProduct(ctx, tx, productQtys, func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) int {
 			release := min(remaining, stock.Reserved)
 			if _, execErr := tx.Exec(ctx,
