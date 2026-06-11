@@ -545,16 +545,7 @@ func (s *InvoiceService) getProvider(ctx context.Context, tx pgx.Tx, tenantID uu
 func (s *InvoiceService) buildInvoiceItems(order *model.Order, taxRate int) []integration.InvoiceItem {
 	if order.Items == nil || string(order.Items) == "[]" || string(order.Items) == "null" {
 		// Fallback: single line item from order total
-		totalNet := order.TotalAmount / (1 + float64(taxRate)/100)
-		return []integration.InvoiceItem{
-			{
-				Name:     "Order " + order.ID.String()[:8],
-				Quantity: 1,
-				NetPrice: totalNet,
-				TaxRate:  taxRate,
-				Unit:     "szt.",
-			},
-		}
+		return fallbackInvoiceItems(order, taxRate)
 	}
 
 	type orderItem struct {
@@ -566,16 +557,7 @@ func (s *InvoiceService) buildInvoiceItems(order *model.Order, taxRate int) []in
 
 	var orderItems []orderItem
 	if err := json.Unmarshal(order.Items, &orderItems); err != nil {
-		totalNet := order.TotalAmount / (1 + float64(taxRate)/100)
-		return []integration.InvoiceItem{
-			{
-				Name:     "Order " + order.ID.String()[:8],
-				Quantity: 1,
-				NetPrice: totalNet,
-				TaxRate:  taxRate,
-				Unit:     "szt.",
-			},
-		}
+		return fallbackInvoiceItems(order, taxRate)
 	}
 
 	items := make([]integration.InvoiceItem, 0, len(orderItems))
@@ -595,17 +577,23 @@ func (s *InvoiceService) buildInvoiceItems(order *model.Order, taxRate int) []in
 	}
 
 	if len(items) == 0 {
-		totalNet := order.TotalAmount / (1 + float64(taxRate)/100)
-		return []integration.InvoiceItem{
-			{
-				Name:     "Order " + order.ID.String()[:8],
-				Quantity: 1,
-				NetPrice: totalNet,
-				TaxRate:  taxRate,
-				Unit:     "szt.",
-			},
-		}
+		return fallbackInvoiceItems(order, taxRate)
 	}
 
 	return items
+}
+
+// fallbackInvoiceItems returns a single invoice line item derived from the order
+// total, used when the order has no parseable line items.
+func fallbackInvoiceItems(order *model.Order, taxRate int) []integration.InvoiceItem {
+	totalNet := order.TotalAmount / (1 + float64(taxRate)/100)
+	return []integration.InvoiceItem{
+		{
+			Name:     "Order " + order.ID.String()[:8],
+			Quantity: 1,
+			NetPrice: totalNet,
+			TaxRate:  taxRate,
+			Unit:     "szt.",
+		},
+	}
 }

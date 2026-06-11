@@ -316,98 +316,15 @@ func (s *StocktakeService) CompleteStocktake(ctx context.Context, tenantID, stoc
 
 		// Create PZ document for surpluses
 		if len(surplusItems) > 0 {
-			seq, err := s.docRepo.NextDocumentNumber(ctx, tx, "PZ", year)
-			if err != nil {
-				return fmt.Errorf("next PZ number: %w", err)
-			}
-			docNumber := fmt.Sprintf("PZ/%d/%03d", year, seq)
-			notes := fmt.Sprintf("Stocktake: %s - surplus", existing.Name)
-
-			doc := &model.WarehouseDocument{
-				ID:             uuid.New(),
-				TenantID:       tenantID,
-				DocumentNumber: docNumber,
-				DocumentType:   "PZ",
-				Status:         "draft",
-				WarehouseID:    existing.WarehouseID,
-				Notes:          &notes,
-				CreatedBy:      &actorID,
-			}
-
-			if err := s.docRepo.Create(ctx, tx, doc); err != nil {
-				return fmt.Errorf("create PZ doc: %w", err)
-			}
-
-			for _, item := range surplusItems {
-				docItem := &model.WarehouseDocItem{
-					ID:         uuid.New(),
-					TenantID:   tenantID,
-					DocumentID: doc.ID,
-					ProductID:  item.ProductID,
-					Quantity:   item.Difference, // positive
-				}
-				if err := s.docItemRepo.Create(ctx, tx, docItem); err != nil {
-					return fmt.Errorf("create PZ doc item: %w", err)
-				}
-
-				// Adjust stock: add surplus
-				if err := s.stockRepo.AdjustQuantity(ctx, tx, existing.WarehouseID, item.ProductID, nil, item.Difference); err != nil {
-					return fmt.Errorf("PZ stock adjust: %w", err)
-				}
-			}
-
-			// Confirm PZ document
-			if err := s.docRepo.Confirm(ctx, tx, doc.ID, actorID); err != nil {
-				return fmt.Errorf("confirm PZ doc: %w", err)
+			if err := s.createAdjustmentDoc(ctx, tx, tenantID, actorID, existing.WarehouseID, "PZ", existing.Name, "surplus", year, surplusItems); err != nil {
+				return err
 			}
 		}
 
 		// Create WZ document for shortages
 		if len(shortageItems) > 0 {
-			seq, err := s.docRepo.NextDocumentNumber(ctx, tx, "WZ", year)
-			if err != nil {
-				return fmt.Errorf("next WZ number: %w", err)
-			}
-			docNumber := fmt.Sprintf("WZ/%d/%03d", year, seq)
-			notes := fmt.Sprintf("Stocktake: %s - shortages", existing.Name)
-
-			doc := &model.WarehouseDocument{
-				ID:             uuid.New(),
-				TenantID:       tenantID,
-				DocumentNumber: docNumber,
-				DocumentType:   "WZ",
-				Status:         "draft",
-				WarehouseID:    existing.WarehouseID,
-				Notes:          &notes,
-				CreatedBy:      &actorID,
-			}
-
-			if err := s.docRepo.Create(ctx, tx, doc); err != nil {
-				return fmt.Errorf("create WZ doc: %w", err)
-			}
-
-			for _, item := range shortageItems {
-				absQty := -item.Difference // make positive
-				docItem := &model.WarehouseDocItem{
-					ID:         uuid.New(),
-					TenantID:   tenantID,
-					DocumentID: doc.ID,
-					ProductID:  item.ProductID,
-					Quantity:   absQty,
-				}
-				if err := s.docItemRepo.Create(ctx, tx, docItem); err != nil {
-					return fmt.Errorf("create WZ doc item: %w", err)
-				}
-
-				// Adjust stock: subtract shortage
-				if err := s.stockRepo.AdjustQuantity(ctx, tx, existing.WarehouseID, item.ProductID, nil, item.Difference); err != nil {
-					return fmt.Errorf("WZ stock adjust: %w", err)
-				}
-			}
-
-			// Confirm WZ document
-			if err := s.docRepo.Confirm(ctx, tx, doc.ID, actorID); err != nil {
-				return fmt.Errorf("confirm WZ doc: %w", err)
+			if err := s.createAdjustmentDoc(ctx, tx, tenantID, actorID, existing.WarehouseID, "WZ", existing.Name, "shortages", year, shortageItems); err != nil {
+				return err
 			}
 		}
 
@@ -472,6 +389,61 @@ func (s *StocktakeService) CompleteStocktake(ctx context.Context, tenantID, stoc
 	}
 
 	return stocktake, nil
+}
+
+// createAdjustmentDoc creates, populates and confirms a single stocktake
+// adjustment warehouse document (PZ for surpluses, WZ for shortages). Each doc
+// item quantity is the absolute discrepancy, while the underlying stock
+// adjustment uses the signed item.Difference (positive adds, negative subtracts).
+// notesSuffix is appended to the document note to distinguish the document type.
+func (s *StocktakeService) createAdjustmentDoc(ctx context.Context, tx pgx.Tx, tenantID, actorID, warehouseID uuid.UUID, docType, stocktakeName, notesSuffix string, year int, items []model.StocktakeItem) error {
+	seq, err := s.docRepo.NextDocumentNumber(ctx, tx, docType, year)
+	if err != nil {
+		return fmt.Errorf("next %s number: %w", docType, err)
+	}
+	docNumber := fmt.Sprintf("%s/%d/%03d", docType, year, seq)
+	notes := fmt.Sprintf("Stocktake: %s - %s", stocktakeName, notesSuffix)
+
+	doc := &model.WarehouseDocument{
+		ID:             uuid.New(),
+		TenantID:       tenantID,
+		DocumentNumber: docNumber,
+		DocumentType:   docType,
+		Status:         "draft",
+		WarehouseID:    warehouseID,
+		Notes:          &notes,
+		CreatedBy:      &actorID,
+	}
+
+	if err := s.docRepo.Create(ctx, tx, doc); err != nil {
+		return fmt.Errorf("create %s doc: %w", docType, err)
+	}
+
+	for _, item := range items {
+		qty := item.Difference
+		if qty < 0 {
+			qty = -qty
+		}
+		docItem := &model.WarehouseDocItem{
+			ID:         uuid.New(),
+			TenantID:   tenantID,
+			DocumentID: doc.ID,
+			ProductID:  item.ProductID,
+			Quantity:   qty,
+		}
+		if err := s.docItemRepo.Create(ctx, tx, docItem); err != nil {
+			return fmt.Errorf("create %s doc item: %w", docType, err)
+		}
+
+		if err := s.stockRepo.AdjustQuantity(ctx, tx, warehouseID, item.ProductID, nil, item.Difference); err != nil {
+			return fmt.Errorf("%s stock adjust: %w", docType, err)
+		}
+	}
+
+	if err := s.docRepo.Confirm(ctx, tx, doc.ID, actorID); err != nil {
+		return fmt.Errorf("confirm %s doc: %w", docType, err)
+	}
+	return nil
 }
 
 // CancelStocktake sets the stocktake status to cancelled.
