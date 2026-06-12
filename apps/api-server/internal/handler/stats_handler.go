@@ -41,7 +41,16 @@ func (h *StatsHandler) GetTopProducts(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	products, err := h.statsService.GetTopProducts(r.Context(), tenantID, limit)
+	// Trailing window for the ranking; bounds the per-order items JSONB expansion.
+	// Defaults to 90 days and is capped at 5 years to keep the scan bounded.
+	days := 90
+	if v := r.URL.Query().Get("days"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 && parsed <= 1825 {
+			days = parsed
+		}
+	}
+
+	products, err := h.statsService.GetTopProducts(r.Context(), tenantID, days, limit)
 	if err != nil {
 		writeServerError(w, "failed to retrieve top products", err)
 		return

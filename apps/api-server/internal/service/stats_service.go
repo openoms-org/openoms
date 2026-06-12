@@ -16,6 +16,7 @@ import (
 type StatsService struct {
 	statsRepo repository.StatsRepo
 	pool      *pgxpool.Pool
+	cache     *statsCache
 }
 
 // NewStatsService creates a new StatsService.
@@ -26,85 +27,96 @@ func NewStatsService(
 	return &StatsService{
 		statsRepo: statsRepo,
 		pool:      pool,
+		cache:     newStatsCache(dashboardStatsCacheTTL),
 	}
 }
 
 // GetDashboardStats returns aggregated dashboard statistics for a tenant.
+//
+// Results are served from a short-TTL per-tenant cache (see statsCache): the
+// dashboard home runs six unbounded full-tenant aggregates per load, so repeat
+// loads within the TTL window reuse one snapshot instead of re-scanning. The
+// cache is keyed strictly by tenant ID, preserving multi-tenant isolation, and
+// concurrent misses for the same tenant are collapsed into a single load.
 func (s *StatsService) GetDashboardStats(ctx context.Context, tenantID uuid.UUID) (*model.DashboardStats, error) {
-	var stats model.DashboardStats
-	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		byStatus, err := s.statsRepo.GetOrderCountByStatus(ctx, tx)
+	return s.cache.getOrLoad(tenantID.String(), func() (*model.DashboardStats, error) {
+		var stats model.DashboardStats
+		err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+			byStatus, err := s.statsRepo.GetOrderCountByStatus(ctx, tx)
+			if err != nil {
+				return err
+			}
+
+			bySource, err := s.statsRepo.GetOrderCountBySource(ctx, tx)
+			if err != nil {
+				return err
+			}
+
+			totalRevenue, err := s.statsRepo.GetTotalRevenue(ctx, tx)
+			if err != nil {
+				return err
+			}
+
+			dailyRevenue, err := s.statsRepo.GetDailyRevenue(ctx, tx, 30)
+			if err != nil {
+				return err
+			}
+
+			recentOrders, err := s.statsRepo.GetRecentOrders(ctx, tx, 10)
+			if err != nil {
+				return err
+			}
+
+			currency, err := s.statsRepo.GetMostCommonCurrency(ctx, tx)
+			if err != nil {
+				return err
+			}
+
+			total := 0
+			for _, count := range byStatus {
+				total += count
+			}
+
+			if dailyRevenue == nil {
+				dailyRevenue = []model.DailyRevenue{}
+			}
+			if recentOrders == nil {
+				recentOrders = []model.OrderSummary{}
+			}
+			// Default to PLN if no orders exist yet
+			if currency == "" {
+				currency = "PLN"
+			}
+
+			stats = model.DashboardStats{
+				OrderCounts: model.OrderCounts{
+					Total:    total,
+					ByStatus: byStatus,
+					BySource: bySource,
+				},
+				Revenue: model.Revenue{
+					Total:    totalRevenue,
+					Currency: currency,
+					Daily:    dailyRevenue,
+				},
+				RecentOrders: recentOrders,
+			}
+			return nil
+		})
 		if err != nil {
-			return err
+			return nil, err
 		}
-
-		bySource, err := s.statsRepo.GetOrderCountBySource(ctx, tx)
-		if err != nil {
-			return err
-		}
-
-		totalRevenue, err := s.statsRepo.GetTotalRevenue(ctx, tx)
-		if err != nil {
-			return err
-		}
-
-		dailyRevenue, err := s.statsRepo.GetDailyRevenue(ctx, tx, 30)
-		if err != nil {
-			return err
-		}
-
-		recentOrders, err := s.statsRepo.GetRecentOrders(ctx, tx, 10)
-		if err != nil {
-			return err
-		}
-
-		currency, err := s.statsRepo.GetMostCommonCurrency(ctx, tx)
-		if err != nil {
-			return err
-		}
-
-		total := 0
-		for _, count := range byStatus {
-			total += count
-		}
-
-		if dailyRevenue == nil {
-			dailyRevenue = []model.DailyRevenue{}
-		}
-		if recentOrders == nil {
-			recentOrders = []model.OrderSummary{}
-		}
-		// Default to PLN if no orders exist yet
-		if currency == "" {
-			currency = "PLN"
-		}
-
-		stats = model.DashboardStats{
-			OrderCounts: model.OrderCounts{
-				Total:    total,
-				ByStatus: byStatus,
-				BySource: bySource,
-			},
-			Revenue: model.Revenue{
-				Total:    totalRevenue,
-				Currency: currency,
-				Daily:    dailyRevenue,
-			},
-			RecentOrders: recentOrders,
-		}
-		return nil
+		return &stats, nil
 	})
-	if err != nil {
-		return nil, err
-	}
-	return &stats, nil
 }
 
-// GetTopProducts returns the best-selling products by order count.
-func (s *StatsService) GetTopProducts(ctx context.Context, tenantID uuid.UUID, limit int) ([]model.TopProduct, error) {
+// GetTopProducts returns the best-selling products by revenue over the trailing
+// days window. The window bounds the per-row JSONB expansion of order items, which
+// would otherwise scan the tenant's entire order history on every request.
+func (s *StatsService) GetTopProducts(ctx context.Context, tenantID uuid.UUID, days, limit int) ([]model.TopProduct, error) {
 	var result []model.TopProduct
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		products, err := s.statsRepo.GetTopProducts(ctx, tx, limit)
+		products, err := s.statsRepo.GetTopProducts(ctx, tx, days, limit)
 		if err != nil {
 			return err
 		}
