@@ -4426,6 +4426,14 @@ paths:
             type: integer
             default: 10
             maximum: 100
+        - name: days
+          in: query
+          description: Trailing window in days used to rank products. Bounds the scan over order history.
+          schema:
+            type: integer
+            default: 90
+            minimum: 1
+            maximum: 1825
       responses:
         '200':
           description: Top products
