@@ -138,12 +138,15 @@ func (r *StatsRepository) GetRecentOrders(ctx context.Context, tx pgx.Tx, limit 
 	return result, rows.Err()
 }
 
-// GetTopProducts returns up to limit products ranked by total revenue.
-func (r *StatsRepository) GetTopProducts(ctx context.Context, tx pgx.Tx, limit int) ([]model.TopProduct, error) {
+// GetTopProducts returns up to limit products ranked by total revenue over the
+// trailing days window. The window is applied before the per-row JSONB expansion
+// so only recent orders are unnested, bounding an otherwise full-history scan.
+func (r *StatsRepository) GetTopProducts(ctx context.Context, tx pgx.Tx, days, limit int) ([]model.TopProduct, error) {
 	rows, err := tx.Query(ctx,
 		`WITH eligible_orders AS (
 		     SELECT items FROM orders
-		     WHERE items IS NOT NULL
+		     WHERE created_at >= NOW() - INTERVAL '1 day' * $1
+		       AND items IS NOT NULL
 		       AND items != 'null'::jsonb
 		       AND jsonb_typeof(items) = 'array'
 		       AND jsonb_array_length(items) > 0
@@ -156,7 +159,7 @@ func (r *StatsRepository) GetTopProducts(ctx context.Context, tx pgx.Tx, limit i
 		 WHERE i.name IS NOT NULL AND i.name != ''
 		 GROUP BY i.name
 		 ORDER BY total_revenue DESC
-		 LIMIT $1`, limit)
+		 LIMIT $2`, days, limit)
 	if err != nil {
 		return nil, fmt.Errorf("top products: %w", err)
 	}

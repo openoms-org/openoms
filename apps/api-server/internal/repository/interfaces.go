@@ -173,7 +173,7 @@ type StatsRepo interface {
 	GetDailyRevenue(ctx context.Context, tx pgx.Tx, days int) ([]model.DailyRevenue, error)
 	GetRecentOrders(ctx context.Context, tx pgx.Tx, limit int) ([]model.OrderSummary, error)
 	GetMostCommonCurrency(ctx context.Context, tx pgx.Tx) (string, error)
-	GetTopProducts(ctx context.Context, tx pgx.Tx, limit int) ([]model.TopProduct, error)
+	GetTopProducts(ctx context.Context, tx pgx.Tx, days, limit int) ([]model.TopProduct, error)
 	GetRevenueBySource(ctx context.Context, tx pgx.Tx, days int) ([]model.SourceRevenue, error)
 	GetOrderTrends(ctx context.Context, tx pgx.Tx, days int) ([]model.DailyOrderTrend, error)
 	GetPaymentMethodStats(ctx context.Context, tx pgx.Tx) (map[string]int, error)
