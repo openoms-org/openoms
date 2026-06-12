@@ -32,13 +32,20 @@ func DefaultPoolOptions() PoolOptions {
 	}
 }
 
-// WorkerPoolOptions returns conservative pool sizing for the privileged worker pool.
-// Supabase session poolers often have low per-role caps; keeping this pool small
-// prevents blue-green deploys from exhausting session slots while old and new API pods overlap.
+// WorkerPoolOptions returns pool sizing for the privileged cross-tenant worker pool.
+// ~27 background workers run concurrently (one goroutine each); a 3-connection pool
+// serialized them, so several pollers firing on the same tick queued on the pool before
+// even reaching the database. Production connects through the Supabase TRANSACTION pooler
+// (max 200 client connections, multiplexed onto a 15-connection database pool), so client
+// connections are cheap: the aggregate budget is well within limits — at most
+// API maxReplicas(5) x DefaultPoolOptions.MaxConns(20) + this pool(10) = ~110 of 200 — and
+// the database itself is protected by the pooler's 15-connection cap regardless of this
+// value. set_config(..., is_local=true) per transaction keeps tenant scoping correct under
+// transaction pooling. Bumped 3 -> 10 to remove the worker-side serialization.
 func WorkerPoolOptions() PoolOptions {
 	return PoolOptions{
-		MaxConns:          3,
-		MinConns:          0,
+		MaxConns:          10,
+		MinConns:          2,
 		MaxConnLifetime:   30 * time.Minute,
 		MaxConnIdleTime:   5 * time.Minute,
 		HealthCheckPeriod: 1 * time.Minute,
