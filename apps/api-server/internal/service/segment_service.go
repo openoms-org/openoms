@@ -370,10 +370,12 @@ func (s *SegmentService) RunRFMAnalysis(ctx context.Context, tenantID uuid.UUID)
 			if err := s.segmentRepo.ClearSegmentMembers(ctx, tx, seg.ID); err != nil {
 				return err
 			}
-			for _, c := range customers {
-				if err := s.segmentRepo.AddMember(ctx, tx, tenantID, seg.ID, c.CustomerID); err != nil {
-					return err
-				}
+			customerIDs := make([]uuid.UUID, len(customers))
+			for i, c := range customers {
+				customerIDs[i] = c.CustomerID
+			}
+			if err := s.segmentRepo.AddMembersInBatch(ctx, tx, tenantID, seg.ID, customerIDs); err != nil {
+				return err
 			}
 			if err := s.segmentRepo.UpdateCustomerCount(ctx, tx, seg.ID); err != nil {
 				return err
@@ -578,10 +580,8 @@ func (s *SegmentService) refreshSegmentMembers(ctx context.Context, tx pgx.Tx, t
 	if err := s.segmentRepo.ClearSegmentMembers(ctx, tx, seg.ID); err != nil {
 		return err
 	}
-	for _, cid := range customerIDs {
-		if err := s.segmentRepo.AddMember(ctx, tx, tenantID, seg.ID, cid); err != nil {
-			return err
-		}
+	if err := s.segmentRepo.AddMembersInBatch(ctx, tx, tenantID, seg.ID, customerIDs); err != nil {
+		return err
 	}
 	if err := s.segmentRepo.UpdateCustomerCount(ctx, tx, seg.ID); err != nil {
 		return err
