@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -97,4 +98,46 @@ func ConnectWithOptions(ctx context.Context, databaseURL string, opts PoolOption
 	}
 
 	return pool, nil
+}
+
+// ConnectWithRetry opens a pool, retrying transient connect/ping failures with
+// exponential backoff (baseDelay, 2x, 4x, ...). Startup must tolerate a brief
+// database hiccup — e.g. a momentary Supabase pooler blip during a blue-green
+// rollout, when extra pods connect at once — rather than crash the pod: a crash
+// turns a transient blip into a CrashLoopBackOff that can outlast the deploy's
+// pre-promotion gate and abort an otherwise healthy release. A genuinely down
+// database still fails after attempts are exhausted, so a real outage is not
+// masked indefinitely.
+func ConnectWithRetry(ctx context.Context, databaseURL string, opts PoolOptions, attempts int, baseDelay time.Duration) (*pgxpool.Pool, error) {
+	return connectWithRetry(ctx, attempts, baseDelay, func(c context.Context) (*pgxpool.Pool, error) {
+		return ConnectWithOptions(c, databaseURL, opts)
+	})
+}
+
+// connectWithRetry is the testable core of ConnectWithRetry: it retries connect
+// independently of how the pool is actually opened.
+func connectWithRetry(ctx context.Context, attempts int, baseDelay time.Duration, connect func(context.Context) (*pgxpool.Pool, error)) (*pgxpool.Pool, error) {
+	if attempts < 1 {
+		attempts = 1
+	}
+	var lastErr error
+	for attempt := 1; attempt <= attempts; attempt++ {
+		pool, err := connect(ctx)
+		if err == nil {
+			return pool, nil
+		}
+		lastErr = err
+		if attempt == attempts {
+			break
+		}
+		delay := baseDelay * time.Duration(1<<(attempt-1))
+		slog.Warn("database connect failed, retrying",
+			"attempt", attempt, "max_attempts", attempts, "retry_in", delay.String(), "error", err)
+		select {
+		case <-time.After(delay):
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+	return nil, fmt.Errorf("database connect failed after %d attempts: %w", attempts, lastErr)
 }
