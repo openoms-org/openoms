@@ -7,9 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestHighestQualifyingTier locks the shared tier-selection logic used by BOTH UpdateTier
-// and AwardPointsForOrder (the de-dup): given a tier config and total spent, both paths
-// must pick the same tier. It iterates config tiers in order and keeps the last whose
+// TestHighestQualifyingTier locks the tier-selection logic used by AwardPointsForOrder:
+// given a tier config and total spent, it iterates config tiers in order and keeps the last whose
 // min_spent is met.
 func TestHighestQualifyingTier(t *testing.T) {
 	cfg := json.RawMessage(`{"tiers":[
