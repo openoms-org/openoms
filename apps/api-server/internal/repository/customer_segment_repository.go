@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -142,6 +143,46 @@ func (r *CustomerSegmentRepository) AddMember(ctx context.Context, tx pgx.Tx, te
 		return fmt.Errorf("add segment member: %w", err)
 	}
 	return nil
+}
+
+// segmentMemberBatchSize bounds the rows per multi-row INSERT. PostgreSQL caps a
+// statement at 65535 bind parameters; at 3 params per row a 1000-row chunk stays
+// well under that while keeping a full segment refresh to a handful of round-trips.
+const segmentMemberBatchSize = 1000
+
+// AddMembersInBatch inserts many customers into a segment using chunked multi-row
+// INSERTs (one round-trip per chunk) instead of one INSERT per customer. It preserves
+// AddMember's idempotent ON CONFLICT DO NOTHING semantics and stays inside the caller's
+// tenant-scoped transaction.
+func (r *CustomerSegmentRepository) AddMembersInBatch(ctx context.Context, tx pgx.Tx, tenantID, segmentID uuid.UUID, customerIDs []uuid.UUID) error {
+	for start := 0; start < len(customerIDs); start += segmentMemberBatchSize {
+		end := min(start+segmentMemberBatchSize, len(customerIDs))
+		query, args := buildSegmentMemberInsert(tenantID, segmentID, customerIDs[start:end])
+		if _, err := tx.Exec(ctx, query, args...); err != nil {
+			return fmt.Errorf("add segment members batch: %w", err)
+		}
+	}
+	return nil
+}
+
+// buildSegmentMemberInsert builds a multi-row INSERT for one chunk of members,
+// returning the parameterized query and its positional args. ON CONFLICT DO NOTHING
+// matches AddMember's idempotent semantics. Pure (no I/O) so the placeholder
+// numbering is unit-tested directly.
+func buildSegmentMemberInsert(tenantID, segmentID uuid.UUID, chunk []uuid.UUID) (string, []any) {
+	var b strings.Builder
+	b.WriteString("INSERT INTO customer_segment_members (tenant_id, segment_id, customer_id) VALUES ")
+	args := make([]any, 0, len(chunk)*3)
+	for i, cid := range chunk {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		n := i * 3
+		fmt.Fprintf(&b, "($%d, $%d, $%d)", n+1, n+2, n+3)
+		args = append(args, tenantID, segmentID, cid)
+	}
+	b.WriteString(" ON CONFLICT DO NOTHING")
+	return b.String(), args
 }
 
 // RemoveMember removes a customer from a segment.
