@@ -883,6 +883,90 @@ func (s *SupplierService) syncViaIOF(ctx context.Context, tenantID, supplierID u
 //   - "xml": skip stock/price (XML stock is always 0 for BTP suppliers with API)
 //   - "api": full sync including stock/price
 //   - "full": full sync (default, for IOF/CSV)
+//
+// dedupeFeedByExternalID collapses feed rows that share an external_id, keeping the LAST
+// occurrence (matching the sequential per-row upsert where later rows overwrite earlier ones).
+// The empty string is coalesced like any other key: the unique index (tenant_id, supplier_id,
+// external_id) treats ” as a normal value, so the old per-row upsert already collapsed
+// empty-external_id rows to a single supplier_product. Required before the batch upsert — a
+// duplicate external_id (incl. ”) within one multi-row INSERT would trip "ON CONFLICT cannot
+// affect row a second time". First-seen order is preserved for determinism.
+func dedupeFeedByExternalID(products []integration.SupplierProduct) []integration.SupplierProduct {
+	lastIdx := make(map[string]int, len(products))
+	order := make([]string, 0, len(products))
+	for i := range products {
+		ext := products[i].ExternalID
+		if _, seen := lastIdx[ext]; !seen {
+			order = append(order, ext)
+		}
+		lastIdx[ext] = i
+	}
+	out := make([]integration.SupplierProduct, 0, len(order))
+	for _, ext := range order {
+		out = append(out, products[lastIdx[ext]])
+	}
+	return out
+}
+
+// buildSupplierProductRow builds the SupplierProduct (incl. metadata JSON) for one feed row.
+// Extracted from the per-row loop so the upsert can be batched; fp must be a pointer into the
+// backing slice so the &fp.EAN / &fp.SKU pointers stay valid.
+func buildSupplierProductRow(fp *integration.SupplierProduct, tenantID, supplierID uuid.UUID, syncedAt time.Time) *model.SupplierProduct {
+	meta := map[string]any{}
+	if fp.Description != "" {
+		meta["description"] = fp.Description
+	}
+	if fp.Brand != "" {
+		meta["brand"] = fp.Brand
+	}
+	if fp.ImageURL != "" {
+		meta["image_url"] = fp.ImageURL
+	}
+	if fp.Weight > 0 {
+		meta["weight"] = fp.Weight
+	}
+	if fp.RetailPrice > 0 {
+		meta["retail_price"] = fp.RetailPrice
+	}
+	if len(fp.Images) > 0 {
+		meta["images"] = fp.Images
+	}
+	if len(fp.Attributes) > 0 {
+		meta["attributes"] = fp.Attributes
+	}
+	metaJSON, _ := json.Marshal(meta)
+
+	var ean, sku *string
+	if fp.EAN != "" {
+		ean = &fp.EAN
+	}
+	if fp.SKU != "" {
+		sku = &fp.SKU
+	}
+	var price *float64
+	if fp.Price > 0 {
+		price = &fp.Price
+	}
+	var sourceCategory *string
+	if fp.Category != "" {
+		sourceCategory = &fp.Category
+	}
+	return &model.SupplierProduct{
+		ID:             uuid.New(),
+		TenantID:       tenantID,
+		SupplierID:     supplierID,
+		ExternalID:     fp.ExternalID,
+		Name:           fp.Name,
+		EAN:            ean,
+		SKU:            sku,
+		Price:          price,
+		StockQuantity:  fp.StockQuantity,
+		SourceCategory: sourceCategory,
+		Metadata:       metaJSON,
+		LastSyncedAt:   &syncedAt,
+	}
+}
+
 func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, supplierID uuid.UUID, products []integration.SupplierProduct, syncSource string) error {
 	syncedAt := time.Now()
 
@@ -901,78 +985,36 @@ func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, 
 		s.logger.Error("failed to fetch supplier default category", "supplier_id", supplierID, "error", err)
 	}
 
+	deduped := dedupeFeedByExternalID(products)
+	sps := make([]*model.SupplierProduct, len(deduped))
+	var eans []string
+	for i := range deduped {
+		sps[i] = buildSupplierProductRow(&deduped[i], tenantID, supplierID, syncedAt)
+		if sps[i].EAN != nil {
+			eans = append(eans, *sps[i].EAN)
+		}
+	}
+
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		for _, fp := range products {
-			// Build rich metadata including description, images, weight, brand
-			meta := map[string]any{}
-			if fp.Description != "" {
-				meta["description"] = fp.Description
-			}
-			if fp.Brand != "" {
-				meta["brand"] = fp.Brand
-			}
-			if fp.ImageURL != "" {
-				meta["image_url"] = fp.ImageURL
-			}
-			if fp.Weight > 0 {
-				meta["weight"] = fp.Weight
-			}
-			if fp.RetailPrice > 0 {
-				meta["retail_price"] = fp.RetailPrice
-			}
-			if len(fp.Images) > 0 {
-				meta["images"] = fp.Images
-			}
-			if len(fp.Attributes) > 0 {
-				meta["attributes"] = fp.Attributes
-			}
-			metaJSON, _ := json.Marshal(meta)
+		// Hot path #1: one chunked multi-row upsert instead of one INSERT per feed row.
+		if err := s.supplierProdRepo.UpsertBatchByExternalID(ctx, tx, sps); err != nil {
+			return err
+		}
+		// Hot path #2: one EAN->productID lookup instead of one SELECT per feed row.
+		eanToProduct, err := s.productRepo.FindIDsByEANs(ctx, tx, eans)
+		if err != nil {
+			return err
+		}
 
-			var ean, sku *string
-			if fp.EAN != "" {
-				ean = &fp.EAN
-			}
-			if fp.SKU != "" {
-				sku = &fp.SKU
-			}
-			var price *float64
-			if fp.Price > 0 {
-				price = &fp.Price
-			}
-
-			var sourceCategory *string
-			if fp.Category != "" {
-				sourceCategory = &fp.Category
-			}
-
-			sp := &model.SupplierProduct{
-				ID:             uuid.New(),
-				TenantID:       tenantID,
-				SupplierID:     supplierID,
-				ExternalID:     fp.ExternalID,
-				Name:           fp.Name,
-				EAN:            ean,
-				SKU:            sku,
-				Price:          price,
-				StockQuantity:  fp.StockQuantity,
-				SourceCategory: sourceCategory,
-				Metadata:       metaJSON,
-				LastSyncedAt:   &syncedAt,
-			}
-
-			if err := s.supplierProdRepo.UpsertByExternalID(ctx, tx, sp); err != nil {
-				s.logger.Error("failed to upsert supplier product",
-					"supplier_id", supplierID, "external_id", fp.ExternalID, "error", err)
-				continue
-			}
+		// The remaining per-row ops (link / availability snapshot / enrichment) fire only for
+		// EAN-matched or already-linked rows and are not hot, so they stay per-row.
+		for i := range deduped {
+			fp := &deduped[i]
+			sp := sps[i]
 
 			// Auto-link by EAN if not already linked and EAN is available
-			if sp.ProductID == nil && ean != nil {
-				var productID uuid.UUID
-				err := tx.QueryRow(ctx,
-					"SELECT id FROM products WHERE ean = $1 LIMIT 1", *ean,
-				).Scan(&productID)
-				if err == nil {
+			if sp.ProductID == nil && sp.EAN != nil {
+				if productID, ok := eanToProduct[*sp.EAN]; ok {
 					if linkErr := s.supplierProdRepo.LinkToProduct(ctx, tx, sp.ID, productID); linkErr != nil {
 						s.logger.Error("failed to auto-link supplier product by EAN",
 							"supplier_product_id", sp.ID, "product_id", productID, "error", linkErr)
@@ -1023,7 +1065,7 @@ func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, 
 							metadata = COALESCE(metadata, '{}'::jsonb) || $5::jsonb,
 							updated_at = NOW()
 						 WHERE id = $6`,
-						fp.Weight, fp.Description, fp.ImageURL, string(imagesJSON), string(metaJSON), *sp.ProductID); err != nil {
+						fp.Weight, fp.Description, fp.ImageURL, string(imagesJSON), string(sp.Metadata), *sp.ProductID); err != nil {
 						s.logger.Error("failed to sync enrichment to linked product",
 							"product_id", sp.ProductID, "error", err)
 					}
@@ -1040,7 +1082,7 @@ func (s *SupplierService) upsertSupplierProducts(ctx context.Context, tenantID, 
 							metadata = COALESCE(metadata, '{}'::jsonb) || $7::jsonb,
 							updated_at = NOW()
 						 WHERE id = $8`,
-						fp.StockQuantity, price, fp.Weight, fp.Description, fp.ImageURL, string(imagesJSON), string(metaJSON), *sp.ProductID); err != nil {
+						fp.StockQuantity, sp.Price, fp.Weight, fp.Description, fp.ImageURL, string(imagesJSON), string(sp.Metadata), *sp.ProductID); err != nil {
 						s.logger.Error("failed to sync to linked product",
 							"product_id", sp.ProductID, "error", err)
 					}
