@@ -283,6 +283,31 @@ func (r *ProductRepository) FindByEAN(ctx context.Context, tx pgx.Tx, ean string
 	return &p, nil
 }
 
+// FindIDsByEANs resolves a set of EANs to product ids in one query, returning ean -> product id.
+// DISTINCT ON picks one product per EAN deterministically, matching the single-row
+// "WHERE ean = $1 LIMIT 1" lookup (any product with that EAN is an acceptable auto-link target).
+func (r *ProductRepository) FindIDsByEANs(ctx context.Context, tx pgx.Tx, eans []string) (map[string]uuid.UUID, error) {
+	result := make(map[string]uuid.UUID)
+	if len(eans) == 0 {
+		return result, nil
+	}
+	rows, err := tx.Query(ctx,
+		`SELECT DISTINCT ON (ean) ean, id FROM products WHERE ean = ANY($1) ORDER BY ean, id`, eans)
+	if err != nil {
+		return nil, fmt.Errorf("find product ids by eans: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var ean string
+		var id uuid.UUID
+		if err := rows.Scan(&ean, &id); err != nil {
+			return nil, fmt.Errorf("scan product id by ean: %w", err)
+		}
+		result[ean] = id
+	}
+	return result, rows.Err()
+}
+
 // Delete removes a product by its ID.
 func (r *ProductRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
 	ct, err := tx.Exec(ctx, "DELETE FROM products WHERE id = $1", id)

@@ -63,6 +63,9 @@ func (m *mockProductRepo) FindBySKU(_ context.Context, _ pgx.Tx, sku string) (*m
 func (m *mockProductRepo) FindByEAN(_ context.Context, _ pgx.Tx, _ string) (*model.Product, error) {
 	return nil, nil
 }
+func (m *mockProductRepo) FindIDsByEANs(_ context.Context, _ pgx.Tx, _ []string) (map[string]uuid.UUID, error) {
+	return map[string]uuid.UUID{}, nil
+}
 
 func (m *mockProductRepo) Create(_ context.Context, _ pgx.Tx, product *model.Product) error {
 	if m.createErr != nil {

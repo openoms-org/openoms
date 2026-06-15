@@ -44,6 +44,9 @@ func (s *stubProductRepo) FindBySKU(_ context.Context, _ pgx.Tx, _ string) (*mod
 func (s *stubProductRepo) FindByEAN(_ context.Context, _ pgx.Tx, _ string) (*model.Product, error) {
 	return nil, nil
 }
+func (s *stubProductRepo) FindIDsByEANs(_ context.Context, _ pgx.Tx, _ []string) (map[string]uuid.UUID, error) {
+	return map[string]uuid.UUID{}, nil
+}
 func (s *stubProductRepo) Create(_ context.Context, _ pgx.Tx, _ *model.Product) error { return nil }
 func (s *stubProductRepo) Update(_ context.Context, _ pgx.Tx, _ uuid.UUID, _ model.UpdateProductRequest) error {
 	return nil

@@ -116,6 +116,7 @@ type ProductRepo interface {
 	FindByIDs(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]model.Product, error)
 	FindBySKU(ctx context.Context, tx pgx.Tx, sku string) (*model.Product, error)
 	FindByEAN(ctx context.Context, tx pgx.Tx, ean string) (*model.Product, error)
+	FindIDsByEANs(ctx context.Context, tx pgx.Tx, eans []string) (map[string]uuid.UUID, error)
 	Create(ctx context.Context, tx pgx.Tx, product *model.Product) error
 	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateProductRequest) error
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
@@ -267,6 +268,7 @@ type SupplierProductRepo interface {
 	FindBySupplierAndExternalID(ctx context.Context, tx pgx.Tx, supplierID uuid.UUID, externalID string) (*model.SupplierProduct, error)
 	FindBySupplierAndProductID(ctx context.Context, tx pgx.Tx, supplierID, productID uuid.UUID) (*model.SupplierProduct, error)
 	UpsertByExternalID(ctx context.Context, tx pgx.Tx, sp *model.SupplierProduct) error
+	UpsertBatchByExternalID(ctx context.Context, tx pgx.Tx, sps []*model.SupplierProduct) error
 	FindByIDs(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]model.SupplierProduct, error)
 	LinkToProduct(ctx context.Context, tx pgx.Tx, id uuid.UUID, productID uuid.UUID) error
 	UnlinkProduct(ctx context.Context, tx pgx.Tx, id uuid.UUID) error

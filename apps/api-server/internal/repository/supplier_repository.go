@@ -397,6 +397,89 @@ func (r *SupplierProductRepository) UpsertByExternalID(ctx context.Context, tx p
 	).Scan(&sp.ID, &sp.CreatedAt, &sp.UpdatedAt)
 }
 
+// supplierProductUpsertChunk bounds rows per multi-row upsert. 13 bind params per row;
+// PostgreSQL caps a statement at 65535 params (max ~5041 rows), so 1000 stays well under.
+const supplierProductUpsertChunk = 1000
+
+// buildSupplierProductsUpsert builds a multi-row INSERT … ON CONFLICT … DO UPDATE for one
+// chunk, returning the query and positional args. The DO UPDATE column list is identical to
+// the single-row UpsertByExternalID (merge semantics preserved); product_id is intentionally
+// not in DO UPDATE so an existing link survives. RETURNING id, external_id lets the caller map
+// the DB row id (the existing id on conflict) back onto each struct. Pure (no I/O).
+func buildSupplierProductsUpsert(chunk []*model.SupplierProduct) (string, []any) {
+	var b strings.Builder
+	b.WriteString(`INSERT INTO supplier_products (id, tenant_id, supplier_id, product_id, external_id, name, ean, sku, price, stock_quantity, source_category, metadata, last_synced_at) VALUES `)
+	args := make([]any, 0, len(chunk)*13)
+	for i, sp := range chunk {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		n := i * 13
+		fmt.Fprintf(&b, "($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)",
+			n+1, n+2, n+3, n+4, n+5, n+6, n+7, n+8, n+9, n+10, n+11, n+12, n+13)
+		args = append(args, sp.ID, sp.TenantID, sp.SupplierID, sp.ProductID, sp.ExternalID,
+			sp.Name, sp.EAN, sp.SKU, sp.Price, sp.StockQuantity, sp.SourceCategory, sp.Metadata, sp.LastSyncedAt)
+	}
+	b.WriteString(`
+		 ON CONFLICT (tenant_id, supplier_id, external_id)
+		 DO UPDATE SET name = COALESCE(NULLIF(EXCLUDED.name, ''), supplier_products.name),
+		              ean = COALESCE(EXCLUDED.ean, supplier_products.ean),
+		              sku = COALESCE(EXCLUDED.sku, supplier_products.sku),
+		              price = COALESCE(EXCLUDED.price, supplier_products.price),
+		              stock_quantity = EXCLUDED.stock_quantity,
+		              source_category = COALESCE(EXCLUDED.source_category, supplier_products.source_category),
+		              metadata = COALESCE(supplier_products.metadata, '{}'::jsonb) || EXCLUDED.metadata,
+		              last_synced_at = EXCLUDED.last_synced_at,
+		              updated_at = NOW()
+		 RETURNING id, external_id`)
+	return b.String(), args
+}
+
+// UpsertBatchByExternalID upserts many supplier products in chunked multi-row statements
+// (one round-trip per chunk) instead of one per row. Each input must have a unique external_id
+// within the slice (caller dedupes) — a duplicate would trip "ON CONFLICT cannot affect row a
+// second time". After upsert each sp.ID is set to the DB row id (the existing id on conflict),
+// matching the single-row UpsertByExternalID. Runs inside the caller's tenant-scoped tx.
+func (r *SupplierProductRepository) UpsertBatchByExternalID(ctx context.Context, tx pgx.Tx, sps []*model.SupplierProduct) error {
+	byExternalID := make(map[string]*model.SupplierProduct, len(sps))
+	for _, sp := range sps {
+		byExternalID[sp.ExternalID] = sp
+	}
+	type returnedRow struct {
+		id  uuid.UUID
+		ext string
+	}
+	for start := 0; start < len(sps); start += supplierProductUpsertChunk {
+		end := min(start+supplierProductUpsertChunk, len(sps))
+		query, args := buildSupplierProductsUpsert(sps[start:end])
+		rows, err := tx.Query(ctx, query, args...)
+		if err != nil {
+			return fmt.Errorf("batch upsert supplier products: %w", err)
+		}
+		// Drain fully before the next tx.Query (pgx single-connection rule).
+		var returned []returnedRow
+		for rows.Next() {
+			var rr returnedRow
+			if err := rows.Scan(&rr.id, &rr.ext); err != nil {
+				rows.Close()
+				return fmt.Errorf("scan batch upsert result: %w", err)
+			}
+			returned = append(returned, rr)
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return fmt.Errorf("batch upsert supplier products rows: %w", err)
+		}
+		rows.Close()
+		for _, rr := range returned {
+			if sp, ok := byExternalID[rr.ext]; ok {
+				sp.ID = rr.id
+			}
+		}
+	}
+	return nil
+}
+
 // FindByIDs returns supplier products matching the given IDs.
 func (r *SupplierProductRepository) FindByIDs(ctx context.Context, tx pgx.Tx, ids []uuid.UUID) ([]model.SupplierProduct, error) {
 	if len(ids) == 0 {
