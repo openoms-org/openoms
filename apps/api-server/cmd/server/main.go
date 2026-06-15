@@ -62,6 +62,19 @@ import (
 
 const redisConnectTimeout = 5 * time.Second
 
+const (
+	// startupConnectAttempts / startupConnectBaseDelay bound the retry of the
+	// initial database pool connects. A brief pooler blip (the case we care about)
+	// fails fast — a TCP reset, not the full ConnectWithOptions 10s ping timeout —
+	// so it is absorbed within a retry or two. A genuine outage hits the full 10s
+	// timeout each attempt: worst case per pool is 4*10s + (1+2+4)s backoff = 47s,
+	// which stays under the pod's ~60s startup-probe budget so run() still returns
+	// a logged error (rather than the probe killing the pod mid-retry) and a real
+	// outage is not masked. Do not raise attempts without re-checking that bound.
+	startupConnectAttempts  = 4
+	startupConnectBaseDelay = time.Second
+)
+
 func main() {
 	if err := run(); err != nil {
 		os.Exit(1)
@@ -162,8 +175,10 @@ func run() error {
 
 	slog.Info("starting OpenOMS API server", "port", cfg.Port, "env", cfg.Env)
 
-	// Connect to database
-	pool, err := database.Connect(context.Background(), cfg.DatabaseURL)
+	// Connect to database. Retry transient failures so a brief pooler blip at
+	// startup (common during blue-green rollouts when extra pods connect at once)
+	// does not crash the pod and abort the deploy's pre-promotion gate.
+	pool, err := database.ConnectWithRetry(context.Background(), cfg.DatabaseURL, database.DefaultPoolOptions(), startupConnectAttempts, startupConnectBaseDelay)
 	if err != nil {
 		slog.Error("failed to connect to database", "error", err)
 		return fmt.Errorf("failed to connect to database: %w", err)
@@ -179,7 +194,7 @@ func run() error {
 		slog.Error("invalid worker database configuration", "error", err)
 		return fmt.Errorf("invalid worker database configuration: %w", err)
 	}
-	workerPool, err := database.ConnectWithOptions(context.Background(), workerDBURL, database.WorkerPoolOptions())
+	workerPool, err := database.ConnectWithRetry(context.Background(), workerDBURL, database.WorkerPoolOptions(), startupConnectAttempts, startupConnectBaseDelay)
 	if err != nil {
 		slog.Error("failed to connect worker database", "error", err)
 		return fmt.Errorf("failed to connect worker database: %w", err)
