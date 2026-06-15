@@ -55,6 +55,25 @@ type AutomationAction struct {
 	DelaySeconds int            `json:"delay_seconds,omitempty"`
 }
 
+// UnmarshalJSON tolerates both the "config" key (the dashboard/form name used by
+// this struct) and the runtime "params" key, so the workflow-builder and rule-test
+// paths surface action params for rules written by either path. Marshalling is
+// unchanged (still emits "config").
+func (a *AutomationAction) UnmarshalJSON(data []byte) error {
+	type actionAlias AutomationAction // shed UnmarshalJSON to avoid recursion
+	aux := struct {
+		*actionAlias
+		Params map[string]any `json:"params"`
+	}{actionAlias: (*actionAlias)(a)}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	if len(a.Config) == 0 && len(aux.Params) > 0 {
+		a.Config = aux.Params
+	}
+	return nil
+}
+
 // DelayedAction represents a pending delayed automation action.
 type DelayedAction struct {
 	ID            uuid.UUID       `json:"id"`

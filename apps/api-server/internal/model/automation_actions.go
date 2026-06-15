@@ -41,25 +41,22 @@ func ValidActionTypes() []string {
 	return out
 }
 
-// validatedAction is the minimal shape needed to validate a rule's action at save time.
-// It mirrors automation.Action's JSON without importing that package (model must not
-// depend on automation — automation already depends on model).
-type validatedAction struct {
-	Type   string         `json:"type"`
-	Params map[string]any `json:"params"`
-}
-
 // ValidateAutomationActions validates a rule's actions JSON at save time: it must be a
 // JSON array of actions, each with a known type and every required param present + a
 // non-blank string. Empty/nil input is allowed (a rule may have no actions). Returns a
 // descriptive error naming the offending action index + type/param.
+//
+// It decodes into AutomationAction, whose UnmarshalJSON tolerates both the runtime
+// "params" key and the dashboard "config" key, so save-time validation matches the
+// tolerant execution path (otherwise a config-keyed rule of a required-param type would
+// be rejected at save and could never be created from the dashboard).
 func ValidateAutomationActions(raw json.RawMessage) error {
 	if len(raw) == 0 || strings.TrimSpace(string(raw)) == "" || strings.TrimSpace(string(raw)) == "[]" {
 		return nil
 	}
-	var actions []validatedAction
+	var actions []AutomationAction
 	if err := json.Unmarshal(raw, &actions); err != nil {
-		return fmt.Errorf("actions must be a JSON array of {type, params}: %w", err)
+		return fmt.Errorf("actions must be a JSON array of {type, config}: %w", err)
 	}
 	for i, a := range actions {
 		if strings.TrimSpace(a.Type) == "" {
@@ -70,7 +67,7 @@ func ValidateAutomationActions(raw json.RawMessage) error {
 			return fmt.Errorf("action %d: unknown action type %q (valid: %s)", i, a.Type, strings.Join(ValidActionTypes(), ", "))
 		}
 		for _, key := range required {
-			v, _ := a.Params[key].(string)
+			v, _ := a.Config[key].(string)
 			if strings.TrimSpace(v) == "" {
 				return fmt.Errorf("action %d (%s): param %q is required", i, a.Type, key)
 			}
