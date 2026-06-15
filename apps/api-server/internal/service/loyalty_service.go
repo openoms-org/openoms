@@ -308,7 +308,7 @@ func (s *LoyaltyService) GetLeaderboard(ctx context.Context, tenantID, programID
 // tiers in order and keeps the last one whose min_spent is met (matching the legacy
 // UpdateTier / AwardPointsForOrder behavior). The bool is false when the config cannot be
 // parsed or no tier qualifies, letting callers treat both as "no tier change". This is the
-// single source of truth for tier selection, shared by UpdateTier and AwardPointsForOrder.
+// single source of truth for tier selection, used by AwardPointsForOrder.
 func highestQualifyingTier(config json.RawMessage, totalSpent float64) (string, bool) {
 	type tierDef struct {
 		Name     string  `json:"name"`
@@ -330,41 +330,6 @@ func highestQualifyingTier(config json.RawMessage, totalSpent float64) (string, 
 		}
 	}
 	return tier, found
-}
-
-// UpdateTier recalculates a customer's tier in a tier-based program.
-func (s *LoyaltyService) UpdateTier(ctx context.Context, tenantID, customerID, programID uuid.UUID) error {
-	return database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		program, err := s.loyaltyRepo.FindProgramByID(ctx, tx, programID)
-		if err != nil {
-			return err
-		}
-		if program == nil {
-			return ErrLoyaltyProgramNotFound
-		}
-		if program.ProgramType != "tier" {
-			return nil // only applicable for tier programs
-		}
-
-		cl, err := s.loyaltyRepo.GetCustomerLoyalty(ctx, tx, customerID, programID)
-		if err != nil {
-			return err
-		}
-		if cl == nil {
-			return nil
-		}
-
-		// Find the highest tier the customer qualifies for (shared with AwardPointsForOrder).
-		tier, ok := highestQualifyingTier(program.Config, cl.TotalSpent)
-		if !ok {
-			return nil
-		}
-		if tier != "" && (cl.CurrentTier == nil || *cl.CurrentTier != tier) {
-			cl.CurrentTier = &tier
-			return s.loyaltyRepo.UpsertCustomerLoyalty(ctx, tx, cl)
-		}
-		return nil
-	})
 }
 
 // AwardPointsForOrder awards loyalty points based on order amount (called automatically
