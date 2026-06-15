@@ -2,6 +2,11 @@
 -- All three lead with tenant_id (the RLS predicate column) so they are RLS-correct
 -- and cannot leak across tenants. Pure-additive; no existing index serves these paths.
 
+-- Bound the lock wait and build time so an index build on the large orders table can
+-- never hang production: fail fast instead (required for any orders-touching migration).
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '2min';
+
 -- Unfiltered orders list (ORDER BY created_at DESC), the 30-day dashboard windows and
 -- keyset pagination. idx_orders_tenant_status leads with status, so it cannot serve an
 -- unfiltered created_at ordering; the trailing id is a stable keyset tiebreaker.
