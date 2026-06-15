@@ -13,9 +13,10 @@ func TestPoolOptions(t *testing.T) {
 	assert.EqualValues(t, 20, app.MaxConns)
 	assert.EqualValues(t, 2, app.MinConns)
 
-	assert.EqualValues(t, 10, worker.MaxConns)
-	assert.EqualValues(t, 2, worker.MinConns)
-	// Worker pool stays smaller than the per-replica app pool: the aggregate
-	// client-connection budget across all replicas must remain within the pooler cap.
+	// Worker pool uses the Supabase SESSION-mode pooler (15-client cap shared across pods),
+	// so it must stay small and hold no eager idle connections (MinConns=0), or blue-green
+	// deploys hit FATAL (EMAXCONNSESSION). See WorkerPoolOptions.
+	assert.EqualValues(t, 5, worker.MaxConns)
+	assert.EqualValues(t, 0, worker.MinConns)
 	assert.Less(t, worker.MaxConns, app.MaxConns)
 }

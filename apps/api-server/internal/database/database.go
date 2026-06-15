@@ -34,19 +34,23 @@ func DefaultPoolOptions() PoolOptions {
 }
 
 // WorkerPoolOptions returns pool sizing for the privileged cross-tenant worker pool.
-// ~27 background workers run concurrently (one goroutine each); a 3-connection pool
-// serialized them, so several pollers firing on the same tick queued on the pool before
-// even reaching the database. Production connects through the Supabase TRANSACTION pooler
-// (max 200 client connections, multiplexed onto a 15-connection database pool), so client
-// connections are cheap: the aggregate budget is well within limits — at most
-// API maxReplicas(5) x DefaultPoolOptions.MaxConns(20) + this pool(10) = ~110 of 200 — and
-// the database itself is protected by the pooler's 15-connection cap regardless of this
-// value. set_config(..., is_local=true) per transaction keeps tenant scoping correct under
-// transaction pooling. Bumped 3 -> 10 to remove the worker-side serialization.
+//
+// IMPORTANT: unlike the app pool (transaction pooler, port 6543, 200 clients), this pool
+// connects through the Supabase SESSION-mode pooler (port 5432), which is hard-limited to
+// pool_size: 15 clients TOTAL across every pod. Exceeding it makes new connections fail
+// immediately with `FATAL: (EMAXCONNSESSION) max clients reached in session mode`, which at
+// startup crashes the pod (run() returns after the connect retries) and, during a blue-green
+// rollout, aborts the deploy. So this pool must stay small and must NOT hold eager idle
+// connections: MinConns=0 means a pod only opens a session connection when a worker actually
+// runs (plus a transient one for the startup Ping), instead of permanently reserving some.
+// Aggregate worst case stays well under 15: blue+green API pods (lazy, ~1 ping each) + the
+// worker Deployment (≤5) ≈ 10 of 15. set_config(..., is_local=true) per transaction keeps
+// tenant scoping correct. (POOLCONN-01 wrongly assumed the transaction pooler here and set
+// MinConns=2/MaxConns=10, which exhausted the 15-client session cap during deploys.)
 func WorkerPoolOptions() PoolOptions {
 	return PoolOptions{
-		MaxConns:          10,
-		MinConns:          2,
+		MaxConns:          5,
+		MinConns:          0,
 		MaxConnLifetime:   30 * time.Minute,
 		MaxConnIdleTime:   5 * time.Minute,
 		HealthCheckPeriod: 1 * time.Minute,
