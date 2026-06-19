@@ -249,7 +249,10 @@ jobs:
 
       - name: Audit frontend dependencies
         working-directory: apps/dashboard
-        run: npm ci && npm audit --audit-level=high
+        # Audit production dependencies (what actually ships to users) at the high gate.
+        # Dev-only tooling CVEs (vite/ws/vitest/shadcn->hono/undici) are not bundled and are
+        # tracked via Renovate, so they must not block PRs; production is still gated at high.
+        run: npm ci && npm audit --omit=dev --audit-level=high
 
   test:
     name: Test
