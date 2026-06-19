@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 
 	"github.com/google/uuid"
@@ -94,6 +95,20 @@ func (s *RoleService) EnsureSystemRoles(ctx context.Context, tenantID uuid.UUID)
 		}
 		return nil
 	})
+}
+
+// EnsureSystemRolesForAll runs EnsureSystemRoles for each tenant — a startup backfill for tenants
+// created before system-role seeding was wired into registration (OPE-561). Idempotent (each
+// EnsureSystemRoles only creates roles that are missing); returns the number of tenants processed.
+func (s *RoleService) EnsureSystemRolesForAll(ctx context.Context, tenantIDs []uuid.UUID) (int, error) {
+	processed := 0
+	for _, tid := range tenantIDs {
+		if err := s.EnsureSystemRoles(ctx, tid); err != nil {
+			return processed, fmt.Errorf("ensure system roles for tenant %s: %w", tid, err)
+		}
+		processed++
+	}
+	return processed, nil
 }
 
 // List lists all roles for a tenant.

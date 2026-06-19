@@ -72,6 +72,29 @@ func TestEnsureSystemRoles_Idempotent(t *testing.T) {
 	assertSeededSystemRoles(ctx, t, tenantID)
 }
 
+// TestEnsureSystemRolesForAll_BackfillsAllTenants verifies the startup backfill (OPE-561):
+// it ensures system roles for every tenant, including a pre-existing tenant that has none,
+// and is a no-op for a tenant that is already seeded.
+func TestEnsureSystemRolesForAll_BackfillsAllTenants(t *testing.T) {
+	ctx := context.Background()
+	roleRepo := repository.NewRoleRepository()
+	auditRepo := repository.NewAuditRepository()
+	roleSvc := service.NewRoleService(roleRepo, auditRepo, appPool)
+
+	// tenantSeeded already has its system roles; tenantBare has none (a pre-OPE-538 tenant).
+	tenantSeeded := seedTenant(t, ctx)
+	tenantBare := seedTenant(t, ctx)
+	require.NoError(t, roleSvc.EnsureSystemRoles(ctx, tenantSeeded))
+
+	processed, err := roleSvc.EnsureSystemRolesForAll(ctx, []uuid.UUID{tenantSeeded, tenantBare})
+	require.NoError(t, err)
+	assert.Equal(t, 2, processed)
+
+	// Both tenants must now have exactly the three canonical system roles.
+	assertSeededSystemRoles(ctx, t, tenantSeeded)
+	assertSeededSystemRoles(ctx, t, tenantBare)
+}
+
 // TestEnsureSystemRoles_ResyncsSystemPermissions verifies that when a system role's
 // stored permissions drift from the canonical set, a re-seed re-syncs them (without
 // creating duplicate rows).
