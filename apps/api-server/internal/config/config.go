@@ -72,6 +72,14 @@ type Config struct {
 	// (mark the create_dropship_order step ready, no auto-submit).
 	SupplierOrderEnabled bool `env:"SUPPLIER_ORDER_ENABLED" envDefault:"false"`
 
+	// SupplierSyncEnabled registers the SupplierSyncWorker (background catalog sync from
+	// supplier feeds). The supplier module is gated behind a readiness checklist in the UI,
+	// so the worker stays off in production until the module is GA — a non-GA module must not
+	// run its catalog sync in the background (it holds a worker-pool connection per active
+	// supplier feed and writes the supplier_products read-model). Default false; set
+	// SUPPLIER_SYNC_ENABLED=true in environments where the supplier module is exercised.
+	SupplierSyncEnabled bool `env:"SUPPLIER_SYNC_ENABLED" envDefault:"false"`
+
 	// AutomationOrchestrationEnabled routes set_status automation actions through
 	// the orchestration outbox (OPE-421) instead of calling OrderService.TransitionStatus
 	// directly: the action ensures a fulfillment process for the order and enqueues an

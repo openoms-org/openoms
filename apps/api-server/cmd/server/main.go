@@ -1120,7 +1120,11 @@ func run() error {
 	workerMgr.Register(worker.NewShopifyOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()).WithFulfillment(fulfillmentService))
 	workerMgr.Register(worker.NewOLXOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()).WithFulfillment(fulfillmentService))
 	workerMgr.Register(worker.NewEbayOrderPoller(workerPool, encryptionKey, orderRepo, shipmentRepo, auditRepo, slog.Default()).WithFulfillment(fulfillmentService))
-	workerMgr.Register(worker.NewSupplierSyncWorker(workerPool, supplierService, slog.Default()))
+	// Gated: the supplier module is behind a readiness checklist, so its background catalog
+	// sync only runs where SUPPLIER_SYNC_ENABLED is set (off in production until GA).
+	if cfg.SupplierSyncEnabled {
+		workerMgr.Register(worker.NewSupplierSyncWorker(workerPool, supplierService, slog.Default()))
+	}
 	workerMgr.Register(worker.NewExchangeRateWorker(workerPool, exchangeRateService, slog.Default()))
 	workerMgr.Register(worker.NewKSeFStatusWorker(workerPool, ksefService, slog.Default()))
 	workerMgr.Register(worker.NewDelayedActionWorker(workerPool, delayedActionRepo, automationExecutor, slog.Default()))
