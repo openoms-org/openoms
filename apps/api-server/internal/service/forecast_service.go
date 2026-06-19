@@ -192,8 +192,9 @@ func (s *ForecastService) fetchSalesHistory(ctx context.Context, tx pgx.Tx) (map
 		})
 	}
 
-	// Fetch product stock levels
-	prodRows, err := tx.Query(ctx, `SELECT id, name, COALESCE(sku, ''), stock_quantity, price FROM products`)
+	// Fetch product metadata (name/sku/price). Stock comes separately from the canonical
+	// available store below, not the stale products.stock_quantity column.
+	prodRows, err := tx.Query(ctx, `SELECT id, name, COALESCE(sku, ''), price FROM products`)
 	if err != nil {
 		return nil, err
 	}
@@ -202,20 +203,33 @@ func (s *ForecastService) fetchSalesHistory(ctx context.Context, tx pgx.Tx) (map
 	for prodRows.Next() {
 		var id uuid.UUID
 		var name, sku string
-		var stock int
 		var price float64
-		if err := prodRows.Scan(&id, &name, &sku, &stock, &price); err != nil {
+		if err := prodRows.Scan(&id, &name, &sku, &price); err != nil {
 			return nil, err
 		}
 		if pd, ok := productMap[id]; ok {
 			pd.ProductName = name
 			pd.SKU = sku
-			pd.Stock = stock
 			pd.Price = price
 		}
 	}
 	if err := prodRows.Err(); err != nil {
 		return nil, err
+	}
+
+	// Stock = canonical available (warehouse_stock quantity - reserved, with a
+	// products.stock_quantity fallback for products that have no warehouse rows), not the stale
+	// products.stock_quantity column which is never decremented on shipment.
+	ids := make([]uuid.UUID, 0, len(productMap))
+	for id := range productMap {
+		ids = append(ids, id)
+	}
+	avail, err := s.productRepo.AvailableStockBatch(ctx, tx, ids)
+	if err != nil {
+		return nil, err
+	}
+	for id, pd := range productMap {
+		pd.Stock = avail[id]
 	}
 
 	return productMap, nil
