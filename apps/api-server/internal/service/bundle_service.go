@@ -204,7 +204,7 @@ func (s *BundleService) CalculateBundleStock(ctx context.Context, tenantID, bund
 			return ErrProductNotBundle
 		}
 
-		components, err := s.bundleRepo.ListByBundleProduct(ctx, tx, bundleProductID)
+		components, err := s.bundleRepo.ListComponentAvailability(ctx, tx, bundleProductID)
 		if err != nil {
 			return err
 		}
@@ -215,10 +215,10 @@ func (s *BundleService) CalculateBundleStock(ctx context.Context, tenantID, bund
 
 		minStock := math.MaxInt32
 		for _, c := range components {
-			if c.Quantity <= 0 {
+			if c.PerBundleQuantity <= 0 {
 				continue
 			}
-			available := c.ComponentStock / c.Quantity
+			available := c.AvailableStock / c.PerBundleQuantity
 			if available < minStock {
 				minStock = available
 			}
