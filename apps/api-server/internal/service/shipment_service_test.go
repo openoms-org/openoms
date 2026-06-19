@@ -41,6 +41,9 @@ func (s *stubProductRepo) FindByIDs(_ context.Context, _ pgx.Tx, ids []uuid.UUID
 func (s *stubProductRepo) FindBySKU(_ context.Context, _ pgx.Tx, _ string) (*model.Product, error) {
 	return nil, nil
 }
+func (s *stubProductRepo) AvailableStockBatch(_ context.Context, _ pgx.Tx, _ []uuid.UUID) (map[uuid.UUID]int, error) {
+	return nil, nil
+}
 func (s *stubProductRepo) FindByEAN(_ context.Context, _ pgx.Tx, _ string) (*model.Product, error) {
 	return nil, nil
 }

@@ -319,3 +319,40 @@ func (r *ProductRepository) Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID)
 	}
 	return nil
 }
+
+// AvailableStockBatch returns the canonical available stock per product id: the sum of
+// warehouse_stock (quantity - reserved) across warehouses, falling back to the legacy
+// products.stock_quantity only for products that have no warehouse rows (e.g. supplier/import-
+// managed products that are not warehouse-tracked). This is the stock that order fulfillment
+// actually draws from and that marketplace sync reports, unlike the raw products.stock_quantity
+// column which is never decremented on shipment. Relies on RLS for tenant scoping.
+func (r *ProductRepository) AvailableStockBatch(ctx context.Context, tx pgx.Tx, productIDs []uuid.UUID) (map[uuid.UUID]int, error) {
+	result := make(map[uuid.UUID]int, len(productIDs))
+	if len(productIDs) == 0 {
+		return result, nil
+	}
+	rows, err := tx.Query(ctx,
+		`SELECT p.id,
+		        GREATEST(COALESCE(ws.available, p.stock_quantity), 0)
+		 FROM products p
+		 LEFT JOIN (
+		     SELECT product_id, SUM(quantity) - SUM(reserved) AS available
+		     FROM warehouse_stock
+		     GROUP BY product_id
+		 ) ws ON ws.product_id = p.id
+		 WHERE p.id = ANY($1)`, productIDs)
+	if err != nil {
+		return nil, fmt.Errorf("available stock batch: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id uuid.UUID
+		var available int
+		if err := rows.Scan(&id, &available); err != nil {
+			return nil, fmt.Errorf("scan available stock: %w", err)
+		}
+		result[id] = available
+	}
+	return result, rows.Err()
+}

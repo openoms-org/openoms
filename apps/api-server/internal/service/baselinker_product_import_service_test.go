@@ -67,6 +67,10 @@ func (m *mockProductRepo) FindIDsByEANs(_ context.Context, _ pgx.Tx, _ []string)
 	return map[string]uuid.UUID{}, nil
 }
 
+func (m *mockProductRepo) AvailableStockBatch(_ context.Context, _ pgx.Tx, _ []uuid.UUID) (map[uuid.UUID]int, error) {
+	return nil, nil
+}
+
 func (m *mockProductRepo) Create(_ context.Context, _ pgx.Tx, product *model.Product) error {
 	if m.createErr != nil {
 		return m.createErr
