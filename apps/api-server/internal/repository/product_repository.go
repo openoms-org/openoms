@@ -331,7 +331,13 @@ func (r *ProductRepository) AvailableStockBatch(ctx context.Context, tx pgx.Tx, 
 	if len(productIDs) == 0 {
 		return result, nil
 	}
-	rows, err := tx.Query(ctx,
+	placeholders := make([]string, len(productIDs))
+	args := make([]any, len(productIDs))
+	for i, id := range productIDs {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+	rows, err := tx.Query(ctx, fmt.Sprintf(
 		`SELECT p.id,
 		        GREATEST(COALESCE(ws.available, p.stock_quantity), 0)
 		 FROM products p
@@ -340,7 +346,7 @@ func (r *ProductRepository) AvailableStockBatch(ctx context.Context, tx pgx.Tx, 
 		     FROM warehouse_stock
 		     GROUP BY product_id
 		 ) ws ON ws.product_id = p.id
-		 WHERE p.id = ANY($1)`, productIDs)
+		 WHERE p.id IN (%s)`, strings.Join(placeholders, ", ")), args...)
 	if err != nil {
 		return nil, fmt.Errorf("available stock batch: %w", err)
 	}
