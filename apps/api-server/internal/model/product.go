@@ -20,6 +20,7 @@ type Product struct {
 	EAN                  *string         `json:"ean,omitempty"`
 	Price                float64         `json:"price"`
 	StockQuantity        int             `json:"stock_quantity"`
+	AvailableStock       int             `json:"available_stock"`
 	Metadata             json.RawMessage `json:"metadata"`
 	Tags                 []string        `json:"tags"`
 	DescriptionShort     string          `json:"description_short"`

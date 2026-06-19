@@ -255,19 +255,20 @@ function MyProductsTab() {
     },
     {
       header: t("stock"),
-      accessorKey: "stock_quantity" as const,
-      sortable: true,
+      // Canonical available stock (warehouse_stock + fallback). Not server-sortable (computed).
+      accessorKey: "available_stock" as const,
+      sortable: false,
       cell: (product: Product) => (
         <span
           className={`text-sm font-medium ${
-            product.stock_quantity === 0
+            product.available_stock === 0
               ? "text-destructive"
-              : product.stock_quantity < 10
+              : product.available_stock < 10
                 ? "text-warning"
                 : ""
           }`}
         >
-          {product.stock_quantity}
+          {product.available_stock}
         </span>
       ),
     },

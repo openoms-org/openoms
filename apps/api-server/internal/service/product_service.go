@@ -62,9 +62,33 @@ func (s *ProductService) List(ctx context.Context, tenantID uuid.UUID, filter mo
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		var err error
 		products, total, err = s.productRepo.List(ctx, tx, filter)
-		return err
+		if err != nil {
+			return err
+		}
+		return s.populateAvailableStock(ctx, tx, products)
 	})
 	return products, total, err
+}
+
+// populateAvailableStock sets each product's AvailableStock from the canonical store
+// (warehouse_stock quantity - reserved, with a products.stock_quantity fallback for products
+// with no warehouse rows) for API responses. The raw stock_quantity column stays as-is.
+func (s *ProductService) populateAvailableStock(ctx context.Context, tx pgx.Tx, products []model.Product) error {
+	if len(products) == 0 {
+		return nil
+	}
+	ids := make([]uuid.UUID, len(products))
+	for i := range products {
+		ids[i] = products[i].ID
+	}
+	avail, err := s.productRepo.AvailableStockBatch(ctx, tx, ids)
+	if err != nil {
+		return err
+	}
+	for i := range products {
+		products[i].AvailableStock = avail[products[i].ID]
+	}
+	return nil
 }
 
 // Get returns a single product by ID.
@@ -73,7 +97,18 @@ func (s *ProductService) Get(ctx context.Context, tenantID, productID uuid.UUID)
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		var err error
 		product, err = s.productRepo.FindByID(ctx, tx, productID)
-		return err
+		if err != nil {
+			return err
+		}
+		if product != nil {
+			var avail map[uuid.UUID]int
+			avail, err = s.productRepo.AvailableStockBatch(ctx, tx, []uuid.UUID{productID})
+			if err != nil {
+				return err
+			}
+			product.AvailableStock = avail[productID]
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, err
