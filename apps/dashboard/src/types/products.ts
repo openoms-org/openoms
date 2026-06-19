@@ -30,6 +30,8 @@ export interface Product {
   ean?: string;
   price: number;
   stock_quantity: number;
+  /** Canonical available stock (warehouse_stock − reserved, with a stock_quantity fallback). Read-only, computed server-side. */
+  available_stock: number;
   metadata?: Record<string, unknown>;
   tags: string[];
   category?: string;
