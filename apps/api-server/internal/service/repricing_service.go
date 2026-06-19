@@ -237,7 +237,26 @@ func (s *RepricingService) applyRule(ctx context.Context, tx pgx.Tx, tenantID uu
 	}
 	affected = len(products)
 
+	// Stock-based rules must price off the canonical available stock (warehouse_stock +
+	// products.stock_quantity fallback), not the stale products.stock_quantity column which is
+	// never decremented on shipment. Fetch it once for the matched set; applyStockStrategy is the
+	// only strategy that reads Product.StockQuantity, so overriding it per product is safe.
+	var availByID map[uuid.UUID]int
+	if rule.Strategy == "stock_based" {
+		ids := make([]uuid.UUID, len(products))
+		for i, p := range products {
+			ids[i] = p.ID
+		}
+		availByID, err = s.productRepo.AvailableStockBatch(ctx, tx, ids)
+		if err != nil {
+			return 0, 0, err
+		}
+	}
+
 	for _, product := range products {
+		if availByID != nil {
+			product.StockQuantity = availByID[product.ID]
+		}
 		newPrice, reason, skip := s.calculatePrice(product, rule)
 		if skip {
 			continue

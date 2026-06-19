@@ -120,6 +120,7 @@ type ProductRepo interface {
 	Create(ctx context.Context, tx pgx.Tx, product *model.Product) error
 	Update(ctx context.Context, tx pgx.Tx, id uuid.UUID, req model.UpdateProductRequest) error
 	Delete(ctx context.Context, tx pgx.Tx, id uuid.UUID) error
+	AvailableStockBatch(ctx context.Context, tx pgx.Tx, productIDs []uuid.UUID) (map[uuid.UUID]int, error)
 }
 
 // IntegrationRepo defines the interface for integration persistence operations.
