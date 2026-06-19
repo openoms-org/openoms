@@ -334,6 +334,27 @@ func run() error {
 	// Seed default system roles (Owner/Administrator/Employee) for every newly
 	// registered tenant via AuthService.Register (DEAD-02). Best-effort inside Register.
 	authService.SetRoleService(roleService)
+	// Backfill: ensure system roles for tenants created before the seeding above was wired into
+	// registration (OPE-561). Idempotent; gated on WorkersEnabled so only the worker instance runs
+	// it, not every API pod.
+	if cfg.WorkersEnabled {
+		backfillCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		tenantIDs, listErr := tenantRepo.ListAllTenantIDs(backfillCtx, workerPool)
+		var processed int
+		var ensureErr error
+		if listErr == nil {
+			processed, ensureErr = roleService.EnsureSystemRolesForAll(backfillCtx, tenantIDs)
+		}
+		cancel()
+		switch {
+		case listErr != nil:
+			slog.Warn("system roles backfill: list tenants failed", "error", listErr)
+		case ensureErr != nil:
+			slog.Warn("system roles backfill failed", "error", ensureErr)
+		case processed > 0:
+			slog.Info("system roles backfill complete", "tenants_checked", processed)
+		}
+	}
 	emailService := service.NewEmailService(tenantRepo, pool)
 	smsService := service.NewSMSService(tenantRepo, pool)
 	webhookDispatchService := service.NewWebhookDispatchService(tenantRepo, webhookDeliveryRepo, pool)
