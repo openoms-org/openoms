@@ -479,14 +479,14 @@ export default function ProductDetailPage() {
                 <p className="text-sm text-muted-foreground">{tc("stockQuantity")}</p>
                 <p
                   className={`text-sm font-medium ${
-                    product.stock_quantity === 0
+                    product.available_stock === 0
                       ? "text-destructive"
-                      : product.stock_quantity < 10
+                      : product.available_stock < 10
                         ? "text-warning"
                         : ""
                   }`}
                 >
-                  {product.stock_quantity}
+                  {product.available_stock}
                 </p>
                 {stockSyncVisible && (
                   <div className="mt-2 flex flex-wrap gap-2">
