@@ -35,21 +35,23 @@ func DefaultPoolOptions() PoolOptions {
 
 // WorkerPoolOptions returns pool sizing for the privileged cross-tenant worker pool.
 //
-// IMPORTANT: unlike the app pool (transaction pooler, port 6543, 200 clients), this pool
-// connects through the Supabase SESSION-mode pooler (port 5432), which is hard-limited to
-// pool_size: 15 clients TOTAL across every pod. Exceeding it makes new connections fail
-// immediately with `FATAL: (EMAXCONNSESSION) max clients reached in session mode`, which at
-// startup crashes the pod (run() returns after the connect retries) and, during a blue-green
-// rollout, aborts the deploy. So this pool must stay small and must NOT hold eager idle
-// connections: MinConns=0 means a pod only opens a session connection when a worker actually
-// runs (plus a transient one for the startup Ping), instead of permanently reserving some.
-// Aggregate worst case stays well under 15: blue+green API pods (lazy, ~1 ping each) + the
-// worker Deployment (≤5) ≈ 10 of 15. set_config(..., is_local=true) per transaction keeps
-// tenant scoping correct. (POOLCONN-01 wrongly assumed the transaction pooler here and set
-// MinConns=2/MaxConns=10, which exhausted the 15-client session cap during deploys.)
+// The worker pool connects through the Supabase TRANSACTION pooler (port 6543, ~200 clients)
+// via the dedicated WORKER_DATABASE_URL secret — the same pooler the app pool uses (OPE-553).
+// Previously this pool was forced onto the SESSION pooler (port 5432, hard 15-client cap)
+// because WORKER_DATABASE_URL defaulted to the migration secret key; that made eager/large
+// sizing crash deploys with `FATAL: (EMAXCONNSESSION) max clients reached in session mode`,
+// so OPE-543 had to cut MaxConns to 5. On the transaction pooler that ceiling is gone, so we
+// restore the throughput sizing (MaxConns=10, POOLCONN-01's original intent). MinConns stays 0
+// (lazy): a pod only opens a connection when a worker actually runs (plus a transient one for
+// the startup Ping), so idle worker/API pods reserve nothing. set_config(..., is_local=true)
+// per transaction keeps tenant scoping correct and is safe under transaction-mode pooling.
+//
+// NOTE: do NOT point WORKER_DATABASE_URL back at the migration secret key — the migration
+// tooling must stay on the SESSION pooler (golang-migrate holds a session-level advisory lock
+// for the whole run, which transaction-mode pooling would break).
 func WorkerPoolOptions() PoolOptions {
 	return PoolOptions{
-		MaxConns:          5,
+		MaxConns:          10,
 		MinConns:          0,
 		MaxConnLifetime:   30 * time.Minute,
 		MaxConnIdleTime:   5 * time.Minute,
