@@ -21,7 +21,7 @@ require (
 	github.com/openoms-org/openoms/packages/btp-go-sdk v0.0.0-00010101000000-000000000000
 	github.com/openoms-org/openoms/packages/dhl-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/dpd-go-sdk v0.0.0-20260213093925-f69d292073cb
-	github.com/openoms-org/openoms/packages/ebay-go-sdk v0.0.0-20260213093925-f69d292073cb
+	github.com/openoms-org/openoms/packages/ebay-go-sdk v0.0.0-20260619175021-7f8876413d2e
 	github.com/openoms-org/openoms/packages/erli-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/fakturownia-go-sdk v0.0.0-20260213093925-f69d292073cb
 	github.com/openoms-org/openoms/packages/fedex-go-sdk v0.0.0-20260213093925-f69d292073cb
