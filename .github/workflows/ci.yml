@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -55,7 +55,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -114,7 +114,7 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Lint api-server
@@ -162,7 +162,7 @@ jobs:
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -294,7 +294,7 @@ jobs:
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -381,7 +381,7 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Run security tests
@@ -398,7 +398,7 @@ jobs:
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version: ${{ env.GO_VERSION }}
 
@@ -681,7 +681,7 @@ jobs:
       DATABASE_URL: postgres://openoms:openoms_dev@localhost:5432/openoms_dev?sslmode=disable
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
-      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version: ${{ env.GO_VERSION }}
       # The DB-bound integration harness (tests/integration, build tag `integration`)
