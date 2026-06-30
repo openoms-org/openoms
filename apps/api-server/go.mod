@@ -15,7 +15,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/microcosm-cc/bluemonday v1.0.27
-	github.com/openoms-org/openoms/packages/allegro-go-sdk v0.0.0-20260619175021-7f8876413d2e
+	github.com/openoms-org/openoms/packages/allegro-go-sdk v0.0.0-20260629120659-22721f4cd1ec
 	github.com/openoms-org/openoms/packages/amazon-sp-sdk v0.0.0-20260619175021-7f8876413d2e
 	github.com/openoms-org/openoms/packages/apaczka-go-sdk v0.0.0-00010101000000-000000000000
 	github.com/openoms-org/openoms/packages/btp-go-sdk v0.0.0-00010101000000-000000000000
