@@ -28,8 +28,24 @@ beforeEach(() => {
     token: "test-token",
     isAuthenticated: true,
     isLoading: false,
-    user: { id: "test", email: "test@test.com", role: "admin", role_id: "test", name: "Test User" },
-    tenant: { id: "test", slug: "test", name: "Test", plan: "pro" },
+    user: {
+      id: "test",
+      tenant_id: "test",
+      email: "test@test.com",
+      role: "admin",
+      role_id: "test",
+      name: "Test User",
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+    },
+    tenant: {
+      id: "test",
+      slug: "test",
+      name: "Test",
+      plan: "pro",
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+    },
   });
 });
 afterEach(() => {
@@ -50,10 +66,13 @@ describe("useOnboarding", () => {
     useAuthStore.setState({
       user: {
         id: "member",
+        tenant_id: "test",
         email: "member@test.com",
         role: "member",
         role_id: "member",
         name: "Member User",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
       },
     });
 
