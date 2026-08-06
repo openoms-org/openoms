@@ -99,7 +99,7 @@ func TestPushOfferCreatesShopifyProductAndReturnsVariantID(t *testing.T) {
 		SKU:             &sku,
 		EAN:             &ean,
 		Price:           123.45,
-		StockQuantity:   9,
+		AvailableStock:  9,
 		DescriptionLong: "Long description",
 	}, nil)
 	if err != nil {
@@ -381,5 +381,51 @@ func TestMapShopifyOrderRejectsInvalidLineItemMoney(t *testing.T) {
 				t.Fatalf("error = %q, want %s context", err.Error(), tt.wantField)
 			}
 		})
+	}
+}
+
+func TestPushOfferUsesCanonicalAvailableStock(t *testing.T) {
+	sku := "SKU-CANON"
+
+	var variant map[string]any
+	provider, closeServer := newShopifyProviderForTest(t, func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read body: %v", err)
+		}
+		var payload struct {
+			Product struct {
+				Variants []map[string]any `json:"variants"`
+			} `json:"product"`
+		}
+		if err := json.Unmarshal(body, &payload); err != nil {
+			t.Fatalf("decode body: %v", err)
+		}
+		if len(payload.Product.Variants) != 1 {
+			t.Fatalf("len(variants) = %d, want 1", len(payload.Product.Variants))
+		}
+		variant = payload.Product.Variants[0]
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"product":{"id":111,"variants":[{"id":222,"product_id":111}]}}`))
+	})
+	defer closeServer()
+
+	// Legacy stock_quantity is not decremented on shipment, so it can overstate
+	// what is really on the shelf. The variant must carry the canonical value.
+	_, err := provider.PushOffer(context.Background(), &model.Product{
+		ID:             uuid.New(),
+		Name:           "Widget",
+		SKU:            &sku,
+		Price:          19.99,
+		StockQuantity:  42,
+		AvailableStock: 7,
+	}, nil)
+	if err != nil {
+		t.Fatalf("PushOffer returned error: %v", err)
+	}
+
+	if variant["inventory_quantity"] != float64(7) {
+		t.Fatalf("inventory_quantity = %#v, want 7 (canonical available stock)", variant["inventory_quantity"])
 	}
 }

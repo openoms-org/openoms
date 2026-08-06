@@ -77,6 +77,14 @@
     "zarzadzajRolamiIUprawnieniamiUzytkownikow": "Zarządzaj rolami i uprawnieniami użytkowników"
   },
   "statuses": {
+    "dropship": {
+      "pending": "Oczekujące",
+      "sent": "Wysłane",
+      "confirmed": "Potwierdzony",
+      "shipped": "Wysłane",
+      "delivered": "Dostarczone",
+      "cancelled": "Anulowane"
+    },
     "integration": {
       "active": "Aktywna",
       "error": "Błąd",
@@ -96,6 +104,11 @@
       "not_sent": "Nie wysłano",
       "pending": "Oczekuje",
       "rejected": "Odrzucona"
+    },
+    "loyalty": {
+      "active": "Aktywny",
+      "paused": "Wstrzymany",
+      "ended": "Zakończony"
     },
     "order": {
       "cancelled": "Anulowane",
@@ -120,12 +133,29 @@
       "pending": "Oczekuje",
       "refunded": "Zwrócone"
     },
+    "pickPack": {
+      "picking": "Kompletowanie",
+      "packing": "Pakowanie",
+      "completed": "Zakończone",
+      "cancelled": "Anulowane"
+    },
     "purchaseOrder": {
       "cancelled": "Anulowane",
       "draft": "Szkic",
       "partially_received": "Częściowo odebrane",
       "received": "Odebrane",
       "sent": "Wysłane"
+    },
+    "recurringOrder": {
+      "active": "Aktywna",
+      "paused": "Wstrzymana",
+      "cancelled": "Anulowana",
+      "completed": "Zakończona"
+    },
+    "repricingRule": {
+      "active": "Aktywny",
+      "paused": "Wstrzymany",
+      "archived": "Zarchiwizowany"
     },
     "return": {
       "approved": "Zatwierdzone",

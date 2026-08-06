@@ -51,6 +51,58 @@ type createWooListingRequest struct {
 	Description   string   `json:"description,omitempty"`
 }
 
+// buildWooListingData maps product data to the WooCommerce product payload.
+// Stock comes from the canonical available stock (warehouse-backed), not the
+// legacy products.stock_quantity column, unless the request overrides it.
+func buildWooListingData(product *model.Product, req createWooListingRequest) map[string]any {
+	listingData := make(map[string]any)
+
+	if req.Description != "" {
+		listingData["description"] = model.SanitizeListingHTML(req.Description)
+	} else if product.DescriptionLong != "" {
+		listingData["description"] = model.SanitizeListingHTML(product.DescriptionLong)
+	}
+	if product.DescriptionShort != "" {
+		listingData["short_description"] = product.DescriptionShort
+	}
+
+	price := product.Price
+	if req.PriceOverride != nil {
+		price = *req.PriceOverride
+	}
+	listingData["regular_price"] = fmt.Sprintf("%.2f", price)
+
+	stock := product.AvailableStock
+	if req.StockOverride != nil {
+		stock = *req.StockOverride
+	}
+	listingData["manage_stock"] = true
+	listingData["stock_quantity"] = stock
+
+	if product.EAN != nil && *product.EAN != "" {
+		listingData["sku"] = *product.EAN
+	}
+
+	if len(req.Categories) > 0 {
+		cats := make([]map[string]any, 0, len(req.Categories))
+		for _, c := range req.Categories {
+			cats = append(cats, map[string]any{"name": c})
+		}
+		listingData["categories"] = cats
+	}
+
+	imageURLs := buildImages(product)
+	if len(imageURLs) > 0 {
+		imgs := make([]map[string]any, 0, len(imageURLs))
+		for _, u := range imageURLs {
+			imgs = append(imgs, map[string]any{"src": u})
+		}
+		listingData["images"] = imgs
+	}
+
+	return listingData
+}
+
 // CreateListing publishes a product to WooCommerce and saves the listing record.
 func (h *WooCommerceListingsHandler) CreateListing(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -114,55 +166,8 @@ func (h *WooCommerceListingsHandler) CreateListing(w http.ResponseWriter, r *htt
 		return
 	}
 
-	// Build listing data for PushOffer
-	listingData := make(map[string]any)
-
-	if req.Description != "" {
-		listingData["description"] = model.SanitizeListingHTML(req.Description)
-	} else if product.DescriptionLong != "" {
-		listingData["description"] = model.SanitizeListingHTML(product.DescriptionLong)
-	}
-	if product.DescriptionShort != "" {
-		listingData["short_description"] = product.DescriptionShort
-	}
-
-	price := product.Price
-	if req.PriceOverride != nil {
-		price = *req.PriceOverride
-	}
-	listingData["regular_price"] = fmt.Sprintf("%.2f", price)
-
-	stock := product.StockQuantity
-	if req.StockOverride != nil {
-		stock = *req.StockOverride
-	}
-	listingData["manage_stock"] = true
-	listingData["stock_quantity"] = stock
-
-	if product.EAN != nil && *product.EAN != "" {
-		listingData["sku"] = *product.EAN
-	}
-
-	if len(req.Categories) > 0 {
-		cats := make([]map[string]any, 0, len(req.Categories))
-		for _, c := range req.Categories {
-			cats = append(cats, map[string]any{"name": c})
-		}
-		listingData["categories"] = cats
-	}
-
-	// Build images
-	imageURLs := buildImages(product)
-	if len(imageURLs) > 0 {
-		imgs := make([]map[string]any, 0, len(imageURLs))
-		for _, u := range imageURLs {
-			imgs = append(imgs, map[string]any{"src": u})
-		}
-		listingData["images"] = imgs
-	}
-
 	// Push to WooCommerce
-	externalID, err := provider.PushOffer(ctx, product, listingData)
+	externalID, err := provider.PushOffer(ctx, product, buildWooListingData(product, req))
 	if err != nil {
 		writeServerError(w, "WooCommerce listing error", err)
 		return
