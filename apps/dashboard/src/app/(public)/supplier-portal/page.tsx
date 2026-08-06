@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { API_URL } from "@/lib/api-client";
+import { PURCHASE_ORDER_STATUSES } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   getSupplierPortalTokenHandoff,
@@ -47,21 +49,6 @@ interface PortalData {
   orders: SupplierPortalPO[];
 }
 
-// --- Status helpers ---
-
-const poStatusColors: Record<string, string> = {
-  sent: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-  confirmed: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
-  shipped: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-  partially_received: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
-  received: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-  cancelled: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-};
-
-function getStatusColor(status: string): string {
-  return poStatusColors[status] || "bg-gray-100 text-gray-800 dark:bg-gray-700/30 dark:text-gray-300";
-}
-
 // --- API helpers ---
 
 async function portalFetch<T>(path: string, token: string, options?: RequestInit): Promise<T> {
@@ -81,24 +68,6 @@ async function portalFetch<T>(path: string, token: string, options?: RequestInit
 }
 
 // --- Components ---
-
-function StatusBadge({ status }: { status: string }) {
-  const t = useTranslations("supplierPortal.statuses");
-  const statusLabels: Record<string, string> = {
-    cancelled: t("cancelled"),
-    confirmed: t("confirmed"),
-    partially_received: t("partiallyReceived"),
-    received: t("received"),
-    sent: t("sent"),
-    shipped: t("shipped"),
-  };
-
-  return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(status)}`}>
-      {statusLabels[status] || status}
-    </span>
-  );
-}
 
 function OrderList({
   orders,
@@ -141,7 +110,7 @@ function OrderList({
                 {order.po_number}
               </td>
               <td className="py-3 px-4">
-                <StatusBadge status={order.status} />
+                <StatusBadge status={order.status} statusMap={PURCHASE_ORDER_STATUSES} translationPrefix="purchaseOrder" />
               </td>
               <td className="py-3 px-4 text-right text-slate-900 dark:text-slate-100">
                 {formatCurrency(order.total_amount, order.currency)}
@@ -305,7 +274,7 @@ function OrderDetail({
             {order.po_number}
           </h2>
         </div>
-        <StatusBadge status={order.status} />
+        <StatusBadge status={order.status} statusMap={PURCHASE_ORDER_STATUSES} translationPrefix="purchaseOrder" />
       </div>
 
       {/* Order details */}
