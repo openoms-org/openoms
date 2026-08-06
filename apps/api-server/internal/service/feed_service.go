@@ -10,6 +10,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"log/slog"
+	"maps"
 	"sync"
 	"time"
 
@@ -209,6 +210,51 @@ func (s *FeedService) GenerateGoogleFeed(ctx context.Context, tenantID uuid.UUID
 	return data, nil
 }
 
+// availableStockBatchSize caps how many product IDs go into one stock lookup.
+// AvailableStockBatch builds one SQL placeholder per ID and a feed can cover the
+// whole catalogue, so the lookup is chunked rather than sent as one huge query.
+const availableStockBatchSize = 1000
+
+// availableStockInBatches looks up canonical available stock in chunks of
+// batchSize and merges the results into a single map.
+func availableStockInBatches(ids []uuid.UUID, batchSize int, fetch func([]uuid.UUID) (map[uuid.UUID]int, error)) (map[uuid.UUID]int, error) {
+	stock := make(map[uuid.UUID]int, len(ids))
+	for start := 0; start < len(ids); start += batchSize {
+		end := min(start+batchSize, len(ids))
+		batch, err := fetch(ids[start:end])
+		if err != nil {
+			return nil, err
+		}
+		maps.Copy(stock, batch)
+	}
+	return stock, nil
+}
+
+// applyFeedFilters drops products the feed config excludes. Stock is judged by
+// the canonical available stock, not the legacy products.stock_quantity column,
+// which is not decremented on shipment and can advertise goods we no longer hold.
+func applyFeedFilters(products []model.Product, cfg *model.ProductFeedConfig) []model.Product {
+	excludedSet := make(map[string]bool, len(cfg.ExcludedCategories))
+	for _, cat := range cfg.ExcludedCategories {
+		excludedSet[cat] = true
+	}
+
+	var filtered []model.Product
+	for _, p := range products {
+		// Exclude out-of-stock if configured
+		if cfg.ExcludeOutOfStock && p.AvailableStock <= 0 {
+			continue
+		}
+		// Exclude by category
+		if p.Category != nil && excludedSet[*p.Category] {
+			continue
+		}
+		filtered = append(filtered, p)
+	}
+
+	return filtered
+}
+
 // fetchFilteredProducts fetches products and applies feed filters.
 func (s *FeedService) fetchFilteredProducts(ctx context.Context, tenantID uuid.UUID, cfg *model.ProductFeedConfig) ([]model.Product, error) {
 	var products []model.Product
@@ -224,32 +270,30 @@ func (s *FeedService) fetchFilteredProducts(ctx context.Context, tenantID uuid.U
 			return fmt.Errorf("list products: %w", err)
 		}
 		products = allProducts
+
+		// The list query does not carry canonical stock, so fill it in on the
+		// same transaction before anything decides what belongs in the feed.
+		ids := make([]uuid.UUID, len(products))
+		for i := range products {
+			ids[i] = products[i].ID
+		}
+		avail, err := availableStockInBatches(ids, availableStockBatchSize,
+			func(batch []uuid.UUID) (map[uuid.UUID]int, error) {
+				return s.productRepo.AvailableStockBatch(ctx, tx, batch)
+			})
+		if err != nil {
+			return fmt.Errorf("available stock: %w", err)
+		}
+		for i := range products {
+			products[i].AvailableStock = avail[products[i].ID]
+		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	// Apply filters
-	excludedSet := make(map[string]bool, len(cfg.ExcludedCategories))
-	for _, cat := range cfg.ExcludedCategories {
-		excludedSet[cat] = true
-	}
-
-	var filtered []model.Product
-	for _, p := range products {
-		// Exclude out-of-stock if configured
-		if cfg.ExcludeOutOfStock && p.StockQuantity <= 0 {
-			continue
-		}
-		// Exclude by category
-		if p.Category != nil && excludedSet[*p.Category] {
-			continue
-		}
-		filtered = append(filtered, p)
-	}
-
-	return filtered, nil
+	return applyFeedFilters(products, cfg), nil
 }
 
 // ----- Ceneo XML -----
@@ -297,7 +341,7 @@ func (s *FeedService) buildCeneoXML(products []model.Product, _ *model.ProductFe
 	for _, p := range products {
 		productID := s.productIdentifier(p)
 		avail := "1"
-		if p.StockQuantity <= 0 {
+		if p.AvailableStock <= 0 {
 			avail = "99" // Ceneo: 99 = not available
 		}
 
@@ -401,7 +445,7 @@ func (s *FeedService) buildGoogleXML(products []model.Product, cfg *model.Produc
 	for _, p := range products {
 		productID := s.productIdentifier(p)
 		avail := "in_stock"
-		if p.StockQuantity <= 0 {
+		if p.AvailableStock <= 0 {
 			avail = "out_of_stock"
 		}
 
