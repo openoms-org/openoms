@@ -226,6 +226,73 @@ func (h *ProductHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// productExportHeader is the column list of the product CSV export. The names are a
+// customer-facing contract: ProductImportService keys off them on re-import, so they
+// must not be renamed even when the underlying source of a value changes.
+var productExportHeader = []string{
+	"id", "name", "sku", "ean", "price", "stock_quantity",
+	"category", "tags", "weight", "width", "height", "length",
+	"short_description", "status",
+}
+
+// productExportRow renders a single product as a CSV row matching productExportHeader.
+// The stock column carries AvailableStock (canonical, warehouse_stock derived) rather
+// than the legacy products.stock_quantity column, which is never decremented on ship.
+func productExportRow(p model.Product) []string {
+	sku := ""
+	if p.SKU != nil {
+		sku = *p.SKU
+	}
+	ean := ""
+	if p.EAN != nil {
+		ean = *p.EAN
+	}
+	category := ""
+	if p.Category != nil {
+		category = *p.Category
+	}
+	var tags strings.Builder
+	for i, t := range p.Tags {
+		if i > 0 {
+			tags.WriteString(",")
+		}
+		tags.WriteString(t)
+	}
+	weight := ""
+	if p.Weight != nil {
+		weight = fmt.Sprintf("%.2f", *p.Weight)
+	}
+	width := ""
+	if p.Width != nil {
+		width = fmt.Sprintf("%.2f", *p.Width)
+	}
+	height := ""
+	if p.Height != nil {
+		height = fmt.Sprintf("%.2f", *p.Height)
+	}
+	depth := ""
+	if p.Depth != nil {
+		depth = fmt.Sprintf("%.2f", *p.Depth)
+	}
+
+	return []string{
+		p.ID.String(),
+		p.Name,
+		sku,
+		ean,
+		fmt.Sprintf("%.2f", p.Price),
+		fmt.Sprintf("%d", p.AvailableStock),
+		category,
+		tags.String(),
+		weight,
+		width,
+		height,
+		depth,
+		p.DescriptionShort,
+		"active",
+	}
+}
+
 // ExportCSV exports products as a CSV file.
 func (h *ProductHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
@@ -247,12 +314,7 @@ func (h *ProductHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 	writer := csv.NewWriter(w)
 	defer writer.Flush()
 
-	header := []string{
-		"id", "name", "sku", "ean", "price", "stock_quantity",
-		"category", "tags", "weight", "width", "height", "length",
-		"short_description", "status",
-	}
-	if err := writer.Write(header); err != nil {
+	if err := writer.Write(productExportHeader); err != nil {
 		slog.Error("csv export: failed to write header", "error", err)
 		return
 	}
@@ -275,62 +337,7 @@ func (h *ProductHandler) ExportCSV(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for _, p := range products {
-			sku := ""
-			if p.SKU != nil {
-				sku = *p.SKU
-			}
-			ean := ""
-			if p.EAN != nil {
-				ean = *p.EAN
-			}
-			category := ""
-			if p.Category != nil {
-				category = *p.Category
-			}
-			var tags strings.Builder
-			if len(p.Tags) > 0 {
-				for i, t := range p.Tags {
-					if i > 0 {
-						tags.WriteString(",")
-					}
-					tags.WriteString(t)
-				}
-			}
-			weight := ""
-			if p.Weight != nil {
-				weight = fmt.Sprintf("%.2f", *p.Weight)
-			}
-			width := ""
-			if p.Width != nil {
-				width = fmt.Sprintf("%.2f", *p.Width)
-			}
-			height := ""
-			if p.Height != nil {
-				height = fmt.Sprintf("%.2f", *p.Height)
-			}
-			depth := ""
-			if p.Depth != nil {
-				depth = fmt.Sprintf("%.2f", *p.Depth)
-			}
-			status := "active"
-
-			row := []string{
-				p.ID.String(),
-				p.Name,
-				sku,
-				ean,
-				fmt.Sprintf("%.2f", p.Price),
-				fmt.Sprintf("%d", p.StockQuantity),
-				category,
-				tags.String(),
-				weight,
-				width,
-				height,
-				depth,
-				p.DescriptionShort,
-				status,
-			}
-			if err := writer.Write(row); err != nil {
+			if err := writer.Write(productExportRow(p)); err != nil {
 				slog.Error("csv export: failed to write row", "error", err, "product_id", p.ID)
 				return
 			}

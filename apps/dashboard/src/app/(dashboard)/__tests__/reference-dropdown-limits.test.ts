@@ -3,7 +3,7 @@ import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const referenceListLimitPattern =
-  /use(?:Products|Suppliers|Warehouses|PriceLists)\s*\(\s*\{[^}]*limit:\s*100/s;
+  /use(?:Products|Suppliers|Warehouses|PriceLists)\s*\(\s*\{[^}]*limit:\s*100/;
 
 describe("reference dropdown list limits", () => {
   it("does not use one-page limit:100 queries for reference dropdown options", () => {

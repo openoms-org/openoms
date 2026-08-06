@@ -166,7 +166,7 @@ func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listin
 		Condition: getStringOr(listingData, "condition", "NEW"),
 		Availability: &ebaysdk.Availability{
 			ShipToLocationAvailability: &ebaysdk.ShipToLocationAvailability{
-				Quantity: getIntOr(listingData, "stock_override", product.StockQuantity),
+				Quantity: getIntOr(listingData, "stock_override", product.AvailableStock),
 			},
 		},
 	}
@@ -212,7 +212,7 @@ func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listin
 			ReturnPolicyID:      returnPolicyID,
 			PaymentPolicyID:     getStringOr(listingData, "payment_policy_id", ""),
 		},
-		AvailableQuantity:  getIntOr(listingData, "stock_override", product.StockQuantity),
+		AvailableQuantity:  getIntOr(listingData, "stock_override", product.AvailableStock),
 		ListingDescription: getStringOr(listingData, "description", ""),
 	}
 

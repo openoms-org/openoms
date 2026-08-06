@@ -114,7 +114,8 @@ func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listin
 	req.Title = product.Name
 	req.Description = model.StripHTMLTags(product.DescriptionLong)
 	req.Price = product.Price
-	req.Stock = product.StockQuantity
+	// Canonical warehouse-backed stock, not the legacy stock_quantity column.
+	req.Stock = product.AvailableStock
 	req.SKU = externalID
 	if product.EAN != nil {
 		req.EAN = *product.EAN

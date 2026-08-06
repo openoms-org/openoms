@@ -24,6 +24,11 @@ type mockProductRepo struct {
 	byID      map[uuid.UUID]*model.Product
 	createErr error
 	updateErr error
+
+	// canonical available stock, plus a record of the lookups made against it
+	availableStock      map[uuid.UUID]int
+	availableStockErr   error
+	availableStockCalls [][]uuid.UUID
 }
 
 type mockProductUpdateCall struct {
@@ -67,8 +72,12 @@ func (m *mockProductRepo) FindIDsByEANs(_ context.Context, _ pgx.Tx, _ []string)
 	return map[string]uuid.UUID{}, nil
 }
 
-func (m *mockProductRepo) AvailableStockBatch(_ context.Context, _ pgx.Tx, _ []uuid.UUID) (map[uuid.UUID]int, error) {
-	return nil, nil
+func (m *mockProductRepo) AvailableStockBatch(_ context.Context, _ pgx.Tx, ids []uuid.UUID) (map[uuid.UUID]int, error) {
+	m.availableStockCalls = append(m.availableStockCalls, ids)
+	if m.availableStockErr != nil {
+		return nil, m.availableStockErr
+	}
+	return m.availableStock, nil
 }
 
 func (m *mockProductRepo) Create(_ context.Context, _ pgx.Tx, product *model.Product) error {
