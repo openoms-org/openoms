@@ -357,6 +357,37 @@ func computeForecast(pd *productSalesData, daysAhead int) model.Forecast {
 	}
 }
 
+// zeroSalesProductData builds the forecast input for a product that has no sales history
+// and is therefore absent from fetchSalesHistory. Stock comes from the same canonical
+// source as products that do have sales (ProductRepo.AvailableStockBatch), not the stale
+// products.stock_quantity column, so a single report cannot mix the two.
+func (s *ForecastService) zeroSalesProductData(ctx context.Context, tx pgx.Tx, productID uuid.UUID) (*productSalesData, error) {
+	product, err := s.productRepo.FindByID(ctx, tx, productID)
+	if err != nil {
+		return nil, err
+	}
+	if product == nil {
+		return nil, ErrProductNotFound
+	}
+
+	avail, err := s.productRepo.AvailableStockBatch(ctx, tx, []uuid.UUID{productID})
+	if err != nil {
+		return nil, err
+	}
+
+	sku := ""
+	if product.SKU != nil {
+		sku = *product.SKU
+	}
+	return &productSalesData{
+		ProductID:   product.ID,
+		ProductName: product.Name,
+		SKU:         sku,
+		Stock:       avail[productID],
+		Price:       product.Price,
+	}, nil
+}
+
 // ForecastDemand returns a demand forecast for a single product.
 func (s *ForecastService) ForecastDemand(ctx context.Context, tenantID, productID uuid.UUID, daysAhead int) (*model.Forecast, error) {
 	var result *model.Forecast
@@ -375,23 +406,9 @@ func (s *ForecastService) ForecastDemand(ctx context.Context, tenantID, productI
 		pd, ok := productMap[productID]
 		if !ok {
 			// Product exists but has no sales — still produce a forecast with zero sales
-			product, err := s.productRepo.FindByID(ctx, tx, productID)
+			pd, err = s.zeroSalesProductData(ctx, tx, productID)
 			if err != nil {
 				return err
-			}
-			if product == nil {
-				return ErrProductNotFound
-			}
-			sku := ""
-			if product.SKU != nil {
-				sku = *product.SKU
-			}
-			pd = &productSalesData{
-				ProductID:   product.ID,
-				ProductName: product.Name,
-				SKU:         sku,
-				Stock:       product.StockQuantity,
-				Price:       product.Price,
 			}
 		}
 
