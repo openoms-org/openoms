@@ -13,11 +13,11 @@ vi.mock("@sentry/nextjs", () => ({
 
 import { ErrorBoundary } from "./error-boundary";
 
-function ThrowUnexpected() {
+function ThrowUnexpected(): never {
   throw new Error("component crashed");
 }
 
-function ThrowExpectedAuthError() {
+function ThrowExpectedAuthError(): never {
   throw new ApiClientError(401, "errors.sessionExpired");
 }
 

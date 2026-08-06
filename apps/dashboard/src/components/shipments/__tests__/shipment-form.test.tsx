@@ -88,6 +88,8 @@ describe("ShipmentForm", () => {
           label_url: "",
           status: "created",
           carrier_data: {},
+          package_number: 1,
+          notes: "",
           created_at: "2026-05-11T00:00:00Z",
           updated_at: "2026-05-11T00:00:00Z",
         }}

@@ -71,12 +71,22 @@ beforeEach(() => {
     isLoading: false,
     user: {
       id: "member",
+      tenant_id: "tenant",
       email: "member@test.com",
       role: "member",
       role_id: "member",
       name: "Member User",
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
     },
-    tenant: { id: "tenant", slug: "tenant", name: "Tenant", plan: "pro" },
+    tenant: {
+      id: "tenant",
+      slug: "tenant",
+      name: "Tenant",
+      plan: "pro",
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+    },
   });
 });
 
@@ -85,10 +95,13 @@ describe("useOperationsDashboard", () => {
     useAuthStore.setState({
       user: {
         id: "admin",
+        tenant_id: "tenant",
         email: "admin@test.com",
         role: "admin",
         role_id: "admin",
         name: "Admin User",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-01-01T00:00:00Z",
       },
     });
     apiClientMock.mockResolvedValue([]);

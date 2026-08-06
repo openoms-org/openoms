@@ -48,12 +48,22 @@ beforeEach(() => {
     isLoading: false,
     user: {
       id: "user-1",
+      tenant_id: "tenant-1",
       email: "admin@example.com",
       role: "owner",
       role_id: "role-1",
       name: "Admin",
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
     },
-    tenant: { id: "tenant-1", slug: "dev", name: "Dev", plan: "plus" },
+    tenant: {
+      id: "tenant-1",
+      slug: "dev",
+      name: "Dev",
+      plan: "plus",
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+    },
   });
 });
 

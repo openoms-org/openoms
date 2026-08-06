@@ -92,6 +92,63 @@ export const INTEGRATION_STATUSES: Record<string, { label: string; color: string
   error: { label: "error", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
 };
 
+// Status families below were hoisted out of individual pages, where each list/detail
+// pair kept its own duplicate colour map. Colours are transcribed 1:1 from those maps —
+// this is a move, not a palette redesign. As everywhere else in this file, `label` holds
+// the raw status key; the display string comes from messages/*/statuses.json via
+// StatusBadge's translationPrefix.
+
+export const DROPSHIP_STATUSES: Record<string, { label: string; color: string }> = {
+  pending: { label: "pending", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
+  sent: { label: "sent", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" },
+  confirmed: { label: "confirmed", color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300" },
+  shipped: { label: "shipped", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300" },
+  delivered: { label: "delivered", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" },
+  cancelled: { label: "cancelled", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
+};
+
+export const LOYALTY_STATUSES: Record<string, { label: string; color: string }> = {
+  active: { label: "active", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  paused: { label: "paused", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
+  ended: { label: "ended", color: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200" },
+};
+
+export const STOCKTAKE_STATUSES: Record<string, { label: string; color: string }> = {
+  draft: { label: "draft", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+  in_progress: { label: "in_progress", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+  completed: { label: "completed", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  cancelled: { label: "cancelled", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+};
+
+// Recurring orders use a translucent-fill idiom (bg-*-500/10) rather than the -100/-800
+// pairing the other families use. Kept verbatim so this stays a pure move; normalising
+// the two idioms is a separate call.
+export const RECURRING_ORDER_STATUSES: Record<string, { label: string; color: string }> = {
+  active: { label: "active", color: "bg-green-500/10 text-green-700 dark:text-green-400" },
+  paused: { label: "paused", color: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400" },
+  cancelled: { label: "cancelled", color: "bg-red-500/10 text-red-700 dark:text-red-400" },
+  completed: { label: "completed", color: "bg-gray-500/10 text-gray-700 dark:text-gray-400" },
+};
+
+export const WAREHOUSE_DOCUMENT_STATUSES: Record<string, { label: string; color: string }> = {
+  draft: { label: "draft", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
+  confirmed: { label: "confirmed", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  cancelled: { label: "cancelled", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+};
+
+export const PICK_PACK_STATUSES: Record<string, { label: string; color: string }> = {
+  picking: { label: "picking", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+  packing: { label: "packing", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
+  completed: { label: "completed", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  cancelled: { label: "cancelled", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+};
+
+export const REPRICING_RULE_STATUSES: Record<string, { label: string; color: string }> = {
+  active: { label: "active", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  paused: { label: "paused", color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200" },
+  archived: { label: "archived", color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200" },
+};
+
 export const ROLES: Record<string, string> = {
   owner: "owner",
   admin: "admin",
