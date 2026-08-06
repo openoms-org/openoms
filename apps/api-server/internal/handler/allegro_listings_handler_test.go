@@ -166,3 +166,35 @@ func assertValidAllegroHTML(t *testing.T, html string) {
 		t.Errorf("found bare text outside block elements: %q\nfull html: %s", trimmed, html)
 	}
 }
+
+func TestBuildAllegroOfferPayload_UsesCanonicalAvailableStock(t *testing.T) {
+	// Legacy stock_quantity is not decremented on shipment, so it can overstate
+	// what is really on the shelf. The offer must carry the canonical value.
+	product := &model.Product{
+		Name:           "Widget",
+		Price:          19.99,
+		StockQuantity:  42,
+		AvailableStock: 7,
+	}
+
+	payload := buildAllegroOfferPayload(product, createListingRequest{CategoryID: "1"}, nil, nil, nil, "", nil)
+
+	stock := payload["stock"].(map[string]any)
+	assert.Equal(t, 7, stock["available"])
+}
+
+func TestBuildAllegroOfferPayload_StockOverrideWinsOverAvailableStock(t *testing.T) {
+	product := &model.Product{
+		Name:           "Widget",
+		Price:          19.99,
+		StockQuantity:  42,
+		AvailableStock: 7,
+	}
+	override := 3
+	req := createListingRequest{CategoryID: "1", StockOverride: &override}
+
+	payload := buildAllegroOfferPayload(product, req, nil, nil, nil, "", nil)
+
+	stock := payload["stock"].(map[string]any)
+	assert.Equal(t, 3, stock["available"])
+}
