@@ -141,7 +141,7 @@ func (p *Provider) PushOffer(ctx context.Context, product *model.Product, listin
 		variant := map[string]any{
 			"price":                fmt.Sprintf("%.2f", product.Price),
 			"inventory_management": "shopify",
-			"inventory_quantity":   product.StockQuantity,
+			"inventory_quantity":   product.AvailableStock,
 		}
 		if product.SKU != nil {
 			variant["sku"] = *product.SKU
