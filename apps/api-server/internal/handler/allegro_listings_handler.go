@@ -281,7 +281,7 @@ func buildAllegroOfferPayload(product *model.Product, req createListingRequest, 
 	if req.PriceOverride != nil {
 		price = *req.PriceOverride
 	}
-	stock := product.StockQuantity
+	stock := product.AvailableStock
 	if req.StockOverride != nil {
 		stock = *req.StockOverride
 	}
@@ -864,8 +864,9 @@ func (h *AllegroListingsHandler) SyncListing(w http.ResponseWriter, r *http.Requ
 
 	externalID := *listing.ExternalID
 
-	// Determine stock and price to sync
-	stock := product.StockQuantity
+	// Determine stock and price to sync. Stock comes from the canonical
+	// available stock (warehouse-backed), not the legacy stock_quantity column.
+	stock := product.AvailableStock
 	if listing.StockOverride != nil {
 		stock = *listing.StockOverride
 	}

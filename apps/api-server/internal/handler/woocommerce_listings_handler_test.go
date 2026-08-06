@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -106,4 +108,34 @@ func TestWooCommerceListingsHandler_CreateListing_MissingProductIDParam(t *testi
 	h.CreateListing(rr, req)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
+}
+
+func TestBuildWooListingData_UsesCanonicalAvailableStock(t *testing.T) {
+	// Legacy stock_quantity is not decremented on shipment, so it can overstate
+	// what is really on the shelf. The listing must carry the canonical value.
+	product := &model.Product{
+		Name:           "Widget",
+		Price:          19.99,
+		StockQuantity:  42,
+		AvailableStock: 7,
+	}
+
+	data := buildWooListingData(product, createWooListingRequest{})
+
+	assert.Equal(t, 7, data["stock_quantity"])
+	assert.Equal(t, true, data["manage_stock"])
+}
+
+func TestBuildWooListingData_StockOverrideWinsOverAvailableStock(t *testing.T) {
+	product := &model.Product{
+		Name:           "Widget",
+		Price:          19.99,
+		StockQuantity:  42,
+		AvailableStock: 7,
+	}
+	override := 3
+
+	data := buildWooListingData(product, createWooListingRequest{StockOverride: &override})
+
+	assert.Equal(t, 3, data["stock_quantity"])
 }
