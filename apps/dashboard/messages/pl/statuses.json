@@ -141,10 +141,12 @@
     },
     "purchaseOrder": {
       "cancelled": "Anulowane",
+      "confirmed": "Potwierdzone",
       "draft": "Szkic",
       "partially_received": "Częściowo odebrane",
       "received": "Odebrane",
-      "sent": "Wysłane"
+      "sent": "Wysłane",
+      "shipped": "Wysłane (dostawca)"
     },
     "recurringOrder": {
       "active": "Aktywna",
