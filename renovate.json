@@ -2,5 +2,13 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
   "timezone": "Europe/Zurich",
-  "labels": ["dependencies"]
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Internal workspace packages are resolved from local sources via go.work — digest bumps are noise, not real changes",
+      "matchPackageNames": ["/^github\\.com/openoms-org/openoms/packages//"],
+      "matchUpdateTypes": ["digest"],
+      "enabled": false
+    }
+  ]
 }
