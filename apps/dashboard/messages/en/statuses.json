@@ -141,10 +141,12 @@
     },
     "purchaseOrder": {
       "cancelled": "Cancelled",
+      "confirmed": "Confirmed",
       "draft": "Draft",
       "partially_received": "Partially received",
       "received": "Received",
-      "sent": "Sent"
+      "sent": "Sent",
+      "shipped": "Shipped (supplier)"
     },
     "recurringOrder": {
       "active": "Active",
