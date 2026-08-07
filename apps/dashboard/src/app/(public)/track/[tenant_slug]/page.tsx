@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { API_URL } from "@/lib/api-client";
+import { ORDER_STATUSES, SHIPMENT_STATUSES } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 // --- Types ---
@@ -38,41 +40,6 @@ interface TrackingResponse {
   timeline: TrackingEvent[];
   company_name?: string;
   company_logo?: string;
-}
-
-// --- Status color map ---
-
-const statusColors: Record<string, string> = {
-  new: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-  confirmed:
-    "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
-  processing:
-    "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
-  ready_to_ship:
-    "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
-  shipped:
-    "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-  in_transit:
-    "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-  out_for_delivery:
-    "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300",
-  delivered:
-    "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-  completed:
-    "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
-  on_hold:
-    "bg-gray-100 text-gray-800 dark:bg-gray-700/30 dark:text-gray-300",
-  cancelled:
-    "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-  refunded:
-    "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-};
-
-function getStatusColor(status: string): string {
-  return (
-    statusColors[status] ||
-    "bg-gray-100 text-gray-800 dark:bg-gray-700/30 dark:text-gray-300"
-  );
 }
 
 // --- Page Component ---
@@ -231,10 +198,16 @@ export default function TrackingPage() {
                   #{result.order_number.substring(0, 8).toUpperCase()}
                 </p>
               </div>
-              <span
-                className={`inline-flex items-center self-start rounded-full px-3 py-1 text-sm font-medium ${getStatusColor(result.status)}`}
-              >
-                {result.status_label}
+              {/* self-start keeps the badge from stretching in the mobile
+                  (flex-col) layout, as the hand-rolled span used to.
+                  The label stays the server's: a tenant can define custom order
+                  statuses, which no client-side catalog knows about. */}
+              <span className="self-start">
+                <StatusBadge
+                  status={result.status}
+                  statusMap={ORDER_STATUSES}
+                  label={result.status_label}
+                />
               </span>
             </div>
 
@@ -321,10 +294,11 @@ export default function TrackingPage() {
                         </p>
                       )}
                     </div>
-                    <span
-                      className={`inline-flex items-center self-start rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(shipment.status)}`}
-                    >
-                      {shipment.status}
+                    <span className="self-start">
+                      <StatusBadge
+                        status={shipment.status}
+                        statusMap={SHIPMENT_STATUSES}
+                      />
                     </span>
                   </div>
                 ))}
