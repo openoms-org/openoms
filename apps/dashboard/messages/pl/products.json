@@ -384,6 +384,7 @@
       "save": "Zapisz",
       "saving": "Zapisywanie...",
       "stockQuantity": "Stan magazynowy",
+      "stockQuantityHint": "Własny stan wariantu — niezależny od stanu kanonicznego magazynu produktu.",
       "title": "Warianty",
       "updated": "Wariant został zaktualizowany",
       "valueExample": "Wartość (np. Czerwony)",
