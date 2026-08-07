@@ -14,7 +14,10 @@ import {
 } from "@/hooks/use-loyalty";
 import { useCustomers } from "@/hooks/use-customers";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { getErrorMessage } from "@/lib/api-client";
+import { LOYALTY_STATUSES } from "@/lib/constants";
+import { enumLabel } from "@/lib/i18n-fallback";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +55,7 @@ import { useTranslations } from "next-intl";
 
 export default function LoyaltyProgramDetailPage() {
   const t = useTranslations("loyalty");
+  const ts = useTranslations("statuses");
 
   const PROGRAM_TYPE_LABELS: Record<string, string> = {
     points: t("type.points"),
@@ -59,20 +63,6 @@ export default function LoyaltyProgramDetailPage() {
     discount_after_n: t("type.discountAfterN"),
   };
 
-  const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-    active: {
-      label: t("statusActive"),
-      className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    },
-    paused: {
-      label: t("statusPaused"),
-      className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-    },
-    ended: {
-      label: t("zakonczony"),
-      className: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
-    },
-  };
   const params = useParams<{ id: string }>();
   const router = useRouter();
 
@@ -129,8 +119,6 @@ export default function LoyaltyProgramDetailPage() {
       </div>
     );
   }
-
-  const statusInfo = STATUS_LABELS[program.status] || STATUS_LABELS.active;
 
   const handleStatusChange = async (status: string) => {
     try {
@@ -205,11 +193,11 @@ export default function LoyaltyProgramDetailPage() {
             <span className="text-sm text-muted-foreground">
               {PROGRAM_TYPE_LABELS[program.program_type]}
             </span>
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusInfo.className}`}
-            >
-              {statusInfo.label}
-            </span>
+            <StatusBadge
+              status={program.status}
+              statusMap={LOYALTY_STATUSES}
+              translationPrefix="loyalty"
+            />
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -260,9 +248,11 @@ export default function LoyaltyProgramDetailPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="active">{t("statusActive")}</SelectItem>
-                  <SelectItem value="paused">{t("statusPaused")}</SelectItem>
-                  <SelectItem value="ended">{t("zakonczony")}</SelectItem>
+                  {Object.keys(LOYALTY_STATUSES).map((key) => (
+                    <SelectItem key={key} value={key}>
+                      {enumLabel(ts, "loyalty", key)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

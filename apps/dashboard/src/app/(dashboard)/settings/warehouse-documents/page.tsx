@@ -33,16 +33,14 @@ import {
 } from "@/components/ui/table";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-
-const STATUS_COLORS: Record<string, string> = {
-  draft: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  confirmed: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  cancelled: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
-};
+import { StatusBadge } from "@/components/shared/status-badge";
+import { WAREHOUSE_DOCUMENT_STATUSES } from "@/lib/constants";
+import { enumLabel } from "@/lib/i18n-fallback";
 
 export default function WarehouseDocumentsPage() {
   const t = useTranslations("warehouseDocuments");
   const tc = useTranslations("common");
+  const ts = useTranslations("statuses");
   const router = useRouter();
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -112,9 +110,11 @@ export default function WarehouseDocumentsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("allStatuses")}</SelectItem>
-            <SelectItem value="draft">{t("statusDraft")}</SelectItem>
-            <SelectItem value="confirmed">{t("statusConfirmed")}</SelectItem>
-            <SelectItem value="cancelled">{t("statusCancelled")}</SelectItem>
+            {Object.keys(WAREHOUSE_DOCUMENT_STATUSES).map((key) => (
+              <SelectItem key={key} value={key}>
+                {enumLabel(ts, "warehouseDocument", key)}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -174,12 +174,11 @@ export default function WarehouseDocumentsPage() {
                     <Badge variant="outline">{doc.document_type}</Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={STATUS_COLORS[doc.status] || ""}
-                    >
-                      {t(`status${doc.status.charAt(0).toUpperCase()}${doc.status.slice(1)}`, { defaultValue: doc.status })}
-                    </Badge>
+                    <StatusBadge
+                      status={doc.status}
+                      statusMap={WAREHOUSE_DOCUMENT_STATUSES}
+                      translationPrefix="warehouseDocument"
+                    />
                   </TableCell>
                   <TableCell>{formatDate(doc.created_at)}</TableCell>
                   <TableCell>

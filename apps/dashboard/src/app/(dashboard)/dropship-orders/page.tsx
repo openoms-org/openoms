@@ -23,20 +23,15 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useDropshipOrders } from "@/hooks/use-dropship-orders";
+import { DROPSHIP_STATUSES } from "@/lib/constants";
+import { enumLabel } from "@/lib/i18n-fallback";
 import { formatDate, formatCurrency, shortId } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 
 export default function DropshipOrdersPage() {
   const t = useTranslations("dropshipOrders");
+  const ts = useTranslations("statuses");
 
-  const DROPSHIP_STATUSES: Record<string, { label: string; color: string }> = {
-    pending: { label: t("status.pending"), color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
-    sent: { label: t("status.sent"), color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" },
-    confirmed: { label: t("status.confirmed"), color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300" },
-    shipped: { label: t("status.shipped"), color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300" },
-    delivered: { label: t("status.delivered"), color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" },
-    cancelled: { label: t("status.cancelled"), color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
-  };
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [page, setPage] = useState(0);
   const limit = 20;
@@ -71,9 +66,9 @@ export default function DropshipOrdersPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__all__">{t("allStatuses")}</SelectItem>
-            {Object.entries(DROPSHIP_STATUSES).map(([key, { label }]) => (
+            {Object.keys(DROPSHIP_STATUSES).map((key) => (
               <SelectItem key={key} value={key}>
-                {label}
+                {enumLabel(ts, "dropship", key)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -139,6 +134,7 @@ export default function DropshipOrdersPage() {
                         <StatusBadge
                           status={d.status}
                           statusMap={DROPSHIP_STATUSES}
+                          translationPrefix="dropship"
                         />
                       </TableCell>
                       <TableCell>

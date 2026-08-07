@@ -22,6 +22,13 @@ import {
   AUTOMATION_TRIGGER_LABELS,
   AUTOMATION_ACTION_TYPES,
   AUTOMATION_ACTION_LABELS,
+  DROPSHIP_STATUSES,
+  LOYALTY_STATUSES,
+  STOCKTAKE_STATUSES,
+  RECURRING_ORDER_STATUSES,
+  WAREHOUSE_DOCUMENT_STATUSES,
+  PICK_PACK_STATUSES,
+  REPRICING_RULE_STATUSES,
 } from "@/lib/constants";
 import enStatusMessages from "../../../messages/en/statuses.json";
 import plStatusMessages from "../../../messages/pl/statuses.json";
@@ -215,6 +222,44 @@ describe("Automation constants", () => {
   it("AUTOMATION_ACTION_LABELS has labels for all action types", () => {
     for (const action of AUTOMATION_ACTION_TYPES) {
       expect(AUTOMATION_ACTION_LABELS).toHaveProperty(action);
+    }
+  });
+});
+
+// The pages migrated to StatusBadge (openoms-dev-7sl) no longer carry their own label
+// maps: the badge resolves `statuses.<prefix>.<status>` from the catalogs. A status key
+// present in constants but missing from a catalog would render the raw dotted key at
+// runtime, which neither `next build` nor eslint can catch — hence this parity guard.
+describe("status families migrated to StatusBadge", () => {
+  const families: Array<[string, string, Record<string, { label: string; color: string }>]> = [
+    ["DROPSHIP_STATUSES", "dropship", DROPSHIP_STATUSES],
+    ["LOYALTY_STATUSES", "loyalty", LOYALTY_STATUSES],
+    ["STOCKTAKE_STATUSES", "stocktake", STOCKTAKE_STATUSES],
+    ["RECURRING_ORDER_STATUSES", "recurringOrder", RECURRING_ORDER_STATUSES],
+    ["WAREHOUSE_DOCUMENT_STATUSES", "warehouseDocument", WAREHOUSE_DOCUMENT_STATUSES],
+    ["PICK_PACK_STATUSES", "pickPack", PICK_PACK_STATUSES],
+    ["REPRICING_RULE_STATUSES", "repricingRule", REPRICING_RULE_STATUSES],
+  ];
+
+  const catalog = (messages: typeof plStatusMessages, prefix: string) =>
+    (messages.statuses as unknown as Record<string, Record<string, string>>)[prefix];
+
+  it.each(families)("%s has a label and colour for every status", (_name, _prefix, family) => {
+    expect(Object.keys(family).length).toBeGreaterThan(0);
+    for (const [, value] of Object.entries(family)) {
+      expect(typeof value.label).toBe("string");
+      expect(value.color).toMatch(/^bg-/);
+    }
+  });
+
+  it.each(families)("%s is translated in pl and en", (_name, prefix, family) => {
+    const pl = catalog(plStatusMessages, prefix);
+    const en = catalog(enStatusMessages, prefix);
+    expect(pl).toBeDefined();
+    expect(en).toBeDefined();
+    for (const status of Object.keys(family)) {
+      expect(pl).toHaveProperty(status);
+      expect(en).toHaveProperty(status);
     }
   });
 });

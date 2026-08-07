@@ -16,7 +16,8 @@ import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { getErrorMessage } from "@/lib/api-client";
 import { formatDate, shortId } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { WAREHOUSE_DOCUMENT_STATUSES } from "@/lib/constants";
 import {
   Table,
   TableBody,
@@ -35,13 +36,7 @@ function ProductName({ productId }: { productId: string }) {
   return <span className="font-mono text-xs">{shortId(productId)}</span>;
 }
 
-// DOC_TYPE_LABELS and STATUS_LABELS moved inside component to use translations
-
-const STATUS_COLORS: Record<string, string> = {
-  draft: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  confirmed: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  cancelled: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
-};
+// DOC_TYPE_LABELS moved inside the component to use translations
 
 export default function WarehouseDocumentDetailPage() {
   const t = useTranslations("warehouseDocuments");
@@ -52,12 +47,6 @@ export default function WarehouseDocumentDetailPage() {
     PZ: t("pzLabel"),
     WZ: t("wzLabel"),
     MM: t("mmLabel"),
-  };
-
-  const STATUS_LABELS: Record<string, string> = {
-    draft: t("statusDraft"),
-    confirmed: t("statusConfirmed"),
-    cancelled: t("statusCancelled"),
   };
 
   const { data: doc, isLoading, isError, refetch } = useWarehouseDocument(id);
@@ -139,12 +128,11 @@ export default function WarehouseDocumentDetailPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <Badge
-              variant="outline"
-              className={`text-sm px-3 py-1 ${STATUS_COLORS[doc.status] || ""}`}
-            >
-              {STATUS_LABELS[doc.status] || doc.status}
-            </Badge>
+            <StatusBadge
+              status={doc.status}
+              statusMap={WAREHOUSE_DOCUMENT_STATUSES}
+              translationPrefix="warehouseDocument"
+            />
             {doc.status === "draft" && (
               <>
                 <Button

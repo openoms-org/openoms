@@ -69,8 +69,6 @@
     "searchCustomer": "Search Customer",
     "selectCustomer": "Select Customer",
     "spent": "Spent",
-    "statusActive": "Status Active",
-    "statusPaused": "Status Paused",
     "statusProgramuZostalZmieniony": "Program status has been changed",
     "tierLevel": "Tier Level",
     "tiersListaPoziomowZProgamiMin_spentIRabatamiDiscou": "tiers: list of levels with min_spent thresholds and discount",
@@ -87,7 +85,6 @@
     "wpiszImieLubEmail": "Wpisz Imie Lub Email",
     "wymien": "Redeem",
     "wymienPunkty": "Redeem points",
-    "zakonczony": "Completed",
     "zamowien": "Zamowien",
     "zarzadzajProgramamiPunktowymiPoziomamiIRabatami": "Manage points programs, tiers and discounts"
   },

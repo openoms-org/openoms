@@ -69,8 +69,6 @@
     "searchCustomer": "Szukaj klienta",
     "selectCustomer": "Wybierz klienta",
     "spent": "Wydane",
-    "statusActive": "Aktywny",
-    "statusPaused": "Wstrzymany",
     "statusProgramuZostalZmieniony": "Status programu został zmieniony",
     "tierLevel": "Poziom",
     "tiersListaPoziomowZProgamiMin_spentIRabatamiDiscou": "tiers: lista poziomów z progami min_spent i rabatami discount_pct",
@@ -87,7 +85,6 @@
     "wpiszImieLubEmail": "Wpisz imię lub email",
     "wymien": "Wymień",
     "wymienPunkty": "Wymień punkty",
-    "zakonczony": "Zakończony",
     "zamowien": "zamówień",
     "zarzadzajProgramamiPunktowymiPoziomamiIRabatami": "Zarządzaj programami punktowymi, poziomami i rabatami"
   },

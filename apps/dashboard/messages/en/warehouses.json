@@ -31,12 +31,6 @@
       "batch": "Batch",
       "single": "Single"
     },
-    "statuses": {
-      "cancelled": "Cancelled",
-      "completed": "Completed",
-      "packing": "Packing",
-      "picking": "Picking"
-    },
     "title": "Pick & Pack",
     "movedToPacking": "Moved to packing phase",
     "itemPacked": "Item packed",
@@ -94,10 +88,6 @@
     "start": "Start",
     "starting": "Starting",
     "status": "Status",
-    "statusCancelled": "Status Cancelled",
-    "statusCompleted": "Status Completed",
-    "statusDraft": "Status Draft",
-    "statusInProgress": "Status In Progress",
     "stocktake": "Stocktake",
     "stocktakeCancelled": "Stocktake has been cancelled",
     "stocktakeCompleted": "Stocktake has been completed",
@@ -183,9 +173,6 @@
     "split": {
       "orderLabel": "Order Label"
     },
-    "statusCancelled": "Cancelled",
-    "statusConfirmed": "Confirmed",
-    "statusDraft": "Draft",
     "subtitle": "Manage PZ/WZ/MM documents",
     "supplier": "Supplier:",
     "supplierLabel": "Supplier",

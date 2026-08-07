@@ -20,7 +20,8 @@ import { DensityToggle } from "@/components/shared/density-toggle";
 import { getErrorMessage } from "@/lib/api-client";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { RECURRING_ORDER_STATUSES } from "@/lib/constants";
 import {
   Select,
   SelectContent,
@@ -39,20 +40,6 @@ import {
 import { useTranslations } from "next-intl";
 
 const DEFAULT_LIMIT = 20;
-
-const statusColors: Record<string, string> = {
-  active: "bg-green-500/10 text-green-700 dark:text-green-400",
-  paused: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
-  cancelled: "bg-red-500/10 text-red-700 dark:text-red-400",
-  completed: "bg-gray-500/10 text-gray-700 dark:text-gray-400",
-};
-
-const statusLabels: Record<string, string> = {
-  active: "Aktywna",
-  paused: "Wstrzymana",
-  cancelled: "Anulowana",
-  completed: "Zakonczona",
-};
 
 const frequencyLabels: Record<string, string> = {
   daily: "Codziennie",
@@ -213,12 +200,11 @@ export default function RecurringOrdersPage() {
                     </TableCell>
                     <TableCell>{formatDate(order.next_order_date)}</TableCell>
                     <TableCell>
-                      <Badge
-                        variant="secondary"
-                        className={statusColors[order.status] || ""}
-                      >
-                        {statusLabels[order.status] || order.status}
-                      </Badge>
+                      <StatusBadge
+                        status={order.status}
+                        statusMap={RECURRING_ORDER_STATUSES}
+                        translationPrefix="recurringOrder"
+                      />
                     </TableCell>
                     <TableCell className="text-right">
                       {order.total_orders_created}
