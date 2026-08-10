@@ -24,9 +24,10 @@ import {
 } from "@/hooks/use-stocktakes";
 import { useAllWarehouses } from "@/hooks/use-warehouses";
 import { getErrorMessage } from "@/lib/api-client";
+import { STOCKTAKE_STATUSES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { Input } from "@/components/ui/input";
 import {
   Card,
@@ -58,25 +59,10 @@ import {
 import type { StocktakeItem } from "@/types/api";
 import { useTranslations } from "next-intl";
 
-const statusVariants: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
-  in_progress:
-    "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  completed:
-    "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  cancelled: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-};
-
 export default function StocktakeDetailPage() {
   const t = useTranslations("stocktakes");
   const tc = useTranslations("common");
 
-  const statusLabels: Record<string, string> = {
-    draft: t("statusDraft"),
-    in_progress: t("statusInProgress"),
-    completed: t("statusCompleted"),
-    cancelled: t("statusCancelled"),
-  };
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
@@ -224,12 +210,11 @@ export default function StocktakeDetailPage() {
               {stocktake.name}
             </h1>
             <div className="flex items-center gap-3 mt-1">
-              <Badge
-                variant="outline"
-                className={statusVariants[stocktake.status] || ""}
-              >
-                {statusLabels[stocktake.status] || stocktake.status}
-              </Badge>
+              <StatusBadge
+                status={stocktake.status}
+                statusMap={STOCKTAKE_STATUSES}
+                translationPrefix="stocktake"
+              />
               <span className="text-muted-foreground">
                 {warehouse?.name || "---"}
               </span>

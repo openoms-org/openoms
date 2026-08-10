@@ -8,9 +8,11 @@ import { useStocktakes } from "@/hooks/use-stocktakes";
 import { useAllWarehouses } from "@/hooks/use-warehouses";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
+import { STOCKTAKE_STATUSES } from "@/lib/constants";
+import { enumLabel } from "@/lib/i18n-fallback";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/shared/status-badge";
 import {
   Select,
   SelectContent,
@@ -29,32 +31,9 @@ import {
 import type { Stocktake } from "@/types/api";
 import { useTranslations } from "next-intl";
 
-const statusVariants: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
-  in_progress:
-    "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  completed:
-    "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  cancelled: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-};
-
-function StocktakeStatusBadge({ status }: { status: string }) {
-  const t = useTranslations("stocktakes");
-  const statusLabels: Record<string, string> = {
-    draft: t("statusDraft"),
-    in_progress: t("statusInProgress"),
-    completed: t("statusCompleted"),
-    cancelled: t("statusCancelled"),
-  };
-  return (
-    <Badge variant="outline" className={statusVariants[status] || ""}>
-      {statusLabels[status] || status}
-    </Badge>
-  );
-}
-
 export default function StocktakesPage() {
   const t = useTranslations("stocktakes");
+  const ts = useTranslations("statuses");
   const router = useRouter();
   const [warehouseFilter, setWarehouseFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -110,10 +89,11 @@ export default function StocktakesPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("allStatuses")}</SelectItem>
-            <SelectItem value="draft">{t("statusDraft")}</SelectItem>
-            <SelectItem value="in_progress">{t("statusInProgress")}</SelectItem>
-            <SelectItem value="completed">{t("statusCompleted")}</SelectItem>
-            <SelectItem value="cancelled">{t("statusCancelled")}</SelectItem>
+            {Object.keys(STOCKTAKE_STATUSES).map((key) => (
+              <SelectItem key={key} value={key}>
+                {enumLabel(ts, "stocktake", key)}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -169,7 +149,11 @@ export default function StocktakesPage() {
                     </TableCell>
                     <TableCell>{warehouse?.name || "---"}</TableCell>
                     <TableCell>
-                      <StocktakeStatusBadge status={stocktake.status} />
+                      <StatusBadge
+                        status={stocktake.status}
+                        statusMap={STOCKTAKE_STATUSES}
+                        translationPrefix="stocktake"
+                      />
                     </TableCell>
                     <TableCell>
                       {stocktake.stats ? (

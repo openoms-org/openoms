@@ -14,6 +14,7 @@ import {
 import { DataTable, type ColumnDef } from "@/components/shared/data-table";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { REPRICING_RULE_STATUSES } from "@/lib/constants";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,20 +33,6 @@ import { useTranslations } from "next-intl";
 export default function RepricingPage() {
   const t = useTranslations("repricing");
 
-  const RULE_STATUSES: Record<string, { label: string; color: string }> = {
-    active: {
-      label: t("statusActive"),
-      color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    },
-    paused: {
-      label: t("statusPaused"),
-      color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-    },
-    archived: {
-      label: t("statusArchived"),
-      color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
-    },
-  };
 
   const STRATEGY_LABELS: Record<string, string> = {
     margin: t("strategyMargin"),
@@ -129,7 +116,7 @@ export default function RepricingPage() {
       header: t("status"),
       accessorKey: "status",
       cell: (row) => (
-        <StatusBadge status={row.status} statusMap={RULE_STATUSES} />
+        <StatusBadge status={row.status} statusMap={REPRICING_RULE_STATUSES} translationPrefix="repricingRule" />
       ),
     },
     {

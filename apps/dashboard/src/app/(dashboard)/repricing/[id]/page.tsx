@@ -14,6 +14,7 @@ import {
   useRepricingLog,
 } from "@/hooks/use-repricing";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { REPRICING_RULE_STATUSES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -42,20 +43,6 @@ export default function RepricingRuleDetailPage() {
   const t = useTranslations("repricing");
   const tc = useTranslations("common");
 
-  const RULE_STATUSES: Record<string, { label: string; color: string }> = {
-    active: {
-      label: t("statusActive"),
-      color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    },
-    paused: {
-      label: t("statusPaused"),
-      color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-    },
-    archived: {
-      label: t("statusArchived"),
-      color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200",
-    },
-  };
 
   const STRATEGY_LABELS: Record<string, string> = {
     margin: t("strategyMargin"),
@@ -167,7 +154,7 @@ export default function RepricingRuleDetailPage() {
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold">{rule.name}</h1>
-              <StatusBadge status={rule.status} statusMap={RULE_STATUSES} />
+              <StatusBadge status={rule.status} statusMap={REPRICING_RULE_STATUSES} translationPrefix="repricingRule" />
             </div>
             <p className="text-muted-foreground mt-1">
               {t("strategy")}: {STRATEGY_LABELS[rule.strategy] || rule.strategy} |

@@ -14,7 +14,8 @@ import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { getErrorMessage } from "@/lib/api-client";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { RECURRING_ORDER_STATUSES } from "@/lib/constants";
 import {
   Card,
   CardContent,
@@ -31,20 +32,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useTranslations } from "next-intl";
-
-const statusColors: Record<string, string> = {
-  active: "bg-green-500/10 text-green-700 dark:text-green-400",
-  paused: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
-  cancelled: "bg-red-500/10 text-red-700 dark:text-red-400",
-  completed: "bg-gray-500/10 text-gray-700 dark:text-gray-400",
-};
-
-const statusLabels: Record<string, string> = {
-  active: "Aktywna",
-  paused: "Wstrzymana",
-  cancelled: "Anulowana",
-  completed: "Zakonczona",
-};
 
 const frequencyLabels: Record<string, string> = {
   daily: "Codziennie",
@@ -130,12 +117,11 @@ export default function RecurringOrderDetailPage({
             Subskrypcja {frequencyLabels[order.frequency] || order.frequency}
           </p>
         </div>
-        <Badge
-          variant="secondary"
-          className={statusColors[order.status] || ""}
-        >
-          {statusLabels[order.status] || order.status}
-        </Badge>
+        <StatusBadge
+          status={order.status}
+          statusMap={RECURRING_ORDER_STATUSES}
+          translationPrefix="recurringOrder"
+        />
         <div className="flex items-center gap-2">
           {(order.status === "active" || order.status === "paused") && (
             <Button

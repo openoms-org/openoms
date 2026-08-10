@@ -31,12 +31,6 @@
       "batch": "Wsadowa",
       "single": "Pojedyncza"
     },
-    "statuses": {
-      "cancelled": "Anulowane",
-      "completed": "Zakończone",
-      "packing": "Pakowanie",
-      "picking": "Kompletowanie"
-    },
     "title": "Pick & Pack",
     "movedToPacking": "Przejście do fazy pakowania",
     "itemPacked": "Pozycja spakowana",
@@ -94,10 +88,6 @@
     "start": "Rozpocznij",
     "starting": "Rozpoczynanie...",
     "status": "Status",
-    "statusCancelled": "Anulowany",
-    "statusCompleted": "Zakończony",
-    "statusDraft": "Szkic",
-    "statusInProgress": "W trakcie",
     "stocktake": "Inwentaryzacja",
     "stocktakeCancelled": "Inwentaryzacja została anulowana",
     "stocktakeCompleted": "Inwentaryzacja została zakończona",
@@ -183,9 +173,6 @@
     "split": {
       "orderLabel": "Numer zamówienia"
     },
-    "statusCancelled": "Anulowany",
-    "statusConfirmed": "Zatwierdzony",
-    "statusDraft": "Szkic",
     "subtitle": "Zarządzaj dokumentami PZ/WZ/MM",
     "supplier": "Dostawca:",
     "supplierLabel": "Dostawca",

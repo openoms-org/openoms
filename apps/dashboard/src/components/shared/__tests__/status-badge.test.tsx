@@ -1,7 +1,18 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { ORDER_STATUSES, SHIPMENT_STATUSES, RETURN_STATUSES } from "@/lib/constants";
+import {
+  ORDER_STATUSES,
+  SHIPMENT_STATUSES,
+  RETURN_STATUSES,
+  DROPSHIP_STATUSES,
+  LOYALTY_STATUSES,
+  STOCKTAKE_STATUSES,
+  RECURRING_ORDER_STATUSES,
+  WAREHOUSE_DOCUMENT_STATUSES,
+  PICK_PACK_STATUSES,
+  REPRICING_RULE_STATUSES,
+} from "@/lib/constants";
 
 describe("StatusBadge", () => {
   it("renders the label text for a known status", () => {
@@ -66,5 +77,33 @@ describe("StatusBadge", () => {
     const badge = container.querySelector("span");
     expect(badge).toHaveClass("bg-blue-100");
     expect(badge).toHaveClass("text-blue-800");
+  });
+});
+
+// Families the dashboard pages delegate to StatusBadge instead of a local colour map
+// (openoms-dev-7sl). Every status of every family must render as a coloured badge.
+describe("StatusBadge status families", () => {
+  const families: Array<[string, string, Record<string, { label: string; color: string }>]> = [
+    ["dropship", "dropship", DROPSHIP_STATUSES],
+    ["loyalty", "loyalty", LOYALTY_STATUSES],
+    ["stocktake", "stocktake", STOCKTAKE_STATUSES],
+    ["recurringOrder", "recurringOrder", RECURRING_ORDER_STATUSES],
+    ["warehouseDocument", "warehouseDocument", WAREHOUSE_DOCUMENT_STATUSES],
+    ["pickPack", "pickPack", PICK_PACK_STATUSES],
+    ["repricingRule", "repricingRule", REPRICING_RULE_STATUSES],
+  ];
+
+  it.each(families)("renders every %s status as a coloured badge", (_name, prefix, family) => {
+    for (const [status, { color }] of Object.entries(family)) {
+      const { container, unmount } = render(
+        <StatusBadge status={status} statusMap={family} translationPrefix={prefix} />,
+      );
+      const badge = container.querySelector("span");
+      expect(badge).not.toBeNull();
+      for (const cls of color.split(" ")) {
+        expect(badge).toHaveClass(cls);
+      }
+      unmount();
+    }
   });
 });

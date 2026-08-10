@@ -38,24 +38,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { PickPackSession, Order } from "@/types/api";
-
-const statusVariants: Record<string, string> = {
-  picking: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-  packing: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-  completed: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-  cancelled: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-};
-
-function SessionStatusBadge({ label, status }: { label: string; status: string }) {
-  return (
-    <Badge variant="outline" className={statusVariants[status] || ""}>
-      {label}
-    </Badge>
-  );
-}
+import { StatusBadge } from "@/components/shared/status-badge";
+import { PICK_PACK_STATUSES } from "@/lib/constants";
+import { enumLabel } from "@/lib/i18n-fallback";
 
 export default function PickPackPage() {
   const t = useTranslations("pickPack");
+  const ts = useTranslations("statuses");
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -77,13 +66,6 @@ export default function PickPackPage() {
 
   const processingOrders: Order[] = ordersData?.items ?? [];
   const sessions = data?.items ?? [];
-  const statusLabels: Record<string, string> = {
-    picking: t("statuses.picking"),
-    packing: t("statuses.packing"),
-    completed: t("statuses.completed"),
-    cancelled: t("statuses.cancelled"),
-  };
-
   const handleToggleOrder = (orderId: string) => {
     setSelectedOrderIds((prev) => {
       const next = new Set(prev);
@@ -161,10 +143,11 @@ export default function PickPackPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("allStatuses")}</SelectItem>
-            <SelectItem value="picking">{t("statuses.picking")}</SelectItem>
-            <SelectItem value="packing">{t("statuses.packing")}</SelectItem>
-            <SelectItem value="completed">{t("statuses.completed")}</SelectItem>
-            <SelectItem value="cancelled">{t("statuses.cancelled")}</SelectItem>
+            {Object.keys(PICK_PACK_STATUSES).map((key) => (
+              <SelectItem key={key} value={key}>
+                {enumLabel(ts, "pickPack", key)}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -212,9 +195,10 @@ export default function PickPackPage() {
                       : t("sessionTypes.single")}
                   </TableCell>
                   <TableCell>
-                    <SessionStatusBadge
-                      label={statusLabels[session.status] || session.status}
+                    <StatusBadge
                       status={session.status}
+                      statusMap={PICK_PACK_STATUSES}
+                      translationPrefix="pickPack"
                     />
                   </TableCell>
                   <TableCell>{session.stats?.order_count ?? "---"}</TableCell>

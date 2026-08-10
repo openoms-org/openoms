@@ -13,7 +13,9 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingSkeleton } from "@/components/shared/loading-skeleton";
 import { DataTablePagination } from "@/components/shared/data-table-pagination";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { getErrorMessage } from "@/lib/api-client";
+import { LOYALTY_STATUSES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,20 +62,6 @@ export default function LoyaltyPage() {
     discount_after_n: t("type.discountAfterN"),
   };
 
-  const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-    active: {
-      label: t("statusActive"),
-      className: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    },
-    paused: {
-      label: t("statusPaused"),
-      className: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-    },
-    ended: {
-      label: t("zakonczony"),
-      className: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
-    },
-  };
   const router = useRouter();
   const [pagination, setPagination] = useState({
     limit: DEFAULT_LIMIT,
@@ -250,9 +238,6 @@ export default function LoyaltyPage() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {programs.map((program) => {
-              const statusInfo = STATUS_LABELS[program.status] ||
-                STATUS_LABELS.active;
-
               return (
                 <div
                   key={program.id}
@@ -267,11 +252,11 @@ export default function LoyaltyPage() {
                           {PROGRAM_TYPE_LABELS[program.program_type] ||
                             program.program_type}
                         </span>
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusInfo.className}`}
-                        >
-                          {statusInfo.label}
-                        </span>
+                        <StatusBadge
+                          status={program.status}
+                          statusMap={LOYALTY_STATUSES}
+                          translationPrefix="loyalty"
+                        />
                       </div>
                     </div>
                     <Button
