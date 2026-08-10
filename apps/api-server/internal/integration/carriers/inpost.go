@@ -30,8 +30,9 @@ type InPostCredentials struct {
 
 // InPostProvider implements integration.CarrierProvider for InPost ShipX.
 type InPostProvider struct {
-	client *inpostsdk.Client
-	logger *slog.Logger
+	client    *inpostsdk.Client
+	logger    *slog.Logger
+	pollLimit int // max attempts for offer polling; production uses 20, tests override it
 }
 
 // NewInPostProvider creates an InPost CarrierProvider from encrypted credentials.
@@ -50,8 +51,9 @@ func NewInPostProvider(credentials json.RawMessage, _ json.RawMessage) (*InPostP
 	client := inpostsdk.NewClient(creds.APIToken, creds.OrganizationID, opts...)
 
 	return &InPostProvider{
-		client: client,
-		logger: slog.Default().With("provider", "inpost"),
+		client:    client,
+		logger:    slog.Default().With("provider", "inpost"),
+		pollLimit: 20,
 	}, nil
 }
 
@@ -123,7 +125,7 @@ func (p *InPostProvider) CreateShipment(ctx context.Context, req integration.Car
 	// InPost generates offers asynchronously. Poll until offers are available, then buy.
 	shipmentID := shipment.ID
 	var offerID int64
-	for attempt := range 20 {
+	for attempt := range p.pollLimit {
 		if len(shipment.Offers) > 0 {
 			offerID = shipment.Offers[0].ID
 			break
