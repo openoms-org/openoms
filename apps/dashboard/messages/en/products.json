@@ -384,6 +384,7 @@
       "save": "Save",
       "saving": "Saving",
       "stockQuantity": "Stock Quantity",
+      "stockQuantityHint": "The variant's own stock level — independent of the product's canonical warehouse stock.",
       "title": "Title",
       "updated": "Variant has been updated",
       "valueExample": "Value (e.g. Red)",

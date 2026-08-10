@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Pencil, Trash2, Layers } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Layers, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -34,6 +34,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useProduct } from "@/hooks/use-products";
 import {
   useVariants,
@@ -298,7 +304,21 @@ export default function ProductVariantsPage() {
                     <TableHead>SKU</TableHead>
                     <TableHead>EAN</TableHead>
                     <TableHead>{t("variants.priceOverride")}</TableHead>
-                    <TableHead>{t("variants.stockQuantity")}</TableHead>
+                    <TableHead>
+                      <span className="inline-flex items-center gap-1">
+                        {t("variants.stockQuantity")}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {t("variants.stockQuantityHint")}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </span>
+                    </TableHead>
                     <TableHead>{t("variants.attributes")}</TableHead>
                     <TableHead>{t("variants.position")}</TableHead>
                     <TableHead>{t("variants.active")}</TableHead>
