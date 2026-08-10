@@ -4,24 +4,6 @@ export const TEST_CREDENTIALS = {
   password: 'password123',
 };
 
-export const LABELS = {
-  dashboard: 'Panel główny',
-  orders: 'Zamówienia',
-  products: 'Produkty',
-  shipments: 'Przesyłki',
-  returns: 'Zwroty',
-  invoices: 'Faktury',
-  customers: 'Klienci',
-  warehouses: 'Magazyny',
-  users: 'Użytkownicy',
-  login: 'Logowanie',
-  loginButton: 'Zaloguj się',
-  logout: 'Wyloguj',
-  newOrder: 'Nowe zamówienie',
-  newProduct: 'Nowy produkt',
-  exportCSV: 'Eksportuj CSV',
-};
-
 // Unique suffix per test run to avoid duplicate key conflicts
 const runId = Date.now().toString(36);
 
