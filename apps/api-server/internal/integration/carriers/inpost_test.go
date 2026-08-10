@@ -29,9 +29,10 @@ func newTestProvider(t *testing.T, serverURL string) *InPostProvider {
 		inpostsdk.WithPointsBaseURL(serverURL),
 	)
 	return &InPostProvider{
-		client:    client,
-		logger:    slog.Default().With("provider", "inpost-test"),
-		pollLimit: 1,
+		client:      client,
+		logger:      slog.Default().With("provider", "inpost-test"),
+		pollLimit:   1,
+		pollTimeout: 1 * time.Second,
 	}
 }
 
@@ -1206,5 +1207,96 @@ func TestInPostFullShipmentLifecycle(t *testing.T) {
 	// Verify all 3 API calls were made.
 	if requestCount != 3 {
 		t.Errorf("expected 3 API requests in lifecycle, got %d", requestCount)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Test: Poll budget timeout — polling exceeds pollTimeout, returns error
+// ---------------------------------------------------------------------------
+
+func TestInPostCreateShipment_PollBudgetTimeout(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{
+			"id": 1,
+			"tracking_number": "T1",
+			"status": "created",
+			"service": "inpost_locker_standard",
+			"receiver": {"name": "X", "phone": "1", "email": ""},
+			"parcels": [],
+			"created_at": "2025-01-01T00:00:00Z",
+			"updated_at": "2025-01-01T00:00:00Z"
+		}`))
+	}))
+	defer srv.Close()
+
+	provider := newTestProvider(t, srv.URL)
+	provider.pollLimit = 20 // large limit so timeout wins, not attempts
+	provider.pollTimeout = 50 * time.Millisecond
+
+	req := integration.CarrierShipmentRequest{
+		TargetPoint: "KRA01M",
+		Receiver:    integration.CarrierReceiver{Name: "X", Phone: "1"},
+		Parcel:      integration.CarrierParcel{WeightKg: 1},
+	}
+	start := time.Now()
+	_, err := provider.CreateShipment(context.Background(), req)
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected timeout error, got nil")
+	}
+	if !strings.Contains(err.Error(), "offer polling timed out") {
+		t.Errorf("expected 'offer polling timed out' in error, got: %s", err.Error())
+	}
+	if elapsed > 500*time.Millisecond {
+		t.Errorf("test took too long (%v), timeout should have fired quickly", elapsed)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Test: Poll exhausted — pollLimit reached, no offers, returns response with warn
+// ---------------------------------------------------------------------------
+
+func TestInPostCreateShipment_PollExhaustedNoOffers(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{
+			"id": 1,
+			"tracking_number": "T1",
+			"status": "created",
+			"service": "inpost_locker_standard",
+			"receiver": {"name": "X", "phone": "1", "email": ""},
+			"parcels": [],
+			"created_at": "2025-01-01T00:00:00Z",
+			"updated_at": "2025-01-01T00:00:00Z"
+		}`))
+	}))
+	defer srv.Close()
+
+	provider := newTestProvider(t, srv.URL)
+	provider.pollLimit = 2                  // exhaust attempts
+	provider.pollTimeout = 10 * time.Second // long enough not to interfere
+
+	req := integration.CarrierShipmentRequest{
+		TargetPoint: "KRA01M",
+		Receiver:    integration.CarrierReceiver{Name: "X", Phone: "1"},
+		Parcel:      integration.CarrierParcel{WeightKg: 1},
+	}
+	resp, err := provider.CreateShipment(context.Background(), req)
+	if err != nil {
+		t.Fatalf("CreateShipment() error: %v", err)
+	}
+	if resp.ExternalID != "1" {
+		t.Errorf("ExternalID = %q, want 1", resp.ExternalID)
+	}
+	if resp.TrackingNumber != "T1" {
+		t.Errorf("TrackingNumber = %q, want T1", resp.TrackingNumber)
+	}
+	// Status should remain "created" — no buy was attempted.
+	if resp.Status != "created" {
+		t.Errorf("Status = %q, want created (no buy without offers)", resp.Status)
 	}
 }

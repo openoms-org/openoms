@@ -30,9 +30,10 @@ type InPostCredentials struct {
 
 // InPostProvider implements integration.CarrierProvider for InPost ShipX.
 type InPostProvider struct {
-	client    *inpostsdk.Client
-	logger    *slog.Logger
-	pollLimit int // max attempts for offer polling; production uses 20, tests override it
+	client      *inpostsdk.Client
+	logger      *slog.Logger
+	pollLimit   int           // max attempts for offer polling; production uses 20, tests override it
+	pollTimeout time.Duration // max total time for offer polling, independent of parent ctx
 }
 
 // NewInPostProvider creates an InPost CarrierProvider from encrypted credentials.
@@ -51,9 +52,10 @@ func NewInPostProvider(credentials json.RawMessage, _ json.RawMessage) (*InPostP
 	client := inpostsdk.NewClient(creds.APIToken, creds.OrganizationID, opts...)
 
 	return &InPostProvider{
-		client:    client,
-		logger:    slog.Default().With("provider", "inpost"),
-		pollLimit: 20,
+		client:      client,
+		logger:      slog.Default().With("provider", "inpost"),
+		pollLimit:   20,
+		pollTimeout: 120 * time.Second,
 	}, nil
 }
 
@@ -123,8 +125,12 @@ func (p *InPostProvider) CreateShipment(ctx context.Context, req integration.Car
 	}
 
 	// InPost generates offers asynchronously. Poll until offers are available, then buy.
+	// Use an independent polling budget so that a caller-provided context.Background()
+	// does not leave the loop unbounded.
 	shipmentID := shipment.ID
 	var offerID int64
+	pollCtx, pollCancel := context.WithTimeout(ctx, p.pollTimeout)
+	defer pollCancel()
 	for attempt := range p.pollLimit {
 		if len(shipment.Offers) > 0 {
 			offerID = shipment.Offers[0].ID
@@ -136,11 +142,14 @@ func (p *InPostProvider) CreateShipment(ctx context.Context, req integration.Car
 		}
 		backoff := time.Duration(500+attempt*500) * time.Millisecond
 		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
+		case <-pollCtx.Done():
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
+			return nil, fmt.Errorf("inpost: offer polling timed out after %v (shipment %d)", p.pollTimeout, shipmentID)
 		case <-time.After(backoff):
 		}
-		polled, err := p.client.Shipments.Get(ctx, shipmentID)
+		polled, err := p.client.Shipments.Get(pollCtx, shipmentID)
 		if err != nil {
 			p.logger.Warn("inpost: poll shipment failed", "id", shipmentID, "error", err)
 			break
