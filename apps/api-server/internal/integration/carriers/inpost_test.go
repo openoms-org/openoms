@@ -29,8 +29,9 @@ func newTestProvider(t *testing.T, serverURL string) *InPostProvider {
 		inpostsdk.WithPointsBaseURL(serverURL),
 	)
 	return &InPostProvider{
-		client: client,
-		logger: slog.Default().With("provider", "inpost-test"),
+		client:    client,
+		logger:    slog.Default().With("provider", "inpost-test"),
+		pollLimit: 1,
 	}
 }
 
