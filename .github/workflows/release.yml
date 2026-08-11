@@ -69,7 +69,7 @@ jobs:
           ignore-unfixed: true
 
       - name: Upload API Trivy results to Security tab
-        uses: github/codeql-action/upload-sarif@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4
+        uses: github/codeql-action/upload-sarif@5595ccaf912efad79be6eef63a5619ff05969be3 # v4
         if: always()
         with:
           sarif_file: trivy-openoms-api.sarif
@@ -195,7 +195,7 @@ jobs:
           ignore-unfixed: true
 
       - name: Upload Dashboard Trivy results to Security tab
-        uses: github/codeql-action/upload-sarif@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4
+        uses: github/codeql-action/upload-sarif@5595ccaf912efad79be6eef63a5619ff05969be3 # v4
         if: always()
         with:
           sarif_file: trivy-openoms-dashboard.sarif
@@ -302,7 +302,7 @@ jobs:
           ignore-unfixed: true
 
       - name: Upload Migrate Trivy results to Security tab
-        uses: github/codeql-action/upload-sarif@7211b7c8077ea37d8641b6271f6a365a22a5fbfa # v4
+        uses: github/codeql-action/upload-sarif@5595ccaf912efad79be6eef63a5619ff05969be3 # v4
         if: always()
         with:
           sarif_file: trivy-openoms-migrate.sarif
