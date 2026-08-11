@@ -365,7 +365,9 @@ jobs:
 
   security-tests:
     name: Security Tests
-    needs: [test]
+    # Deliberately no `needs:`. This job brings up its own Redis and shares
+    # nothing with `test`, which brings up its own Postgres — the dependency
+    # only sequenced them, and left this job closing the whole run.
     runs-on: ubuntu-latest
     permissions:
       contents: read
