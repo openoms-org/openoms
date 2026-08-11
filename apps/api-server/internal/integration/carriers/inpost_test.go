@@ -1256,6 +1256,62 @@ func TestInPostCreateShipment_PollBudgetTimeout(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// Test: Poll defaults — zero-value poll settings still poll for offers
+// ---------------------------------------------------------------------------
+
+func TestInPostCreateShipment_ZeroPollSettingsUseDefaults(t *testing.T) {
+	var requestCount int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if r.Method == http.MethodPost {
+			_, _ = w.Write([]byte(`{
+				"id": 1,
+				"tracking_number": "T1",
+				"status": "created",
+				"service": "inpost_locker_standard",
+				"receiver": {"name": "X", "phone": "1", "email": ""},
+				"parcels": [],
+				"created_at": "2025-01-01T00:00:00Z",
+				"updated_at": "2025-01-01T00:00:00Z"
+			}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{
+			"id": 1,
+			"tracking_number": "T1",
+			"status": "confirmed",
+			"service": "inpost_locker_standard",
+			"receiver": {"name": "X", "phone": "1", "email": ""},
+			"parcels": [],
+			"created_at": "2025-01-01T00:00:00Z",
+			"updated_at": "2025-01-01T00:00:00Z"
+		}`))
+	}))
+	defer srv.Close()
+
+	provider := newTestProvider(t, srv.URL)
+	provider.pollLimit = 0
+	provider.pollTimeout = 0
+
+	resp, err := provider.CreateShipment(context.Background(), integration.CarrierShipmentRequest{
+		TargetPoint: "KRA01M",
+		Receiver:    integration.CarrierReceiver{Name: "X", Phone: "1"},
+		Parcel:      integration.CarrierParcel{WeightKg: 1},
+	})
+	if err != nil {
+		t.Fatalf("CreateShipment() error: %v", err)
+	}
+	if requestCount != 2 {
+		t.Errorf("expected create plus one poll request, got %d", requestCount)
+	}
+	if resp.Status != "confirmed" {
+		t.Errorf("Status = %q, want confirmed after polling", resp.Status)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Test: Poll exhausted — pollLimit reached, no offers, returns response with warn
 // ---------------------------------------------------------------------------
 
