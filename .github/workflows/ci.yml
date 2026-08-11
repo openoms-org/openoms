@@ -731,45 +731,23 @@ jobs:
       - helm-chart
       - docker
       - github-actions-pinning
-    # Auto-merge for Dependabot and bot branches.
+    # Auto-merge only digest-only Renovate PRs. Version bumps remain manual:
+    # release.yml and Trivy may uncover transitive CVEs that require review.
     # Requires lint-strict (no pre-existing issues allowed for auto-merge).
     # e2e and migration-safety excluded from needs — e2e is informational,
     # migration-safety may be skipped (no migrations in dependency PRs).
     if: >-
       github.event_name == 'pull_request' &&
-      (startsWith(github.event.pull_request.head.ref, 'dependabot/') ||
-       startsWith(github.event.pull_request.head.ref, 'bot/'))
+      startsWith(github.event.pull_request.head.ref, 'renovate/') &&
+      contains(github.event.pull_request.labels.*.name, 'dependencies:digest')
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-      - name: Check CodeRabbit reviews
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          UNRESOLVED=$(gh api graphql -f query='
-            query($owner:String!, $repo:String!, $pr:Int!) {
-              repository(owner:$owner, name:$repo) {
-                pullRequest(number:$pr) {
-                  reviewThreads(first:100) {
-                    nodes { isResolved comments(first:20) { nodes { author { login } } } }
-                  }
-                }
-              }
-            }' -f owner="${{ github.repository_owner }}" \
-               -f repo="${{ github.event.repository.name }}" \
-               -F pr=${{ github.event.pull_request.number }} \
-            --jq '[.data.repository.pullRequest.reviewThreads.nodes[]
-                   | select(.isResolved == false)
-                   | select(any(.comments.nodes[]?; .author.login == "coderabbitai"))]
-                   | length')
-          if [ "$UNRESOLVED" -gt 0 ]; then
-            echo "::warning::$UNRESOLVED unresolved CodeRabbit threads"
-            exit 1
-          fi
       - name: Auto-merge
         if: success()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh pr merge ${{ github.event.pull_request.number }} \
+            --auto \
             --squash \
             --delete-branch
