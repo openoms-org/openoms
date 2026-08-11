@@ -89,6 +89,7 @@ jobs:
         run: cd apps/dashboard && npx playwright test
         env:
           CI: "true"
+          DASHBOARD_API_PROXY_URL: http://localhost:8080
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: failure()
