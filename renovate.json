@@ -5,6 +5,11 @@
   "labels": ["dependencies"],
   "packageRules": [
     {
+      "description": "Label digest-only updates so CI can auto-merge them after all required checks pass",
+      "matchUpdateTypes": ["digest"],
+      "addLabels": ["dependencies:digest"]
+    },
+    {
       "description": "Internal workspace packages are resolved from local sources via go.work — digest bumps are noise, not real changes",
       "matchPackageNames": ["/^github\\.com/openoms-org/openoms/packages//"],
       "matchUpdateTypes": ["digest"],
