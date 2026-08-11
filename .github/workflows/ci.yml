@@ -365,7 +365,9 @@ jobs:
 
   security-tests:
     name: Security Tests
-    needs: [test]
+    # Deliberately no `needs:`. This job brings up its own Redis and shares
+    # nothing with `test`, which brings up its own Postgres — the dependency
+    # only sequenced them, and left this job closing the whole run.
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -627,14 +629,32 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    needs: [lint, test, security-tests, vet, frontend]
+    # Deliberately no `needs:`. Whether the images build and pass the hardening
+    # checks does not depend on lint or test results, and waiting for them left
+    # this job idle for ~4 minutes while it was the one closing the whole run.
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - name: Build API server image
-        run: docker build -f apps/api-server/Dockerfile -t openoms-api:ci .
-
+      # Must come before the first build: the docker-container driver it sets up
+      # is what makes the registry-independent build cache below possible.
       - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+
+      # build-push-action rather than a plain `docker buildx build`: the GitHub
+      # Actions cache credentials are only handed to JS actions, so cache flags
+      # passed from a shell step are accepted and then silently ignored — the
+      # build looks cached-enabled while never importing or exporting anything.
+      # pull: a warm cache once served a stale base image and hid an
+      # already-patched CVE until the release pipeline caught it.
+      # Scopes match release.yml, so both workflows share the same layers.
+      - name: Build API server image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          file: apps/api-server/Dockerfile
+          tags: openoms-api:ci
+          pull: true
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
 
       - name: Check Dashboard build secrets
         run: ./scripts/check-dashboard-build-secrets.sh
@@ -642,8 +662,17 @@ jobs:
       - name: Test Dashboard Sentry guards
         run: ./scripts/test-dashboard-sentry-guards.sh
 
+      # load: materialises the image locally so the hardening check can inspect it.
       - name: Build Dashboard image
-        run: docker buildx build --load -f apps/dashboard/Dockerfile -t openoms-dashboard:ci ./apps/dashboard
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: apps/dashboard
+          file: apps/dashboard/Dockerfile
+          tags: openoms-dashboard:ci
+          load: true
+          pull: true
+          cache-from: type=gha,scope=dashboard
+          cache-to: type=gha,mode=max,scope=dashboard
 
       - name: Check Dashboard image hardening
         run: ./scripts/check-dashboard-image.sh openoms-dashboard:ci
