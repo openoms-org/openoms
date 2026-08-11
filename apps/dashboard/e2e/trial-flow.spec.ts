@@ -22,9 +22,7 @@ async function loginViaAPI(
 
   const loginResult = await page.evaluate(
     async ({ email, password, tenant_slug }) => {
-      const apiUrl = 'http://localhost:8080';
-
-      const resp = await fetch(`${apiUrl}/v1/auth/login`, {
+      const resp = await fetch('/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, tenant_slug }),
