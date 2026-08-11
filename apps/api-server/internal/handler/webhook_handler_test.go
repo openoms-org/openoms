@@ -36,23 +36,47 @@ func TestWebhookHandler_Receive_InvalidTenantID(t *testing.T) {
 }
 
 func TestWebhookHandler_Receive_RejectsMissingProviderSecret(t *testing.T) {
-	webhookService := service.NewWebhookService(nil, nil, nil, "", "inpost-secret")
-	h := NewWebhookHandler(webhookService)
-	tenantID := uuid.New()
+	tests := []struct {
+		name          string
+		provider      string
+		allegroSecret string
+		inpostSecret  string
+	}{
+		{
+			name:          "allegro",
+			provider:      "allegro",
+			allegroSecret: "",
+			inpostSecret:  "inpost-secret",
+		},
+		{
+			name:          "inpost",
+			provider:      "inpost",
+			allegroSecret: "allegro-secret",
+			inpostSecret:  "",
+		},
+	}
 
-	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("provider", "allegro")
-	rctx.URLParams.Add("tenant_id", tenantID.String())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			webhookService := service.NewWebhookService(nil, nil, nil, tt.allegroSecret, tt.inpostSecret)
+			h := NewWebhookHandler(webhookService)
+			tenantID := uuid.New()
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/webhooks/allegro/"+tenantID.String(), bytes.NewBufferString(`{"type":"ORDER_CREATED"}`))
-	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
-	rr := httptest.NewRecorder()
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("provider", tt.provider)
+			rctx.URLParams.Add("tenant_id", tenantID.String())
 
-	h.Receive(rr, req)
+			req := httptest.NewRequest(http.MethodPost, "/v1/webhooks/"+tt.provider+"/"+tenantID.String(), bytes.NewBufferString(`{"type":"ORDER_CREATED"}`))
+			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+			rr := httptest.NewRecorder()
 
-	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
-	var resp map[string]string
-	err := json.NewDecoder(rr.Body).Decode(&resp)
-	require.NoError(t, err)
-	assert.Equal(t, "webhook secret not configured", resp["error"])
+			h.Receive(rr, req)
+
+			assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+			var resp map[string]string
+			err := json.NewDecoder(rr.Body).Decode(&resp)
+			require.NoError(t, err)
+			assert.Equal(t, "webhook secret not configured", resp["error"])
+		})
+	}
 }
