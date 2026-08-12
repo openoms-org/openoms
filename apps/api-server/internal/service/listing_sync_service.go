@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"math"
 	"time"
 
@@ -235,7 +236,16 @@ type SyncResult struct {
 	Message        string `json:"message"`
 }
 
-// SyncProducts pushes local products to the marketplace as new listings or updates existing ones.
+// listingPushJob couples a newly-created local listing with the product to publish.
+// It is gathered inside a transaction and pushed outside it.
+type listingPushJob struct {
+	listing *model.ProductListing
+	product model.Product
+}
+
+// SyncProducts creates marketplace offers for products without a listing. It follows the
+// same three-phase pattern as SyncPrices: gather and create pending local rows in a short
+// transaction, call the marketplace without a transaction, then persist each outcome.
 func (s *ListingSyncService) SyncProducts(ctx context.Context, tenantID uuid.UUID, configID uuid.UUID) (*SyncResult, error) {
 	cfg, err := s.Get(ctx, tenantID, configID)
 	if err != nil {
@@ -243,8 +253,11 @@ func (s *ListingSyncService) SyncProducts(ctx context.Context, tenantID uuid.UUI
 	}
 
 	result := &SyncResult{}
+	var jobs []listingPushJob
+	var integ *model.IntegrationWithCreds
+
+	// Phase 1: create local pending rows and gather the provider credentials.
 	err = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		// Get all products for the tenant
 		products, _, listErr := s.productRepo.List(ctx, tx, model.ProductListFilter{
 			PaginationParams: model.PaginationParams{Limit: 1000, Offset: 0},
 		})
@@ -253,83 +266,166 @@ func (s *ListingSyncService) SyncProducts(ctx context.Context, tenantID uuid.UUI
 		}
 
 		for _, product := range products {
-			// Check if a listing already exists for this product + integration
 			existing, findErr := s.listingRepo.FindByProductAndIntegration(ctx, tx, product.ID, cfg.IntegrationID)
 			if findErr != nil {
 				s.logSyncEntry(ctx, tx, tenantID, configID, "push", "product", &product.ID, nil, "failed", findErr.Error())
 				result.ItemsFailed++
 				continue
 			}
-
-			if existing == nil {
-				// Create a placeholder listing record (actual marketplace push is provider-specific)
-				listing := &model.ProductListing{
-					ID:            uuid.New(),
-					TenantID:      tenantID,
-					ProductID:     product.ID,
-					IntegrationID: cfg.IntegrationID,
-					Status:        "pending",
-					SyncStatus:    "pending",
-					Metadata:      json.RawMessage("{}"),
-				}
-
-				// Apply price rule. Stock is intentionally NOT written here: stock_override
-				// is owned by StockSyncService (sourced from warehouse_stock); writing it
-				// from products.stock_quantity would corrupt the canonical value.
-				adjustedPrice := s.applyPriceRule(cfg, product.Price)
-				if adjustedPrice != product.Price {
-					listing.PriceOverride = &adjustedPrice
-				}
-
-				if createErr := s.listingRepo.Create(ctx, tx, listing); createErr != nil {
-					s.logSyncEntry(ctx, tx, tenantID, configID, "push", "product", &product.ID, nil, "failed", createErr.Error())
-					result.ItemsFailed++
-					continue
-				}
-
-				changes, _ := json.Marshal(map[string]any{
-					"action":  "created_listing",
-					"product": product.Name,
-				})
-				s.logSyncEntryWithChanges(ctx, tx, tenantID, configID, "push", "product", &product.ID, nil, "success", changes)
-				result.ItemsProcessed++
-			} else {
-				// Listing exists — update price/stock overrides if needed
-				needsUpdate := false
-				updateReq := &model.UpdateProductListingRequest{}
-
-				// Stock_override is owned by StockSyncService (warehouse_stock source) and
-				// is intentionally not written from products.stock_quantity here.
-				adjustedPrice := s.applyPriceRule(cfg, product.Price)
-				if existing.PriceOverride == nil || *existing.PriceOverride != adjustedPrice {
-					updateReq.PriceOverride = &adjustedPrice
-					needsUpdate = true
-				}
-
-				if needsUpdate {
-					if updateErr := s.listingRepo.Update(ctx, tx, existing.ID, updateReq); updateErr != nil {
-						s.logSyncEntry(ctx, tx, tenantID, configID, "push", "product", &product.ID, existing.ExternalID, "failed", updateErr.Error())
-						result.ItemsFailed++
-						continue
-					}
-				}
-
-				s.logSyncEntry(ctx, tx, tenantID, configID, "push", "product", &product.ID, existing.ExternalID, "success", "")
-				result.ItemsProcessed++
+			if existing != nil {
+				// PushOffer creates an offer, so reusing it for an existing listing could duplicate it.
+				s.logSyncEntry(ctx, tx, tenantID, configID, "push", "product", &product.ID, existing.ExternalID, "skipped", "listing already exists")
+				continue
 			}
+
+			listing := &model.ProductListing{
+				ID:            uuid.New(),
+				TenantID:      tenantID,
+				ProductID:     product.ID,
+				IntegrationID: cfg.IntegrationID,
+				Status:        "pending",
+				SyncStatus:    "pending",
+				Metadata:      json.RawMessage("{}"),
+			}
+			adjustedPrice := s.applyPriceRule(cfg, product.Price)
+			if adjustedPrice != product.Price {
+				listing.PriceOverride = &adjustedPrice
+			}
+			if createErr := s.listingRepo.Create(ctx, tx, listing); createErr != nil {
+				s.logSyncEntry(ctx, tx, tenantID, configID, "push", "product", &product.ID, nil, "failed", createErr.Error())
+				result.ItemsFailed++
+				continue
+			}
+			jobs = append(jobs, listingPushJob{listing: listing, product: product})
 		}
 
+		if len(jobs) == 0 {
+			return nil
+		}
+		var findErr error
+		integ, findErr = s.integrationRepo.FindByID(ctx, tx, cfg.IntegrationID)
+		if findErr != nil {
+			return fmt.Errorf("find integration: %w", findErr)
+		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	// Update last sync
-	s.updateLastSync(ctx, tenantID, configID, result.ItemsFailed > 0)
+	// Phase 2: PushOffer runs without a database transaction. Phase 3 persists each outcome.
+	if len(jobs) > 0 {
+		switch {
+		case integ == nil || integ.EncryptedCredentials == "":
+			for _, job := range jobs {
+				s.persistProductPushError(ctx, tenantID, configID, job.listing, "integration has no credentials")
+				result.ItemsFailed++
+			}
+		default:
+			provider, providerErr := s.marketplaceProvider(integ)
+			if providerErr != nil {
+				errMsg := truncateServiceErrorMsg(providerErr.Error())
+				for _, job := range jobs {
+					s.persistProductPushError(ctx, tenantID, configID, job.listing, errMsg)
+					result.ItemsFailed++
+				}
+			} else {
+				s.dispatchProductOffers(ctx, integ, provider, cfg, jobs, result,
+					func(listing *model.ProductListing, externalID string) {
+						s.persistProductPush(ctx, tenantID, configID, listing, externalID)
+					},
+					func(listing *model.ProductListing, errMsg string) {
+						s.persistProductPushError(ctx, tenantID, configID, listing, errMsg)
+					},
+				)
+				closeMarketplaceProvider(provider)
+			}
+		}
+	}
 
+	s.updateLastSync(ctx, tenantID, configID, result.ItemsFailed > 0)
 	result.Message = fmt.Sprintf("Synced %d products, %d errors", result.ItemsProcessed, result.ItemsFailed)
 	return result, nil
+}
+
+// dispatchProductOffers calls PushOffer for each new listing outside a transaction and
+// reports each provider outcome to the supplied persistence callbacks. A failed offer
+// does not prevent later jobs from being pushed.
+func (s *ListingSyncService) dispatchProductOffers(
+	ctx context.Context,
+	integ *model.IntegrationWithCreds,
+	provider integration.MarketplaceProvider,
+	cfg *model.ListingSyncConfig,
+	jobs []listingPushJob,
+	result *SyncResult,
+	onSuccess func(*model.ProductListing, string),
+	onFailure func(*model.ProductListing, string),
+) {
+	for _, job := range jobs {
+		externalID, pushErr := provider.PushOffer(ctx, &job.product, s.listingData(cfg, job.listing, job.product))
+		if pushErr != nil || externalID == "" {
+			errMsg := "provider returned an empty external id"
+			if pushErr != nil {
+				errMsg = truncateServiceErrorMsg(pushErr.Error())
+			}
+			s.logger.Error("listing sync: push offer failed", "listing_id", job.listing.ID, "provider", integ.Provider, "error", errMsg)
+			onFailure(job.listing, errMsg)
+			result.ItemsFailed++
+			continue
+		}
+		onSuccess(job.listing, externalID)
+		result.ItemsProcessed++
+	}
+}
+
+// listingData returns the common product fields expected by marketplace providers, overlaid
+// with the config's provider-specific field mapping. It deliberately excludes stock: the
+// canonical stock owner is StockSyncService, which reads warehouse_stock.
+func (s *ListingSyncService) listingData(cfg *model.ListingSyncConfig, listing *model.ProductListing, product model.Product) map[string]any {
+	data := map[string]any{
+		"title":          product.Name,
+		"name":           product.Name,
+		"price":          product.Price,
+		"price_override": listing.PriceOverride,
+		"sku":            product.SKU,
+		"ean":            product.EAN,
+		"description":    product.DescriptionLong,
+	}
+	var mapped map[string]any
+	if json.Unmarshal(cfg.FieldMapping, &mapped) == nil {
+		maps.Copy(data, mapped)
+	}
+	return data
+}
+
+// persistProductPush records a successful PushOffer in its own short transaction.
+func (s *ListingSyncService) persistProductPush(ctx context.Context, tenantID, configID uuid.UUID, listing *model.ProductListing, externalID string) {
+	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		if _, execErr := tx.Exec(ctx, `UPDATE product_listings
+			SET external_id = $2, status = 'active', stock_sync_mode = 'auto', sync_status = 'synced',
+				error_message = NULL, last_synced_at = NOW(), updated_at = NOW()
+			WHERE id = $1`, listing.ID, externalID); execErr != nil {
+			return execErr
+		}
+		s.logSyncEntry(ctx, tx, tenantID, configID, "push", "product", &listing.ProductID, &externalID, "success", "")
+		return nil
+	}); err != nil {
+		s.logger.Error("listing sync: persist product push failed", "listing_id", listing.ID, "error", err)
+	}
+}
+
+// persistProductPushError marks one offer creation as failed and records its sync log.
+func (s *ListingSyncService) persistProductPushError(ctx context.Context, tenantID, configID uuid.UUID, listing *model.ProductListing, errMsg string) {
+	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		if _, execErr := tx.Exec(ctx, `UPDATE product_listings
+			SET sync_status = 'failed', error_message = $2, updated_at = NOW() WHERE id = $1`, listing.ID, errMsg); execErr != nil {
+			return execErr
+		}
+		s.logSyncEntry(ctx, tx, tenantID, configID, "push", "product", &listing.ProductID, nil, "failed", errMsg)
+		return nil
+	}); err != nil {
+		s.logger.Error("listing sync: persist product push error failed", "listing_id", listing.ID, "error", err)
+	}
 }
 
 // PullListings imports marketplace listings as local products.
