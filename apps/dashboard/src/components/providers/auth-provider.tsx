@@ -5,6 +5,31 @@ import { useAuthStore } from "@/lib/auth";
 import { API_URL } from "@/lib/api-client";
 import type { TokenResponse } from "@/types/api";
 
+type RefreshResult =
+  | { ok: true; data: TokenResponse }
+  | { ok: false; status: number };
+
+// React StrictMode mounts effects twice in development. Sharing the in-flight request
+// avoids presenting a rotated refresh cookie twice, which the API treats as token reuse.
+let hydrationRefreshPromise: Promise<RefreshResult> | null = null;
+
+function refreshForHydration(): Promise<RefreshResult> {
+  if (!hydrationRefreshPromise) {
+    hydrationRefreshPromise = fetch(`${API_URL}/v1/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+    })
+      .then(async (res): Promise<RefreshResult> => {
+        if (!res.ok) return { ok: false, status: res.status };
+        return { ok: true, data: await res.json() as TokenResponse };
+      })
+      .finally(() => {
+        hydrationRefreshPromise = null;
+      });
+  }
+  return hydrationRefreshPromise;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setAuth = useAuthStore((s) => s.setAuth);
   const clearAuth = useAuthStore((s) => s.clearAuth);
@@ -25,16 +50,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        const res = await fetch(`${API_URL}/v1/auth/refresh`, {
-          method: "POST",
-          credentials: "include",
-        });
+        const result = await refreshForHydration();
         if (cancelled) return;
-        if (res.ok) {
-          const data: TokenResponse = await res.json();
-          setAuth(data.access_token, data.user, data.tenant);
+        if (result.ok) {
+          setAuth(result.data.access_token, result.data.user, result.data.tenant);
           document.cookie = `has_session=1; path=/; SameSite=Lax; max-age=2592000${secure}`;
-        } else if (res.status === 429) {
+        } else if (result.status === 429) {
           // Rate-limited — retry after 3s instead of logging out
           retryTimer = setTimeout(() => {
             if (cancelled) return;
