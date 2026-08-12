@@ -35,7 +35,11 @@
     "movedToPacking": "Moved to packing phase",
     "itemPacked": "Item packed",
     "sessionCompleted": "Session completed - orders marked as packed",
-    "sessionCancelled": "Session cancelled"
+    "sessionCancelled": "Session cancelled",
+    "sessionTitle": "Pick & Pack session",
+    "ordersCount": "{count} orders",
+    "pickingProgress": "Picking",
+    "packingProgress": "Packing"
   },
   "stocktakes": {
     "all": "All",

@@ -423,17 +423,19 @@ export default function PurchaseOrderDetailPage() {
 }
 
 function ProgressBadge({ item }: { item: PurchaseOrderItem }) {
+  const t = useTranslations("purchaseOrders");
+
   if (item.quantity_received === 0) {
     return (
       <Badge variant="outline" className="text-xs">
-        Oczekuje
+        {t("progressAwaiting")}
       </Badge>
     );
   }
   if (item.quantity_received >= item.quantity_ordered) {
     return (
       <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
-        Komplet
+        {t("progressComplete")}
       </Badge>
     );
   }
