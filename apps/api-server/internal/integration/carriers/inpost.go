@@ -32,8 +32,8 @@ type InPostCredentials struct {
 type InPostProvider struct {
 	client      *inpostsdk.Client
 	logger      *slog.Logger
-	pollLimit   int           // max attempts for offer polling; production uses 20, tests override it
-	pollTimeout time.Duration // max total time for offer polling, independent of parent ctx
+	pollLimit   int           // max attempts for offer polling; production uses 20, tests use 1
+	pollTimeout time.Duration // max total time for offer polling, independent of parent ctx; production uses 120s, tests use 1s
 }
 
 // NewInPostProvider creates an InPost CarrierProvider from encrypted credentials.
@@ -129,9 +129,17 @@ func (p *InPostProvider) CreateShipment(ctx context.Context, req integration.Car
 	// does not leave the loop unbounded.
 	shipmentID := shipment.ID
 	var offerID int64
-	pollCtx, pollCancel := context.WithTimeout(ctx, p.pollTimeout)
+	pollLimit := p.pollLimit
+	if pollLimit <= 0 {
+		pollLimit = 20
+	}
+	pollTimeout := p.pollTimeout
+	if pollTimeout <= 0 {
+		pollTimeout = 120 * time.Second
+	}
+	pollCtx, pollCancel := context.WithTimeout(ctx, pollTimeout)
 	defer pollCancel()
-	for attempt := range p.pollLimit {
+	for attempt := range pollLimit {
 		if len(shipment.Offers) > 0 {
 			offerID = shipment.Offers[0].ID
 			break
@@ -146,7 +154,7 @@ func (p *InPostProvider) CreateShipment(ctx context.Context, req integration.Car
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
 			}
-			return nil, fmt.Errorf("inpost: offer polling timed out after %v (shipment %d)", p.pollTimeout, shipmentID)
+			return nil, fmt.Errorf("inpost: offer polling timed out after %v (shipment %d)", pollTimeout, shipmentID)
 		case <-time.After(backoff):
 		}
 		polled, err := p.client.Shipments.Get(pollCtx, shipmentID)
