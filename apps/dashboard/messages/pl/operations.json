@@ -172,6 +172,8 @@
     "orderCancelled": "Zamówienie zostało anulowane",
     "ordered": "Zamówione",
     "postep": "Postęp",
+    "progressAwaiting": "Oczekuje",
+    "progressComplete": "Komplet",
     "pozycjeZamowienia": "Pozycje zamówienia (",
     "pozycjeZostalyPrzyjete": "Pozycje zostały przyjęte",
     "przyjeto": "Przyjęto",

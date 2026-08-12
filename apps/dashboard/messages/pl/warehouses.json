@@ -35,7 +35,11 @@
     "movedToPacking": "Przejście do fazy pakowania",
     "itemPacked": "Pozycja spakowana",
     "sessionCompleted": "Sesja zakończona - zamówienia oznaczone jako spakowane",
-    "sessionCancelled": "Sesja anulowana"
+    "sessionCancelled": "Sesja anulowana",
+    "sessionTitle": "Sesja Pick & Pack",
+    "ordersCount": "{count} zamówień",
+    "pickingProgress": "Kompletowanie",
+    "packingProgress": "Pakowanie"
   },
   "stocktakes": {
     "all": "Wszystkie",
