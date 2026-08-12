@@ -1,8 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { LOGIN_COPY } from './helpers/messages';
 
-const API_URL = process.env.E2E_API_URL ?? 'http://localhost:8080';
-
 /**
  * The login screen only renders the "register" link when the deployment
  * actually offers self-registration (see (auth)/login/page.tsx). The dev stack
@@ -10,7 +8,7 @@ const API_URL = process.env.E2E_API_URL ?? 'http://localhost:8080';
  * asserting it unconditionally tested the fixture, not the app.
  */
 async function registrationLinkOffered(request: import('@playwright/test').APIRequestContext) {
-  const resp = await request.get(`${API_URL}/v1/config/public`);
+  const resp = await request.get('/v1/config/public');
   expect(resp.ok()).toBeTruthy();
   const config = (await resp.json()) as {
     registration_mode: string;

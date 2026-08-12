@@ -20,7 +20,7 @@ setup('authenticate', async ({ page }) => {
         const body = await resp.json().catch(() => ({}));
         return { error: `Login failed: ${resp.status} ${body.error || ''}` };
       }
-      const data = await resp.json();
+      await resp.json();
       document.cookie = 'has_session=1; path=/; SameSite=Lax; max-age=2592000';
       return { ok: true };
     },
