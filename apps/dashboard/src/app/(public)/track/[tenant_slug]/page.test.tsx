@@ -2,6 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, userEvent } from "@/test/test-utils";
 import TrackingPage from "./page";
 
+vi.mock("next-intl", () => ({
+  useTranslations: (namespace?: string) => (key: string) =>
+    namespace === "statuses" && key === "shipment.label_ready"
+      ? "Etykieta gotowa"
+      : key,
+}));
+
 vi.mock("next/navigation", () => ({
   useParams: () => ({ tenant_slug: "mercpart" }),
 }));
@@ -93,12 +100,12 @@ describe("TrackingPage", () => {
     expect(screen.queryByText("awaiting_parts")).not.toBeInTheDocument();
   });
 
-  it("colours shipment badges from the shipment catalog, not the order one", async () => {
+  it("translates shipment badges from the shipment catalog", async () => {
     await lookup({
       shipments: [{ tracking_number: "TRK-1", carrier: "inpost", status: "label_ready" }],
     });
 
-    const badge = await screen.findByText("label_ready");
+    const badge = await screen.findByText("Etykieta gotowa");
     // SHIPMENT_STATUSES.label_ready — a status the old local map had no colour for
     expect(badge).toHaveClass("bg-indigo-100");
     expect(badge).toHaveClass("text-indigo-800");

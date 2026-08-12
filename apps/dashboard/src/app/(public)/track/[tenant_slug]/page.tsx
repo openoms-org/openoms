@@ -298,6 +298,7 @@ export default function TrackingPage() {
                       <StatusBadge
                         status={shipment.status}
                         statusMap={SHIPMENT_STATUSES}
+                        translationPrefix="shipment"
                       />
                     </span>
                   </div>
