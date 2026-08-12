@@ -41,16 +41,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import type { PickPackItem } from "@/types/api";
 import { useTranslations } from "next-intl";
-
-const statusLabels: Record<string, string> = {
-  picking: "Kompletowanie",
-  packing: "Pakowanie",
-  completed: "Zakonczone",
-  cancelled: "Anulowane",
-};
+import { enumLabel } from "@/lib/i18n-fallback";
 
 export default function PickPackSessionPage() {
   const t = useTranslations("pickPack");
+  const ts = useTranslations("statuses");
   const params = useParams();
   const router = useRouter();
   const sessionId = params.id as string;
@@ -214,12 +209,12 @@ export default function PickPackSessionPage() {
           </Button>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
-              Sesja Pick & Pack
+              {t("sessionTitle")}
             </h1>
             <p className="text-muted-foreground">
-              {session.session_type === "batch" ? "Wsadowa" : "Pojedyncza"} &middot;{" "}
-              {statusLabels[session.status] || session.status} &middot;{" "}
-              {stats?.order_count ?? 0} zamowien
+              {t(`sessionTypes.${session.session_type}`)} &middot;{" "}
+              {enumLabel(ts, "pickPack", session.status)} &middot;{" "}
+              {t("ordersCount", { count: stats?.order_count ?? 0 })}
             </p>
           </div>
         </div>
@@ -255,7 +250,7 @@ export default function PickPackSessionPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <ScanBarcode className="h-5 w-5" />
-              Kompletowanie
+              {t("pickingProgress")}
               {stats?.all_picked && (
                 <Check className="h-5 w-5 text-green-500 ml-auto" />
               )}
@@ -281,7 +276,7 @@ export default function PickPackSessionPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <PackageCheck className="h-5 w-5" />
-              Pakowanie
+              {t("packingProgress")}
               {stats?.all_packed && (
                 <Check className="h-5 w-5 text-green-500 ml-auto" />
               )}
