@@ -1,12 +1,16 @@
 package service
 
 import (
+	"context"
+	"errors"
 	"log/slog"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
@@ -66,6 +70,83 @@ func TestIsPushEligible(t *testing.T) {
 func TestFeedMetaForProvider_NoFeed(t *testing.T) {
 	// A provider that does not implement AsyncFeedResult yields nil metadata.
 	assert.Nil(t, feedMetaForProvider(struct{}{}))
+}
+
+// --- dispatchProductOffers ---
+
+type listingSyncTestProvider struct {
+	fail bool
+}
+
+func (p *listingSyncTestProvider) ProviderName() string { return "test" }
+func (p *listingSyncTestProvider) PollOrders(context.Context, string) ([]integration.MarketplaceOrder, string, error) {
+	return nil, "", nil
+}
+func (p *listingSyncTestProvider) GetOrder(context.Context, string) (*integration.MarketplaceOrder, error) {
+	return nil, nil
+}
+func (p *listingSyncTestProvider) PushOffer(_ context.Context, product *model.Product, _ map[string]any) (string, error) {
+	if p.fail {
+		return "", errors.New("provider rejected offer")
+	}
+	return "offer-" + product.ID.String(), nil
+}
+func (p *listingSyncTestProvider) UpdateStock(context.Context, string, int) error { return nil }
+func (p *listingSyncTestProvider) UpdatePrice(context.Context, string, float64) error {
+	return nil
+}
+
+func TestDispatchProductOffers_RecordsExternalIDAfterSuccessfulPush(t *testing.T) {
+	productID := uuid.New()
+	listing := &model.ProductListing{ID: uuid.New(), ProductID: productID}
+	result := &SyncResult{}
+	var savedExternalID string
+	var failed bool
+
+	(&ListingSyncService{logger: slog.Default()}).dispatchProductOffers(
+		context.Background(),
+		&model.IntegrationWithCreds{Integration: model.Integration{Provider: "test"}},
+		&listingSyncTestProvider{},
+		&model.ListingSyncConfig{},
+		[]listingPushJob{{listing: listing, product: model.Product{ID: productID}}},
+		result,
+		func(saved *model.ProductListing, externalID string) {
+			assert.Same(t, listing, saved)
+			savedExternalID = externalID
+		},
+		func(*model.ProductListing, string) { failed = true },
+	)
+
+	assert.Equal(t, "offer-"+productID.String(), savedExternalID)
+	assert.False(t, failed)
+	assert.Equal(t, 1, result.ItemsProcessed)
+	assert.Zero(t, result.ItemsFailed)
+}
+
+func TestDispatchProductOffers_FailedPushIsNotMarkedSynced(t *testing.T) {
+	listing := &model.ProductListing{ID: uuid.New(), ProductID: uuid.New()}
+	result := &SyncResult{}
+	var saved bool
+	var failureMessage string
+
+	(&ListingSyncService{logger: slog.Default()}).dispatchProductOffers(
+		context.Background(),
+		&model.IntegrationWithCreds{Integration: model.Integration{Provider: "test"}},
+		&listingSyncTestProvider{fail: true},
+		&model.ListingSyncConfig{},
+		[]listingPushJob{{listing: listing, product: model.Product{ID: listing.ProductID}}},
+		result,
+		func(*model.ProductListing, string) { saved = true },
+		func(failed *model.ProductListing, errMsg string) {
+			assert.Same(t, listing, failed)
+			failureMessage = errMsg
+		},
+	)
+
+	assert.False(t, saved, "a failed push must not take the synced persistence path")
+	assert.Equal(t, "provider rejected offer", failureMessage)
+	assert.Zero(t, result.ItemsProcessed)
+	assert.Equal(t, 1, result.ItemsFailed)
 }
 
 // --- construction + setter wiring ---
