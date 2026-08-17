@@ -169,3 +169,25 @@ func TestNewListingSyncService_WiresDependencies(t *testing.T) {
 	svc.SetStockSyncService(stockSvc)
 	assert.Same(t, stockSvc, svc.stockSyncSvc, "SetStockSyncService must wire the stock owner")
 }
+
+func TestPlanUnsupportedListingPull_NeverMarksSynced(t *testing.T) {
+	ext := "OFFER-1"
+	listings := []*model.ProductListing{
+		{ID: uuid.New(), ProductID: uuid.New(), ExternalID: &ext, SyncStatus: "pending"},
+		{ID: uuid.New(), ProductID: uuid.New(), ExternalID: nil, SyncStatus: "pending"},
+	}
+
+	actions := planUnsupportedListingPull(listings)
+	require.Len(t, actions, 2)
+	for _, action := range actions {
+		assert.Equal(t, "skipped", action.LogStatus)
+		assert.Equal(t, listingPullUnsupportedReason, action.Reason)
+		assert.False(t, action.MarkSynced)
+	}
+
+	result := syncResultForUnsupportedPull(len(actions))
+	assert.Equal(t, 0, result.ItemsProcessed)
+	assert.Equal(t, 0, result.ItemsFailed)
+	assert.Contains(t, result.Message, "not supported")
+	assert.NotContains(t, result.Message, "Fetched")
+}

@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"maps"
 	"math"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -428,54 +427,61 @@ func (s *ListingSyncService) persistProductPushError(ctx context.Context, tenant
 	}
 }
 
-// PullListings imports marketplace listings as local products.
+const listingPullUnsupportedReason = "provider does not expose offer listing"
+
+// listingPullSkip is one honest skip for a listing we cannot fetch from the provider.
+type listingPullSkip struct {
+	ProductID  *uuid.UUID
+	ExternalID *string
+	LogStatus  string
+	Reason     string
+	MarkSynced bool
+}
+
+func planUnsupportedListingPull(listings []*model.ProductListing) []listingPullSkip {
+	actions := make([]listingPullSkip, 0, len(listings))
+	for _, listing := range listings {
+		var productID *uuid.UUID
+		if listing.ProductID != uuid.Nil {
+			id := listing.ProductID
+			productID = &id
+		}
+		actions = append(actions, listingPullSkip{
+			ProductID:  productID,
+			ExternalID: listing.ExternalID,
+			LogStatus:  "skipped",
+			Reason:     listingPullUnsupportedReason,
+			MarkSynced: false,
+		})
+	}
+	return actions
+}
+
+func syncResultForUnsupportedPull(skipped int) *SyncResult {
+	return &SyncResult{
+		Message: fmt.Sprintf("Offer pull is not supported by the provider; %d listings skipped, 0 fetched", skipped),
+	}
+}
+
+// PullListings does not fetch marketplace offers: MarketplaceProvider has no
+// list-offers API. It records an honest skip per existing listing and does
+// not write a successful pull status for work that did not happen.
 func (s *ListingSyncService) PullListings(ctx context.Context, tenantID uuid.UUID, configID uuid.UUID) (*SyncResult, error) {
 	cfg, err := s.Get(ctx, tenantID, configID)
 	if err != nil {
 		return nil, err
 	}
 
-	result := &SyncResult{}
-
+	var skipped int
 	err = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		// Get all existing listings for this integration
 		listings, listErr := s.listingRepo.ListByIntegration(ctx, tx, cfg.IntegrationID)
 		if listErr != nil {
 			return fmt.Errorf("list listings: %w", listErr)
 		}
 
-		productMap, err := s.productMapForListings(ctx, tx, listings)
-		if err != nil {
-			return err
-		}
-
-		for _, listing := range listings {
-			if listing.ExternalID == nil || *listing.ExternalID == "" {
-				s.logSyncEntry(ctx, tx, tenantID, configID, "pull", "offer", nil, nil, "skipped", "no external_id")
-				continue
-			}
-
-			product := productMap[listing.ProductID]
-			if product == nil {
-				s.logSyncEntry(ctx, tx, tenantID, configID, "pull", "offer", &listing.ProductID, listing.ExternalID, "skipped", "product not found")
-				continue
-			}
-
-			// Mark as synced (actual marketplace data pull is provider-specific)
-			syncStatus := "synced"
-			now := time.Now()
-			updateReq := &model.UpdateProductListingRequest{
-				SyncStatus: &syncStatus,
-			}
-			if updateErr := s.listingRepo.Update(ctx, tx, listing.ID, updateReq); updateErr != nil {
-				result.ItemsFailed++
-				continue
-			}
-			// Update last_synced_at
-			_, _ = tx.Exec(ctx, "UPDATE product_listings SET last_synced_at = $1 WHERE id = $2", now, listing.ID)
-
-			s.logSyncEntry(ctx, tx, tenantID, configID, "pull", "offer", &listing.ProductID, listing.ExternalID, "success", "")
-			result.ItemsProcessed++
+		for _, action := range planUnsupportedListingPull(listings) {
+			s.logSyncEntry(ctx, tx, tenantID, configID, "pull", "offer", action.ProductID, action.ExternalID, action.LogStatus, action.Reason)
+			skipped++
 		}
 		return nil
 	})
@@ -483,9 +489,8 @@ func (s *ListingSyncService) PullListings(ctx context.Context, tenantID uuid.UUI
 		return nil, err
 	}
 
-	s.updateLastSync(ctx, tenantID, configID, result.ItemsFailed > 0)
-	result.Message = fmt.Sprintf("Fetched %d offers, %d errors", result.ItemsProcessed, result.ItemsFailed)
-	return result, nil
+	s.updateLastSync(ctx, tenantID, configID, false)
+	return syncResultForUnsupportedPull(skipped), nil
 }
 
 // listingPriceJob couples a push-eligible listing with the markup-applied price
