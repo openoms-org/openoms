@@ -1,5 +1,5 @@
 # ── Build stage ──────────────────────────────────────────────────
-FROM golang:1.25.13-alpine AS builder
+FROM golang:1.26.6-alpine AS builder
 
 RUN apk add --no-cache ca-certificates tzdata
 

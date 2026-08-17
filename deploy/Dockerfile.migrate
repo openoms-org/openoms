@@ -1,6 +1,6 @@
 # Build migrate from source with current Go toolchain to avoid CVEs
 # in the prebuilt migrate/migrate image (old Go stdlib + Alpine deps).
-FROM golang:1.25.13-alpine AS builder
+FROM golang:1.26.6-alpine AS builder
 
 RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1
 
