@@ -2160,7 +2160,7 @@ DPD uzywa dwoch powierzchni API: DPD Services REST do tworzenia przesylek i etyk
 | RecurringOrderWorker | konfigurowalny | Tworzenie zamowien cyklicznych |
 | SegmentRefreshWorker | 1h | Przeliczanie czlonkostwa segmentow rule_based dla wszystkich tenantow (pelny recompute clear-then-repopulate, idempotentny) |
 | RepricingWorker | konfigurowalny | Automatyczna zmiana cen wg regul |
-| ListingSyncWorker | konfigurowalny | Synchronizacja listingow marketplace |
+| ListingSyncWorker | konfigurowalny | Push listingow (oferty/ceny/stan). Pull nie pobiera ofert — MarketplaceProvider nie ma list-offers; pozycje sa skipowane, bez statusu sukcesu |
 | BillingReconciliationWorker | 15min | Naprawia sesje checkout, ktore zarejestrowaly tenanta, ale nie utworzyly rekordow billing/subskrypcji (powtarza idempotentna finalizacje); rejestrowany tylko gdy billing jest skonfigurowany |
 
 Workery zarejestrowane w managerze: 22. Liczba plikow zrodlowych w `internal/worker/`: 26. `AllegroWebhookSyncer` jest podpiety do handlera webhookow Allegro (wyzwalany eventem), a nie rejestrowany w managerze workerow -- dlatego nie liczy sie do 22 cyklicznych workerow.
