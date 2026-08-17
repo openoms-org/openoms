@@ -356,6 +356,7 @@ export interface BundleComponent {
   position: number;
   component_name?: string;
   component_sku?: string;
+  /** Canonical available stock of the component (same hybrid read as available_stock). */
   component_stock: number;
   created_at: string;
   updated_at: string;

@@ -9,24 +9,22 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
+	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// TestBundleAvailability_HybridWarehouseStockWithFallback verifies that bundle component
-// availability is read from the canonical warehouse_stock (SUM quantity - reserved), falling
-// back to products.stock_quantity only when the component has no warehouse rows.
-//
-// Bundle with three components, each products.stock_quantity deliberately stale/high:
-//
-//	COMP-WH      pos 0: stock_quantity=100, warehouse 5-1 -> expect 4   (warehouse wins over stale 100)
-//	COMP-SUP     pos 1: stock_quantity=7,   no warehouse  -> expect 7   (fallback to products.stock_quantity)
-//	COMP-SOLDOUT pos 2: stock_quantity=50,  warehouse 3-3 -> expect 0   (warehouse rows exist & empty -> 0, NOT fallback 50)
-func TestBundleAvailability_HybridWarehouseStockWithFallback(t *testing.T) {
+func TestBundleListComponents_HybridWarehouseStockWithFallback(t *testing.T) {
 	ctx := context.Background()
 	tenant := seedTenant(t, ctx)
-	repo := repository.NewBundleRepository()
+	svc := service.NewBundleService(
+		repository.NewBundleRepository(),
+		repository.NewProductRepository(),
+		nil,
+		appPool,
+	)
 
 	bundleID := uuid.New()
 	compWH := uuid.New()
@@ -58,7 +56,6 @@ func TestBundleAvailability_HybridWarehouseStockWithFallback(t *testing.T) {
 			whID, tenant); err != nil {
 			return err
 		}
-		// warehouse rows ONLY for compWH (5-1=4) and compSoldOut (3-3=0); compSup has none.
 		for _, ws := range []struct {
 			product            uuid.UUID
 			quantity, reserved int
@@ -91,18 +88,28 @@ func TestBundleAvailability_HybridWarehouseStockWithFallback(t *testing.T) {
 		return nil
 	}))
 
-	var got []repository.BundleComponentStock
-	require.NoError(t, database.WithTenant(ctx, appPool, tenant, func(tx pgx.Tx) error {
-		var err error
-		got, err = repo.ListComponentAvailability(ctx, tx, bundleID)
-		return err
-	}))
-
+	got, err := svc.ListComponents(ctx, tenant, bundleID)
+	require.NoError(t, err)
 	require.Len(t, got, 3)
-	assert.Equal(t, 4, got[0].AvailableStock, "warehouse-managed must use warehouse_stock 5-1=4, not stale products.stock_quantity 100")
-	assert.Equal(t, 1, got[0].PerBundleQuantity)
-	assert.Equal(t, 7, got[1].AvailableStock, "supplier-managed (no warehouse rows) must fall back to products.stock_quantity 7")
-	assert.Equal(t, 2, got[1].PerBundleQuantity)
-	assert.Equal(t, 0, got[2].AvailableStock, "warehouse rows exist but empty (3-3) must be 0, NOT fall back to products.stock_quantity 50")
-	assert.Equal(t, 1, got[2].PerBundleQuantity)
+	assert.Equal(t, 4, got[0].ComponentStock, "warehouse-managed must use warehouse_stock 5-1=4, not stale products.stock_quantity 100")
+	assert.Equal(t, 1, got[0].Quantity)
+	assert.Equal(t, 7, got[1].ComponentStock, "supplier-managed (no warehouse rows) must fall back to products.stock_quantity 7")
+	assert.Equal(t, 2, got[1].Quantity)
+	assert.Equal(t, 0, got[2].ComponentStock, "warehouse rows exist but empty (3-3) must be 0, NOT fall back to products.stock_quantity 50")
+	assert.Equal(t, 1, got[2].Quantity)
+
+	assemble, err := svc.CalculateBundleStock(ctx, tenant, bundleID)
+	require.NoError(t, err)
+	assert.Equal(t, 0, assemble, "sold-out component must zero assembleable bundles")
+
+	var raw []model.ProductBundle
+	require.NoError(t, database.WithTenant(ctx, appPool, tenant, func(tx pgx.Tx) error {
+		var listErr error
+		raw, listErr = repository.NewBundleRepository().ListByBundleProduct(ctx, tx, bundleID)
+		return listErr
+	}))
+	require.Len(t, raw, 3)
+	assert.Equal(t, 0, raw[0].ComponentStock)
+	assert.Equal(t, 0, raw[1].ComponentStock)
+	assert.Equal(t, 0, raw[2].ComponentStock)
 }
