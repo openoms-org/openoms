@@ -1,0 +1,19 @@
+---
+description: Start from the tree. README and ROADMAP counts are not shipped.
+alwaysApply: true
+---
+
+README and ROADMAP are a brochure. Do not treat their counts as shipped. Migrations say 28. The tree has 45+. The README says 8 marketplaces and lists 11. 10 of 11 are still In Development. Only Allegro is Verified.
+
+What is real in the tree:
+- `apps/api-server` (Go)
+- `apps/dashboard` (Next)
+- Postgres RLS
+- Helm at `deploy/helm/openoms`
+- Allegro, InPost, and an Amazon client
+
+Real UI is under `apps/dashboard`, not repo-root leftovers.
+
+Beads is the task queue. One graph: `/Users/rafs/praca/openoms-dev/.beads/` (embedded Dolt, db `openoms_dev`, project_id `f2dee6bd-e125-4ef9-993a-971388b60435`, ids `openoms-dev-*`). `enterprise/` has no own `.beads`. Run `bd ready` from the repo root. Do not invent a second queue. No Jira.
+
+Work one leftover slice at a time. Do not start a new marketplace or carrier. Do not rewrite the README.
