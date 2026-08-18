@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import type { Product, CreateProductRequest } from "@/types/api";
 import { normalizeProductImages } from "@/types/api";
+import { productAvailableStock } from "@/lib/product-available-stock";
 import { ProductBasicFields } from "./product-basic-fields";
 import { ProductDescriptionFields } from "./product-description-fields";
 import { ProductDimensionsFields } from "./product-dimensions-fields";
@@ -88,7 +89,7 @@ export function ProductForm({ product, onSubmit, isPending }: ProductFormProps) 
         sku: product?.sku ?? "",
         ean: product?.ean ?? "",
         price: product?.price ?? 0,
-        stock_quantity: product?.stock_quantity ?? 0,
+        stock_quantity: product ? productAvailableStock(product) : 0,
         source: (product?.source as ProductFormValues["source"]) ?? "manual",
         description_short: product?.description_short || "",
         description_long: product?.description_long || "",

@@ -190,17 +190,6 @@ function MyProductsTab() {
           queryClient.invalidateQueries({ queryKey: ["products"] });
         },
       },
-      {
-        accessorKey: "stock_quantity",
-        type: "number",
-        onSave: async (row, value) => {
-          await apiClient<Product>(`/v1/products/${row.id}`, {
-            method: "PATCH",
-            body: JSON.stringify({ stock_quantity: Number(value) }),
-          });
-          queryClient.invalidateQueries({ queryKey: ["products"] });
-        },
-      },
     ],
     [queryClient]
   );
