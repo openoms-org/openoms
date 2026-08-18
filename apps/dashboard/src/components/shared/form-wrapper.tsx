@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   useForm,
@@ -51,6 +52,7 @@ export function FormWrapper<TValues extends FieldValues>({
   showErrorSummary = true,
   errorSummaryTitle = "Please fix the highlighted fields",
 }: FormWrapperProps<TValues>) {
+  const t = useTranslations("common");
   const form = useForm<TValues>({
     resolver: zodResolver(schema) as Resolver<TValues>,
     defaultValues,
@@ -79,7 +81,7 @@ export function FormWrapper<TValues extends FieldValues>({
       {!hideActions && (
         <div className={cn("flex items-center gap-3", actionsClassName)}>
           <Button type="submit" disabled={pending}>
-            {pending && submittingLabel ? submittingLabel : submitLabel}
+            {pending ? (submittingLabel ?? t("processing")) : submitLabel}
           </Button>
           {onCancel && (
             <Button type="button" variant="outline" onClick={onCancel}>

@@ -52,7 +52,9 @@ import type {
   CreateStockSyncChannelRequest,
 } from "@/types/api";
 import Link from "next/link";
+import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { getErrorMessage } from "@/lib/api-client";
 
 function useChannelTypeLabels() {
   const t = useTranslations("stockSync");
@@ -133,12 +135,17 @@ function AddChannelDialog() {
       priority: priority,
       enabled: true,
     };
-    await createChannel.mutateAsync(req);
-    setOpen(false);
-    setChannelType("allegro");
-    setSyncMode("realtime");
-    setStockBuffer(0);
-    setPriority(0);
+    try {
+      await createChannel.mutateAsync(req);
+      toast.success(t("channelCreated"));
+      setOpen(false);
+      setChannelType("allegro");
+      setSyncMode("realtime");
+      setStockBuffer(0);
+      setPriority(0);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
   };
 
   return (
@@ -230,17 +237,33 @@ function ChannelCard({ channel }: { channel: ChannelSummary }) {
   const pushChannel = usePushChannelStock();
 
   const handleToggle = async (enabled: boolean) => {
-    await updateChannel.mutateAsync({ enabled });
+    try {
+      await updateChannel.mutateAsync({ enabled });
+      toast.success(t("channelUpdated"));
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
   };
 
   const handleDelete = async () => {
-    if (confirm(t("confirmDeleteChannel"))) {
+    if (!confirm(t("confirmDeleteChannel"))) {
+      return;
+    }
+    try {
       await deleteChannel.mutateAsync(channel.id);
+      toast.success(t("channelDeleted"));
+    } catch (error) {
+      toast.error(getErrorMessage(error));
     }
   };
 
   const handlePush = async () => {
-    await pushChannel.mutateAsync(channel.id);
+    try {
+      await pushChannel.mutateAsync(channel.id);
+      toast.success(t("channelSynced"));
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
   };
 
   return (
@@ -351,7 +374,14 @@ export default function StockSyncPage() {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              onClick={() => pushAll.mutate()}
+              onClick={async () => {
+                try {
+                  const result = await pushAll.mutateAsync();
+                  toast.success(t("allChannelsSynced", { count: result.channels_synced }));
+                } catch (error) {
+                  toast.error(getErrorMessage(error));
+                }
+              }}
               disabled={pushAll.isPending}
             >
               <RefreshCw

@@ -62,6 +62,7 @@ export default function DropshipOrderDetailPage() {
   const router = useRouter();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showShippedDialog, setShowShippedDialog] = useState(false);
+  const [pendingTarget, setPendingTarget] = useState<string | null>(null);
   const [trackingNumber, setTrackingNumber] = useState("");
   const [carrier, setCarrier] = useState("");
   const [supplierRef, setSupplierRef] = useState("");
@@ -74,6 +75,7 @@ export default function DropshipOrderDetailPage() {
     status: string,
     extra: { tracking_number?: string; carrier?: string; supplier_reference?: string } = {}
   ) => {
+    setPendingTarget(status);
     try {
       await updateStatus.mutateAsync({ status, ...extra });
       toast.success(t("statusChangedTo", { status: enumLabel(ts, "dropship", status) }));
@@ -205,7 +207,11 @@ export default function DropshipOrderDetailPage() {
                 onClick={() => handleStatusChange("sent")}
                 disabled={updateStatus.isPending}
               >
-                <Send className="mr-2 h-4 w-4" />
+                {updateStatus.isPending && pendingTarget === "sent" ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="mr-2 h-4 w-4" />
+                )}
                 {t("markAsShipped")}
               </Button>
             )}
@@ -215,7 +221,11 @@ export default function DropshipOrderDetailPage() {
                   onClick={() => handleStatusChange("confirmed")}
                   disabled={updateStatus.isPending}
                 >
-                  <Check className="mr-2 h-4 w-4" />
+                  {updateStatus.isPending && pendingTarget === "confirmed" ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Check className="mr-2 h-4 w-4" />
+                  )}
                   {t("confirmedBySupplier")}
                 </Button>
                 <Button
@@ -243,7 +253,11 @@ export default function DropshipOrderDetailPage() {
                 disabled={updateStatus.isPending}
                 className="bg-green-600 hover:bg-green-700"
               >
-                <Package className="mr-2 h-4 w-4" />
+                {updateStatus.isPending && pendingTarget === "delivered" ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Package className="mr-2 h-4 w-4" />
+                )}
                 {t("markAsDelivered")}
               </Button>
             )}

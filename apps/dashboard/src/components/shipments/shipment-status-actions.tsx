@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusTransitionDialog } from "@/components/shared/status-transition-dialog";
 import { SHIPMENT_TRANSITIONS, SHIPMENT_STATUSES } from "@/lib/constants";
@@ -21,6 +22,7 @@ export function ShipmentStatusActions({
 }: ShipmentStatusActionsProps) {
   const t = useTranslations("shipments");
   const [confirmStatus, setConfirmStatus] = useState<string | null>(null);
+  const [pendingTarget, setPendingTarget] = useState<string | null>(null);
 
   const availableTransitions = SHIPMENT_TRANSITIONS[currentStatus] ?? [];
 
@@ -33,6 +35,7 @@ export function ShipmentStatusActions({
   }
 
   const handleClick = (status: string) => {
+    setPendingTarget(status);
     if (DESTRUCTIVE_STATUSES.includes(status)) {
       setConfirmStatus(status);
     } else {
@@ -62,6 +65,9 @@ export function ShipmentStatusActions({
               onClick={() => handleClick(status)}
               disabled={isPending}
             >
+              {isPending && pendingTarget === status && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
               {statusInfo?.label ?? status}
             </Button>
           );

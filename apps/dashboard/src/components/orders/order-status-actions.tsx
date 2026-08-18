@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { StatusTransitionDialog } from "@/components/shared/status-transition-dialog";
@@ -31,6 +32,7 @@ export function OrderStatusActions({
     status: string;
     force: boolean;
   } | null>(null);
+  const [pendingTarget, setPendingTarget] = useState<string | null>(null);
 
   const { data: statusConfig } = useOrderStatuses();
   const orderStatuses = statusConfig ? statusesToMap(statusConfig) : ORDER_STATUSES;
@@ -44,6 +46,7 @@ export function OrderStatusActions({
   );
 
   const handleClick = (newStatus: string, force: boolean) => {
+    setPendingTarget(newStatus);
     if (force || isDestructiveOrderStatus(newStatus)) {
       setConfirmDialog({ status: newStatus, force });
     } else {
@@ -76,6 +79,9 @@ export function OrderStatusActions({
                 onClick={() => handleClick(status, false)}
                 disabled={isPending}
               >
+                {isPending && pendingTarget === status && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
                 {config?.label || status}
               </Button>
             );
@@ -101,6 +107,9 @@ export function OrderStatusActions({
                   onClick={() => handleClick(status, true)}
                   disabled={isPending}
                 >
+                  {isPending && pendingTarget === status && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
                   {config?.label || status}
                 </Button>
               );

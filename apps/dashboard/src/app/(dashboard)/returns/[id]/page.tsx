@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ExternalLink, Copy, Check } from "lucide-react";
+import { ExternalLink, Copy, Check, Loader2 } from "lucide-react";
 import {
   useReturn,
   useUpdateReturn,
@@ -61,6 +61,7 @@ export default function ReturnDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [tokenCopied, setTokenCopied] = useState(false);
+  const [pendingTarget, setPendingTarget] = useState<string | null>(null);
 
   const editSchema = useMemo(() => createEditSchema(t), [t]);
   const { data: returnData, isLoading } = useReturn(params.id);
@@ -113,6 +114,7 @@ export default function ReturnDetailPage() {
   };
 
   const handleTransition = async (newStatus: string) => {
+    setPendingTarget(newStatus);
     try {
       await transitionStatus.mutateAsync({ status: newStatus });
       toast.success(t("statusChanged"));
@@ -363,6 +365,9 @@ export default function ReturnDetailPage() {
                         onClick={() => handleTransition(status)}
                         disabled={transitionStatus.isPending}
                       >
+                        {transitionStatus.isPending && pendingTarget === status && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
                         {TRANSITION_LABEL_KEYS[status] ? t(TRANSITION_LABEL_KEYS[status]) : status}
                       </Button>
                     ))}
