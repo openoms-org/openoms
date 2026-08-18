@@ -125,6 +125,7 @@ export default function SuppliersPage() {
                     <StatusBadge
                       status={supplier.status}
                       statusMap={SUPPLIER_STATUSES}
+                      translationPrefix="supplier"
                     />
                   </TableCell>
                   <TableCell>

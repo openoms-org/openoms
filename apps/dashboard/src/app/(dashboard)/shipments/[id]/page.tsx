@@ -241,6 +241,7 @@ export default function ShipmentDetailPage() {
                 <StatusBadge
                   status={shipment.status}
                   statusMap={SHIPMENT_STATUSES}
+                  translationPrefix="shipment"
                 />
               </div>
               <div>

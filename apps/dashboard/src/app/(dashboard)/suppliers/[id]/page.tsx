@@ -155,7 +155,7 @@ export default function SupplierDetailPage() {
             {t("format")}: {supplier.feed_format.toUpperCase()} | {tc("createdAt")}: {formatDate(supplier.created_at)}
           </p>
         </div>
-        <StatusBadge status={supplier.status} statusMap={SUPPLIER_STATUSES} />
+        <StatusBadge status={supplier.status} statusMap={SUPPLIER_STATUSES} translationPrefix="supplier" />
         <Button onClick={handleSync} disabled={syncSupplier.isPending}>
           <RefreshCw className="h-4 w-4 mr-2" />
           {t("synchronize")}

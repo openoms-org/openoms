@@ -44,7 +44,7 @@ function useInvoiceColumns(): ColumnDef<Invoice>[] {
     {
       header: "Status",
       accessorKey: "status",
-      cell: (row) => <StatusBadge status={row.status} statusMap={INVOICE_STATUS_MAP} />,
+      cell: (row) => <StatusBadge status={row.status} statusMap={INVOICE_STATUS_MAP} translationPrefix="invoice" />,
     },
     {
       header: t("columns.type"),
@@ -70,7 +70,7 @@ function useInvoiceColumns(): ColumnDef<Invoice>[] {
       accessorKey: "ksef_status",
       cell: (row) => (
         <div className="flex flex-col gap-1">
-          <StatusBadge status={row.ksef_status} statusMap={KSEF_STATUS_MAP} />
+          <StatusBadge status={row.ksef_status} statusMap={KSEF_STATUS_MAP} translationPrefix="ksef" />
           {row.ksef_number && (
             <span className="font-mono text-xs text-muted-foreground">
               {row.ksef_number}

@@ -115,6 +115,7 @@ export default function CarriersPage() {
                     <StatusBadge
                       status={integration.status}
                       statusMap={INTEGRATION_STATUSES}
+                      translationPrefix="integration"
                     />
                   </TableCell>
                   <TableCell>

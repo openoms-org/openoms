@@ -54,7 +54,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ORDER_STATUSES, PAYMENT_STATUSES, SHIPMENT_STATUSES, RETURN_STATUSES, ORDER_PRIORITIES, SHIPMENT_PROVIDERS } from "@/lib/constants";
+import { ORDER_STATUSES, PAYMENT_STATUSES, SHIPMENT_STATUSES, RETURN_STATUSES, DROPSHIP_STATUSES, ORDER_PRIORITIES, SHIPMENT_PROVIDERS } from "@/lib/constants";
 import { getSelectableShipmentProviders, isFeatureVisible } from "@/lib/readiness";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { useCustomFields } from "@/hooks/use-custom-fields";
@@ -378,7 +378,7 @@ export default function OrderDetailPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">{tc("status")}</p>
                   <div className="mt-1">
-                    <StatusBadge status={order.status} statusMap={orderStatuses} />
+                    <StatusBadge status={order.status} statusMap={orderStatuses} translationPrefix="order" />
                   </div>
                 </div>
                 <div>
@@ -431,7 +431,7 @@ export default function OrderDetailPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">{t("columns.payment")}</p>
                   <div className="mt-1">
-                    <StatusBadge status={order.payment_status} statusMap={PAYMENT_STATUSES} />
+                    <StatusBadge status={order.payment_status} statusMap={PAYMENT_STATUSES} translationPrefix="payment" />
                   </div>
                 </div>
                 {order.payment_method && (
@@ -639,7 +639,7 @@ export default function OrderDetailPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <StatusBadge status={shipment.status} statusMap={SHIPMENT_STATUSES} />
+                        <StatusBadge status={shipment.status} statusMap={SHIPMENT_STATUSES} translationPrefix="shipment" />
                         <Button variant="outline" size="sm" asChild>
                           <Link href={`/shipments/${shipment.id}`}>
                             {tc("details")}
@@ -774,7 +774,7 @@ export default function OrderDetailPage() {
                         </Link>
                       </TableCell>
                       <TableCell>
-                        <StatusBadge status={ret.status} statusMap={RETURN_STATUSES} />
+                        <StatusBadge status={ret.status} statusMap={RETURN_STATUSES} translationPrefix="return" />
                       </TableCell>
                       <TableCell className="max-w-[200px] truncate">{ret.reason}</TableCell>
                       <TableCell>{formatCurrency(ret.refund_amount)}</TableCell>
@@ -874,14 +874,8 @@ export default function OrderDetailPage() {
                       <TableCell>
                         <StatusBadge
                           status={d.status}
-                          statusMap={{
-                            pending: { label: t("dropship.pending"), color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
-                            sent: { label: t("dropship.sent"), color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300" },
-                            confirmed: { label: t("dropship.confirmed"), color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300" },
-                            shipped: { label: t("dropship.shipped"), color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300" },
-                            delivered: { label: t("dropship.delivered"), color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" },
-                            cancelled: { label: t("dropship.cancelled"), color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" },
-                          }}
+                          statusMap={DROPSHIP_STATUSES}
+                          translationPrefix="dropship"
                         />
                       </TableCell>
                       <TableCell>

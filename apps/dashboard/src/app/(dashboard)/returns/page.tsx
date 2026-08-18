@@ -39,7 +39,7 @@ export default function ReturnsPage() {
     {
       header: t("columns.status"),
       accessorKey: "status",
-      cell: (row) => <StatusBadge status={row.status} statusMap={RETURN_STATUSES} />,
+      cell: (row) => <StatusBadge status={row.status} statusMap={RETURN_STATUSES} translationPrefix="return" />,
     },
     {
       header: t("columns.order"),

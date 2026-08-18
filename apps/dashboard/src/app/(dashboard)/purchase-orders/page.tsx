@@ -142,6 +142,7 @@ export default function PurchaseOrdersPage() {
                     <StatusBadge
                       status={po.status}
                       statusMap={PURCHASE_ORDER_STATUSES}
+                      translationPrefix="purchaseOrder"
                     />
                   </TableCell>
                   <TableCell className="text-right">
