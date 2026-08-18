@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { useBulkTransitionStatus } from "@/hooks/use-orders";
@@ -124,6 +125,9 @@ export function BulkActions({ selectedOrders, onClearSelection }: BulkActionsPro
           onClick={handleAction}
           disabled={!targetStatus || bulkTransition.isPending}
         >
+          {bulkTransition.isPending && (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          )}
           {bulkTransition.isPending
             ? t("bulk.changing")
             : isForce

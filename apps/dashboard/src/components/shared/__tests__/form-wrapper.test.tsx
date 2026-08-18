@@ -50,6 +50,23 @@ describe("FormWrapper", () => {
 
     expect(handleCancel).toHaveBeenCalledTimes(1);
   });
+
+  it("defaults the submit label to common.processing while pending", () => {
+    render(
+      <FormWrapper<TestFormValues>
+        schema={schema}
+        defaultValues={{ name: "" }}
+        onSubmit={vi.fn()}
+        submitLabel="Save"
+        isSubmitting
+      >
+        {() => null}
+      </FormWrapper>
+    );
+
+    expect(screen.getByRole("button", { name: "processing" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
+  });
 });
 
 function renderTestForm(
