@@ -8,8 +8,8 @@
 //     read model: /v1/operations/summary, /exceptions, /v1/fulfillment/*).
 //
 // This flag selects which one is PRIMARY on the home page. It is a build-time
-// switch read straight off the environment, mirroring how readiness.ts reads
-// NEXT_PUBLIC_OPENOMS_DASHBOARD_SURFACE — no runtime config, no API call.
+// switch read straight off the environment. Dashboard surface mode is separate
+// and can be set at runtime via OPENOMS_DASHBOARD_SURFACE.
 //
 // DEFAULT / UNSET MUST mean the current production behavior: "heuristic". The
 // actual cutover is then just flipping this flag to "process-backed" once the

@@ -18,10 +18,31 @@ interface NavVisibilityOptions extends VisibilityOptions {
 
 const DEFAULT_SURFACE_MODE: DashboardSurfaceMode = "client-ready";
 
+// Helm/runtime override for the current process. The public image stays
+// client-ready because NEXT_PUBLIC_* is baked at build time; a server layout
+// reads OPENOMS_DASHBOARD_SURFACE and a client provider installs that value
+// here so nav and ReadinessRouteGuard see the same mode after hydration.
+let runtimeSurfaceModeOverride: DashboardSurfaceMode | undefined;
+
+export function setDashboardSurfaceModeOverride(
+  mode: DashboardSurfaceMode | undefined,
+): void {
+  runtimeSurfaceModeOverride = mode;
+}
+
+function parseDashboardSurfaceMode(value: string | undefined): DashboardSurfaceMode {
+  return value === "full" ? "full" : DEFAULT_SURFACE_MODE;
+}
+
 export function getDashboardSurfaceMode(): DashboardSurfaceMode {
-  return process.env.NEXT_PUBLIC_OPENOMS_DASHBOARD_SURFACE === "full"
-    ? "full"
-    : DEFAULT_SURFACE_MODE;
+  if (runtimeSurfaceModeOverride !== undefined) {
+    return runtimeSurfaceModeOverride;
+  }
+
+  return parseDashboardSurfaceMode(
+    process.env.OPENOMS_DASHBOARD_SURFACE ??
+      process.env.NEXT_PUBLIC_OPENOMS_DASHBOARD_SURFACE,
+  );
 }
 
 type Registry = {

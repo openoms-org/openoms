@@ -68,6 +68,8 @@ spec:
                   name: {{ include "openoms.secretName" . }}
                   key: DASHBOARD_SENTRY_DSN
                   optional: true
+            - name: OPENOMS_DASHBOARD_SURFACE
+              value: {{ .Values.dashboard.surfaceMode | default "client-ready" | quote }}
           {{- include "openoms.lifecycle.preStopSleep" (dict "root" . "seconds" .Values.dashboard.terminationDrainSeconds) | nindent 10 }}
           livenessProbe:
             {{- toYaml .Values.dashboard.livenessProbe | nindent 12 }}

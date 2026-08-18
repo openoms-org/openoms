@@ -23,7 +23,7 @@ type Config struct {
 
 	// APISurfaceMode gates non-ready features over the API. "client-ready" (default)
 	// exposes only "ready" features; "full" exposes all except "blocked". Keep this in
-	// sync with the dashboard's NEXT_PUBLIC_OPENOMS_DASHBOARD_SURFACE.
+	// sync with dashboard.surfaceMode (OPENOMS_DASHBOARD_SURFACE).
 	APISurfaceMode string `env:"OPENOMS_API_SURFACE" envDefault:"client-ready"`
 
 	// TrustedProxyCIDRs is a comma-separated list of immediate proxy CIDRs

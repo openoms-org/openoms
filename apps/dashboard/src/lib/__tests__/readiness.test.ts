@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { navItems } from "@/lib/nav-items";
 import { SHIPMENT_PROVIDERS } from "@/lib/constants";
 import {
+  getDashboardSurfaceMode,
   getFeatureReadiness,
   getSelectableCarrierShipmentProviders,
   getSelectableShipmentProviders,
@@ -11,6 +12,7 @@ import {
   getVisibleProvidersByCategory,
   isFeatureVisible,
   isRouteAccessible,
+  setDashboardSurfaceModeOverride,
 } from "@/lib/readiness";
 
 const WAREHOUSE_HIDDEN_NAV_ROUTES = [
@@ -48,6 +50,45 @@ const WAREHOUSE_VALIDATION_ROUTES = [
   ...WAREHOUSE_CONTROLLED_ROUTES,
   ...WAREHOUSE_BETA_ROUTES,
 ] as const;
+
+describe("getDashboardSurfaceMode", () => {
+  afterEach(() => {
+    setDashboardSurfaceModeOverride(undefined);
+    vi.unstubAllEnvs();
+  });
+
+  it("defaults to client-ready when no surface env is set", () => {
+    expect(getDashboardSurfaceMode()).toBe("client-ready");
+  });
+
+  it("reads OPENOMS_DASHBOARD_SURFACE at runtime", () => {
+    vi.stubEnv("OPENOMS_DASHBOARD_SURFACE", "full");
+    expect(getDashboardSurfaceMode()).toBe("full");
+  });
+
+  it("keeps NEXT_PUBLIC_OPENOMS_DASHBOARD_SURFACE as a local/build fallback", () => {
+    vi.stubEnv("NEXT_PUBLIC_OPENOMS_DASHBOARD_SURFACE", "full");
+    expect(getDashboardSurfaceMode()).toBe("full");
+  });
+
+  it("prefers the runtime env over a baked NEXT_PUBLIC value", () => {
+    vi.stubEnv("NEXT_PUBLIC_OPENOMS_DASHBOARD_SURFACE", "full");
+    vi.stubEnv("OPENOMS_DASHBOARD_SURFACE", "client-ready");
+    expect(getDashboardSurfaceMode()).toBe("client-ready");
+  });
+
+  it("lets a provider override win so client nav matches the server value", () => {
+    vi.stubEnv("NEXT_PUBLIC_OPENOMS_DASHBOARD_SURFACE", "client-ready");
+    setDashboardSurfaceModeOverride("full");
+    expect(getDashboardSurfaceMode()).toBe("full");
+    expect(isRouteAccessible("/suppliers")).toBe(true);
+  });
+
+  it("treats unknown surface values as client-ready", () => {
+    vi.stubEnv("OPENOMS_DASHBOARD_SURFACE", "maybe");
+    expect(getDashboardSurfaceMode()).toBe("client-ready");
+  });
+});
 
 describe("dashboard feature readiness", () => {
   it("keeps the client-ready navigation focused on certified core flows", () => {
