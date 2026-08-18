@@ -78,6 +78,11 @@ describe("StatusBadge", () => {
     expect(badge).toHaveClass("bg-blue-100");
     expect(badge).toHaveClass("text-blue-800");
   });
+
+  it("resolves the statuses catalog key when translationPrefix is set", () => {
+    render(<StatusBadge status="new" statusMap={ORDER_STATUSES} translationPrefix="order" />);
+    expect(screen.getByText("order.new")).toBeInTheDocument();
+  });
 });
 
 // Families the dashboard pages delegate to StatusBadge instead of a local colour map

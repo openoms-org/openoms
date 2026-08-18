@@ -235,6 +235,7 @@ export default function IntegrationDetailPage() {
                   <StatusBadge
                     status={integration.status}
                     statusMap={INTEGRATION_STATUSES}
+                    translationPrefix="integration"
                   />
                 </div>
               </div>

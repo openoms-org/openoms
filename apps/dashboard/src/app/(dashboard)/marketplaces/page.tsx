@@ -135,6 +135,7 @@ export default function MarketplacesPage() {
                     <StatusBadge
                       status={integration.status}
                       statusMap={INTEGRATION_STATUSES}
+                      translationPrefix="integration"
                     />
                   </TableCell>
                   <TableCell>

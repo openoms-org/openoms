@@ -142,6 +142,7 @@ export default function InvoiceDetailPage() {
             <StatusBadge
               status={invoice.status}
               statusMap={INVOICE_STATUS_MAP}
+              translationPrefix="invoice"
             />
           </div>
           <p className="text-muted-foreground mt-1">
@@ -280,6 +281,7 @@ export default function InvoiceDetailPage() {
                     <StatusBadge
                       status={invoice.ksef_status}
                       statusMap={KSEF_STATUS_MAP}
+                      translationPrefix="ksef"
                     />
                   </div>
                 </div>

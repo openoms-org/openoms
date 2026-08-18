@@ -357,7 +357,7 @@ export default function CustomerDetailPage() {
                           </Link>
                         </TableCell>
                         <TableCell>
-                          <StatusBadge status={order.status} statusMap={orderStatuses} />
+                          <StatusBadge status={order.status} statusMap={orderStatuses} translationPrefix="order" />
                         </TableCell>
                         <TableCell>{order.source}</TableCell>
                         <TableCell className="text-right">

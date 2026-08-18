@@ -158,7 +158,7 @@ export default function PurchaseOrderDetailPage() {
               {po.supplier_name} | Utworzono: {formatDate(po.created_at)}
             </p>
           </div>
-          <StatusBadge status={po.status} statusMap={PURCHASE_ORDER_STATUSES} />
+          <StatusBadge status={po.status} statusMap={PURCHASE_ORDER_STATUSES} translationPrefix="purchaseOrder" />
           <div className="flex gap-2">
             {canSend && (
               <Button

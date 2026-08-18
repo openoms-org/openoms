@@ -452,6 +452,7 @@ export default function InvoicingPage() {
                       <StatusBadge
                         status={integration.status}
                         statusMap={INTEGRATION_STATUSES}
+                        translationPrefix="integration"
                       />
                     </TableCell>
                     <TableCell>

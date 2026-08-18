@@ -89,7 +89,7 @@ export default function ShipmentsPage() {
       accessorKey: "status" as const,
       sortable: true,
       cell: (shipment: Shipment) => (
-        <StatusBadge status={shipment.status} statusMap={SHIPMENT_STATUSES} />
+        <StatusBadge status={shipment.status} statusMap={SHIPMENT_STATUSES} translationPrefix="shipment" />
       ),
     },
     {

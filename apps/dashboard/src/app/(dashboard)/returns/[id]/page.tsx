@@ -155,7 +155,7 @@ export default function ReturnDetailPage() {
             <h1 className="text-2xl font-bold">
               {t("returnTitle", { id: shortId(params.id) })}
             </h1>
-            <StatusBadge status={returnData.status} statusMap={RETURN_STATUSES} />
+            <StatusBadge status={returnData.status} statusMap={RETURN_STATUSES} translationPrefix="return" />
           </div>
           <p className="text-muted-foreground mt-1">
             {t("createdOn", { date: formatDate(returnData.created_at) })}
@@ -245,7 +245,7 @@ export default function ReturnDetailPage() {
                   <div>
                     <p className="text-sm text-muted-foreground">{t("columns.status")}</p>
                     <div className="mt-1">
-                      <StatusBadge status={returnData.status} statusMap={RETURN_STATUSES} />
+                      <StatusBadge status={returnData.status} statusMap={RETURN_STATUSES} translationPrefix="return" />
                     </div>
                   </div>
                   <div>

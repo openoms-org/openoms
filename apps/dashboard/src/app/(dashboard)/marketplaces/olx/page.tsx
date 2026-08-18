@@ -556,6 +556,7 @@ function ConnectedState({
                   <StatusBadge
                     status={integration.status}
                     statusMap={INTEGRATION_STATUSES}
+                    translationPrefix="integration"
                   />
                 </div>
               </div>
