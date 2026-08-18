@@ -1099,7 +1099,7 @@ function AddBundleComponentDialog({
                     <span className="ml-2 text-xs text-muted-foreground">({p.sku})</span>
                   )}
                   <span className="ml-2 text-xs text-muted-foreground">
-                    {tc("stockQuantity")}: {p.stock_quantity}
+                    {tc("stockQuantity")}: {p.available_stock}
                   </span>
                 </div>
               ))}

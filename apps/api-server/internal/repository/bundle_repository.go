@@ -34,13 +34,13 @@ func (r *BundleRepository) FindByID(ctx context.Context, tx pgx.Tx, id uuid.UUID
 	err := tx.QueryRow(ctx,
 		`SELECT pb.id, pb.tenant_id, pb.bundle_product_id, pb.component_product_id,
 		        pb.component_variant_id, pb.quantity, pb.position, pb.created_at, pb.updated_at,
-		        p.name, p.sku, p.stock_quantity
+		        p.name, p.sku
 		 FROM product_bundles pb
 		 JOIN products p ON p.id = pb.component_product_id
 		 WHERE pb.id = $1`, id,
 	).Scan(&b.ID, &b.TenantID, &b.BundleProductID, &b.ComponentProductID,
 		&b.ComponentVariantID, &b.Quantity, &b.Position, &b.CreatedAt, &b.UpdatedAt,
-		&b.ComponentName, &b.ComponentSKU, &b.ComponentStock)
+		&b.ComponentName, &b.ComponentSKU)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -55,7 +55,7 @@ func (r *BundleRepository) ListByBundleProduct(ctx context.Context, tx pgx.Tx, b
 	rows, err := tx.Query(ctx,
 		`SELECT pb.id, pb.tenant_id, pb.bundle_product_id, pb.component_product_id,
 		        pb.component_variant_id, pb.quantity, pb.position, pb.created_at, pb.updated_at,
-		        p.name, p.sku, p.stock_quantity
+		        p.name, p.sku
 		 FROM product_bundles pb
 		 JOIN products p ON p.id = pb.component_product_id
 		 WHERE pb.bundle_product_id = $1
@@ -71,56 +71,12 @@ func (r *BundleRepository) ListByBundleProduct(ctx context.Context, tx pgx.Tx, b
 		var b model.ProductBundle
 		if err := rows.Scan(&b.ID, &b.TenantID, &b.BundleProductID, &b.ComponentProductID,
 			&b.ComponentVariantID, &b.Quantity, &b.Position, &b.CreatedAt, &b.UpdatedAt,
-			&b.ComponentName, &b.ComponentSKU, &b.ComponentStock); err != nil {
+			&b.ComponentName, &b.ComponentSKU); err != nil {
 			return nil, fmt.Errorf("scan bundle: %w", err)
 		}
 		bundles = append(bundles, b)
 	}
 	return bundles, rows.Err()
-}
-
-// BundleComponentStock pairs a bundle component's per-bundle quantity with its canonical
-// available stock: warehouse_stock (SUM quantity - reserved) when the component has warehouse
-// rows, otherwise the legacy products.stock_quantity fallback. Stock is product-level
-// (variant-specific component stock is not yet distinguished — matching the prior
-// products.stock_quantity behaviour).
-type BundleComponentStock struct {
-	PerBundleQuantity int
-	AvailableStock    int
-}
-
-// ListComponentAvailability returns each component's per-bundle quantity and available stock
-// for bundle-availability calculation. Unlike ListByBundleProduct (which exposes the raw
-// products.stock_quantity and feeds the order-decrement path), this reads the canonical
-// warehouse_stock, falling back to products.stock_quantity only for components with no
-// warehouse rows (e.g. supplier/import-managed products). Relies on RLS for tenant scoping.
-func (r *BundleRepository) ListComponentAvailability(ctx context.Context, tx pgx.Tx, bundleProductID uuid.UUID) ([]BundleComponentStock, error) {
-	rows, err := tx.Query(ctx,
-		`SELECT pb.quantity,
-		        GREATEST(COALESCE(
-		            (SELECT SUM(ws.quantity) - SUM(ws.reserved)
-		             FROM warehouse_stock ws
-		             WHERE ws.product_id = pb.component_product_id),
-		            p.stock_quantity), 0)
-		 FROM product_bundles pb
-		 JOIN products p ON p.id = pb.component_product_id
-		 WHERE pb.bundle_product_id = $1
-		 ORDER BY pb.position ASC, pb.created_at ASC`, bundleProductID,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("list component availability: %w", err)
-	}
-	defer rows.Close()
-
-	var components []BundleComponentStock
-	for rows.Next() {
-		var c BundleComponentStock
-		if err := rows.Scan(&c.PerBundleQuantity, &c.AvailableStock); err != nil {
-			return nil, fmt.Errorf("scan component availability: %w", err)
-		}
-		components = append(components, c)
-	}
-	return components, rows.Err()
 }
 
 // Update applies partial updates to a bundle component.

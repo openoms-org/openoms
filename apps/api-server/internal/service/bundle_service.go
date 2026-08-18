@@ -51,7 +51,10 @@ func (s *BundleService) ListComponents(ctx context.Context, tenantID, bundleProd
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		var err error
 		components, err = s.bundleRepo.ListByBundleProduct(ctx, tx, bundleProductID)
-		return err
+		if err != nil {
+			return err
+		}
+		return s.populateComponentStock(ctx, tx, components)
 	})
 	if components == nil {
 		components = []model.ProductBundle{}
@@ -149,6 +152,13 @@ func (s *BundleService) UpdateComponent(ctx context.Context, tenantID uuid.UUID,
 		if err != nil {
 			return err
 		}
+		if result != nil {
+			hydrated := []model.ProductBundle{*result}
+			if err := s.populateComponentStock(ctx, tx, hydrated); err != nil {
+				return err
+			}
+			*result = hydrated[0]
+		}
 
 		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
 			TenantID:   tenantID,
@@ -204,32 +214,55 @@ func (s *BundleService) CalculateBundleStock(ctx context.Context, tenantID, bund
 			return ErrProductNotBundle
 		}
 
-		components, err := s.bundleRepo.ListComponentAvailability(ctx, tx, bundleProductID)
+		components, err := s.bundleRepo.ListByBundleProduct(ctx, tx, bundleProductID)
 		if err != nil {
 			return err
 		}
-		if len(components) == 0 {
-			stock = 0
-			return nil
+		if err := s.populateComponentStock(ctx, tx, components); err != nil {
+			return err
 		}
-
-		minStock := math.MaxInt32
-		for _, c := range components {
-			if c.PerBundleQuantity <= 0 {
-				continue
-			}
-			available := c.AvailableStock / c.PerBundleQuantity
-			if available < minStock {
-				minStock = available
-			}
-		}
-		if minStock == math.MaxInt32 {
-			minStock = 0
-		}
-		stock = minStock
+		stock = assembleableBundles(components)
 		return nil
 	})
 	return stock, err
+}
+
+func (s *BundleService) populateComponentStock(ctx context.Context, tx pgx.Tx, components []model.ProductBundle) error {
+	if len(components) == 0 {
+		return nil
+	}
+	ids := make([]uuid.UUID, len(components))
+	for i := range components {
+		ids[i] = components[i].ComponentProductID
+	}
+	avail, err := s.productRepo.AvailableStockBatch(ctx, tx, ids)
+	if err != nil {
+		return err
+	}
+	for i := range components {
+		components[i].ComponentStock = avail[components[i].ComponentProductID]
+	}
+	return nil
+}
+
+func assembleableBundles(components []model.ProductBundle) int {
+	if len(components) == 0 {
+		return 0
+	}
+	minStock := math.MaxInt32
+	for _, c := range components {
+		if c.Quantity <= 0 {
+			continue
+		}
+		available := c.ComponentStock / c.Quantity
+		if available < minStock {
+			minStock = available
+		}
+	}
+	if minStock == math.MaxInt32 {
+		return 0
+	}
+	return minStock
 }
 
 // ExpandBundleComponents resolves bundle product IDs in productQtys into their component
