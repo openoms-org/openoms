@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { DescriptionEditor, plainTextToHTML } from "@/components/editor/description-editor";
 import { apiClient } from "@/lib/api-client";
+import { productAvailableStock } from "@/lib/product-available-stock";
 import type { AISuggestion, AITextResult } from "@/types/api";
 import { AdminGuard } from "@/components/shared/admin-guard";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -777,7 +778,7 @@ function CreateWooCommerceListingDialog({
   );
 
   const [price, setPrice] = useState(String(product.price));
-  const [stock, setStock] = useState(String(product.stock_quantity));
+  const [stock, setStock] = useState(String(productAvailableStock(product)));
   const [description, setDescription] = useState(
     plainTextToHTML(product.description_long || product.description_short || "")
   );
@@ -850,7 +851,7 @@ function CreateWooCommerceListingDialog({
                 onChange={(e) => setStock(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Aktualny stan: {product.stock_quantity}
+                Aktualny stan: {productAvailableStock(product)}
               </p>
             </div>
           </div>
@@ -1150,10 +1151,10 @@ function CreateEbayListingDialog({
                 min="0"
                 value={stockOverride}
                 onChange={(e) => setStockOverride(e.target.value)}
-                placeholder={String(product.stock_quantity)}
+                placeholder={String(productAvailableStock(product))}
               />
               <p className="text-xs text-muted-foreground">
-                Aktualny stan: {product.stock_quantity}
+                Aktualny stan: {productAvailableStock(product)}
               </p>
             </div>
           </div>
@@ -1710,7 +1711,7 @@ function CreateAllegroListingDialog({
   // Step 5: Price/Location
   const [priceOverride, setPriceOverride] = useState(String(product.price));
   const [stockOverride, setStockOverride] = useState(
-    String(product.stock_quantity)
+    String(productAvailableStock(product))
   );
   const [city, setCity] = useState("Warszawa");
   const [postCode, setPostCode] = useState("00-001");
@@ -2576,7 +2577,7 @@ function CreateAllegroListingDialog({
                   onChange={(e) => setStockOverride(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Aktualny stan: {product.stock_quantity}
+                  Aktualny stan: {productAvailableStock(product)}
                 </p>
               </div>
             </div>
