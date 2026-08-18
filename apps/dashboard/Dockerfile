@@ -16,7 +16,10 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Build-time env vars baked into the Next.js client bundle
+# Build-time env vars baked into the Next.js client bundle.
+# Do not add NEXT_PUBLIC_OPENOMS_DASHBOARD_SURFACE here. Surface mode is a
+# runtime Helm setting (OPENOMS_DASHBOARD_SURFACE) so the public image stays
+# client-ready.
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 

@@ -27,8 +27,8 @@ apiServer:
   allowInMemoryState: false  # set true only for explicit single-node deployments without Redis
   registrationMode: invite  # "invite" (token required), "open" (dev only — rejected by the API outside development), "closed"
   # Server-side feature readiness gate. "client-ready" exposes only certified
-  # features over the API; "full" disables gating (escape hatch). Keep in sync with
-  # the dashboard NEXT_PUBLIC_OPENOMS_DASHBOARD_SURFACE.
+  # features over the API; "full" disables gating (escape hatch). Keep in sync
+  # with dashboard.surfaceMode (OPENOMS_DASHBOARD_SURFACE).
   apiSurfaceMode: "client-ready"
   # Expose the unauthenticated OpenAPI spec (/v1/openapi.yaml) and Swagger UI (/v1/docs).
   # Keep false in production; the API serves them in development regardless of this flag.
@@ -122,6 +122,11 @@ worker:
       memory: 384Mi
 
 dashboard:
+  # Client-side feature readiness gate. "client-ready" (default) shows only
+  # certified UI; "full" unlocks non-blocked nav/pages for this install only.
+  # Runtime env OPENOMS_DASHBOARD_SURFACE — not baked into the public image.
+  # Keep in sync with apiServer.apiSurfaceMode.
+  surfaceMode: "client-ready"
   # Rendered as a kubelet-managed Kubernetes preStop.sleep on clusters >= 1.30 (see apiServer.terminationDrainSeconds).
   terminationDrainSeconds: 5
   replicaCount: 1

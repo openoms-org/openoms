@@ -7,6 +7,8 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { LocaleProvider } from "@/components/providers/locale-provider";
+import { SurfaceModeProvider } from "@/components/providers/surface-mode-provider";
+import { getDashboardSurfaceMode } from "@/lib/readiness";
 import "./globals.css";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
@@ -20,6 +22,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
   const messages = await getMessages();
+  const surfaceMode = getDashboardSurfaceMode();
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -30,22 +33,24 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
       </head>
       <body className={`${geist.variable} ${geistMono.variable} antialiased`}>
-        <NextIntlClientProvider messages={messages} locale={locale}>
-          <LocaleProvider>
-            <ThemeProvider>
-              <QueryProvider>
-                <AuthProvider>
-                  {children}
-                  <Toaster
-                    richColors
-                    position="top-right"
-                    duration={3000}
-                  />
-                </AuthProvider>
-              </QueryProvider>
-            </ThemeProvider>
-          </LocaleProvider>
-        </NextIntlClientProvider>
+        <SurfaceModeProvider mode={surfaceMode}>
+          <NextIntlClientProvider messages={messages} locale={locale}>
+            <LocaleProvider>
+              <ThemeProvider>
+                <QueryProvider>
+                  <AuthProvider>
+                    {children}
+                    <Toaster
+                      richColors
+                      position="top-right"
+                      duration={3000}
+                    />
+                  </AuthProvider>
+                </QueryProvider>
+              </ThemeProvider>
+            </LocaleProvider>
+          </NextIntlClientProvider>
+        </SurfaceModeProvider>
       </body>
     </html>
   );
