@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -69,6 +70,27 @@ func TestLocalStorage_Delete(t *testing.T) {
 	// Verify it's gone
 	_, err = os.Stat(fullPath)
 	assert.True(t, os.IsNotExist(err))
+}
+
+func TestLocalStorage_Get_MissingReturnsErrNotFound(t *testing.T) {
+	store := NewLocalStorage(t.TempDir(), "http://localhost:8080")
+	_, err := store.Get(context.Background(), "tenant/missing.pdf")
+	require.ErrorIs(t, err, ErrNotFound)
+}
+
+func TestLocalStorage_Get_ReadsUploadedObject(t *testing.T) {
+	store := NewLocalStorage(t.TempDir(), "http://localhost:8080")
+	ctx := context.Background()
+	key := "tenant-abc/label.pdf"
+	_, err := store.Upload(ctx, key, strings.NewReader("%PDF-1.4"), "application/pdf")
+	require.NoError(t, err)
+
+	r, err := store.Get(ctx, key)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = r.Close() })
+	data, err := io.ReadAll(r)
+	require.NoError(t, err)
+	assert.Equal(t, "%PDF-1.4", string(data))
 }
 
 func TestLocalStorage_Delete_NonExistent(t *testing.T) {

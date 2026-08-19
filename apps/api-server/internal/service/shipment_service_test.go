@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -91,7 +89,7 @@ func (r fakeShipmentLookupRow) Scan(dest ...any) error {
 }
 
 func TestShipmentService_UpdateStatusByTrackingNumber_RequiresWorkerPool(t *testing.T) {
-	svc := NewShipmentService(nil, nil, nil, nil, nil, nil, nil, "")
+	svc := NewShipmentService(nil, nil, nil, nil, nil, nil, nil, nil)
 
 	err := svc.UpdateStatusByTrackingNumber(context.Background(), "123", "inpost", "delivered")
 
@@ -117,7 +115,7 @@ func TestShipmentService_UpdateStatusByTrackingNumber_UsesWorkerPoolForCrossTena
 }
 
 func TestShipmentService_Create_ValidationError_MissingOrderID(t *testing.T) {
-	svc := NewShipmentService(nil, nil, nil, nil, nil, nil, nil, "")
+	svc := NewShipmentService(nil, nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.Create(context.Background(), uuid.New(), model.CreateShipmentRequest{
 		Provider: "inpost",
@@ -130,7 +128,7 @@ func TestShipmentService_Create_ValidationError_MissingOrderID(t *testing.T) {
 }
 
 func TestShipmentService_Create_ValidationError_MissingProvider(t *testing.T) {
-	svc := NewShipmentService(nil, nil, nil, nil, nil, nil, nil, "")
+	svc := NewShipmentService(nil, nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.Create(context.Background(), uuid.New(), model.CreateShipmentRequest{
 		OrderID: uuid.New(),
@@ -143,7 +141,7 @@ func TestShipmentService_Create_ValidationError_MissingProvider(t *testing.T) {
 }
 
 func TestShipmentService_Update_ValidationError_NoFields(t *testing.T) {
-	svc := NewShipmentService(nil, nil, nil, nil, nil, nil, nil, "")
+	svc := NewShipmentService(nil, nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.Update(context.Background(), uuid.New(), uuid.New(), model.UpdateShipmentRequest{}, uuid.New(), "127.0.0.1")
 
@@ -153,7 +151,7 @@ func TestShipmentService_Update_ValidationError_NoFields(t *testing.T) {
 }
 
 func TestShipmentService_TransitionStatus_ValidationError_EmptyStatus(t *testing.T) {
-	svc := NewShipmentService(nil, nil, nil, nil, nil, nil, nil, "")
+	svc := NewShipmentService(nil, nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.TransitionStatus(context.Background(), uuid.New(), uuid.New(),
 		model.ShipmentStatusTransitionRequest{Status: ""}, uuid.New(), "127.0.0.1")
@@ -164,7 +162,7 @@ func TestShipmentService_TransitionStatus_ValidationError_EmptyStatus(t *testing
 }
 
 func TestShipmentService_TransitionStatus_ValidationError_WhitespaceStatus(t *testing.T) {
-	svc := NewShipmentService(nil, nil, nil, nil, nil, nil, nil, "")
+	svc := NewShipmentService(nil, nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := svc.TransitionStatus(context.Background(), uuid.New(), uuid.New(),
 		model.ShipmentStatusTransitionRequest{Status: "   "}, uuid.New(), "127.0.0.1")
@@ -176,7 +174,7 @@ func TestShipmentService_TransitionStatus_ValidationError_WhitespaceStatus(t *te
 }
 
 func TestShipmentService_Create_ValidationError_BothMissing(t *testing.T) {
-	svc := NewShipmentService(nil, nil, nil, nil, nil, nil, nil, "")
+	svc := NewShipmentService(nil, nil, nil, nil, nil, nil, nil, nil)
 
 	// Both OrderID (uuid.Nil) and Provider ("") are missing — should fail on order_id first
 	_, err := svc.Create(context.Background(), uuid.New(), model.CreateShipmentRequest{
@@ -202,7 +200,7 @@ func TestShipmentService_Update_ValidationError_NegativeWeightAccepted(t *testin
 }
 
 func TestShipmentService_Create_ValidationError_ProviderTooLong(t *testing.T) {
-	svc := NewShipmentService(nil, nil, nil, nil, nil, nil, nil, "")
+	svc := NewShipmentService(nil, nil, nil, nil, nil, nil, nil, nil)
 
 	// CreateShipmentRequest.Validate() checks validateMaxLength("provider", ..., 100)
 	var longProvider strings.Builder
@@ -368,71 +366,4 @@ func TestCalculateOrderWeight_DuplicateProductIDSumsQuantities(t *testing.T) {
 	got := svc.calculateOrderWeight(context.Background(), nil, order)
 	// 1.0 * (2+3) = 5.0
 	assert.InDelta(t, 5.0, got, 0.001)
-}
-
-func TestReadLabelFile_ReadsStoredPDF(t *testing.T) {
-	tenantID := uuid.New()
-	filename := "label-test.pdf"
-	dir := filepath.Join("uploads", tenantID.String())
-	require.NoError(t, os.MkdirAll(dir, 0o750))
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(filepath.Join("uploads", tenantID.String())))
-	})
-
-	want := []byte("%PDF-1.4 stored label")
-	require.NoError(t, os.WriteFile(filepath.Join(dir, filename), want, 0o600))
-
-	url := "https://api.openoms.org/uploads/" + tenantID.String() + "/" + filename
-	got, err := readLabelFile(url, "uploads")
-	require.NoError(t, err)
-	assert.Equal(t, want, got)
-}
-
-func TestReadLabelFile_ReadsFromConfiguredUploadDir(t *testing.T) {
-	uploadDir := t.TempDir()
-	tenantID := uuid.New()
-	filename := "label-custom-dir.pdf"
-	dir := filepath.Join(uploadDir, tenantID.String())
-	require.NoError(t, os.MkdirAll(dir, 0o750))
-
-	want := []byte("%PDF-1.4 custom upload dir")
-	require.NoError(t, os.WriteFile(filepath.Join(dir, filename), want, 0o600))
-
-	url := "https://api.example.invalid/uploads/" + tenantID.String() + "/" + filename
-	got, err := readLabelFile(url, uploadDir)
-	require.NoError(t, err)
-	assert.Equal(t, want, got)
-}
-
-func TestReadLabelFile_MissingFileReturnsNotAvailable(t *testing.T) {
-	uploadDir := t.TempDir()
-	tenantID := uuid.New()
-	url := "https://api.example.invalid/uploads/" + tenantID.String() + "/missing.pdf"
-	_, err := readLabelFile(url, uploadDir)
-	require.ErrorIs(t, err, ErrLabelNotAvailable)
-}
-
-func TestReadLabelFile_DoesNotSearchHardcodedDirs(t *testing.T) {
-	tenantID := uuid.New()
-	filename := "label-elsewhere.pdf"
-	guessDir := filepath.Join("uploads", tenantID.String())
-	require.NoError(t, os.MkdirAll(guessDir, 0o750))
-	t.Cleanup(func() {
-		require.NoError(t, os.RemoveAll(filepath.Join("uploads", tenantID.String())))
-	})
-	require.NoError(t, os.WriteFile(filepath.Join(guessDir, filename), []byte("%PDF-1.4 elsewhere"), 0o600))
-
-	url := "https://api.example.invalid/uploads/" + tenantID.String() + "/" + filename
-	_, err := readLabelFile(url, t.TempDir())
-	require.ErrorIs(t, err, ErrLabelNotAvailable)
-}
-
-func TestReadLabelFile_InvalidURLReturnsNotAvailable(t *testing.T) {
-	_, err := readLabelFile("https://api.example.invalid/labels/missing.pdf", t.TempDir())
-	require.ErrorIs(t, err, ErrLabelNotAvailable)
-}
-
-func TestReadLabelFile_RejectsTraversal(t *testing.T) {
-	_, err := readLabelFile("https://api.openoms.org/uploads/../secret.pdf", t.TempDir())
-	require.Error(t, err)
 }

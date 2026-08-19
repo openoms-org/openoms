@@ -62,6 +62,9 @@ func (s *LocalStorage) Get(_ context.Context, key string) (io.ReadCloser, error)
 	fullPath := filepath.Clean(filepath.Join(s.baseDir, key))
 	f, err := os.Open(fullPath) // #nosec G304 -- path is cleaned and joined under baseDir
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("%w: %s", ErrNotFound, key)
+		}
 		return nil, fmt.Errorf("opening file %s: %w", fullPath, err)
 	}
 	return f, nil

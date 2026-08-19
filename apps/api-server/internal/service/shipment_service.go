@@ -5,9 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,6 +16,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
+	"github.com/openoms-org/openoms/apps/api-server/internal/storage"
 )
 
 var (
@@ -48,7 +46,7 @@ type ShipmentService struct {
 	automationService *AutomationService
 	allegroSync       *AllegroSyncService
 	fulfillment       *FulfillmentService
-	uploadDir         string
+	objectStorage     storage.ObjectStorage
 }
 
 // SetFulfillmentService wires the gated fulfillment service used for best-effort
@@ -88,7 +86,7 @@ func NewShipmentService(
 	tenantRepo repository.TenantRepo,
 	pool *pgxpool.Pool,
 	webhookDispatch *WebhookDispatchService,
-	uploadDir string,
+	objectStorage storage.ObjectStorage,
 ) *ShipmentService {
 	return &ShipmentService{
 		shipmentRepo:    shipmentRepo,
@@ -98,7 +96,7 @@ func NewShipmentService(
 		tenantRepo:      tenantRepo,
 		pool:            pool,
 		webhookDispatch: webhookDispatch,
-		uploadDir:       uploadDir,
+		objectStorage:   objectStorage,
 	}
 }
 
@@ -462,7 +460,7 @@ func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipme
 
 // GetLabelFile loads the already-stored label PDF for a single shipment.
 func (s *ShipmentService) GetLabelFile(ctx context.Context, tenantID, shipmentID uuid.UUID) ([]byte, error) {
-	var data []byte
+	var labelURL string
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		shipment, err := s.shipmentRepo.FindByID(ctx, tx, shipmentID)
 		if err != nil {
@@ -474,60 +472,31 @@ func (s *ShipmentService) GetLabelFile(ctx context.Context, tenantID, shipmentID
 		if shipment.LabelURL == nil || *shipment.LabelURL == "" {
 			return ErrLabelNotAvailable
 		}
-		data, err = readLabelFile(*shipment.LabelURL, s.uploadDir)
-		if err != nil {
-			return err
-		}
+		labelURL = *shipment.LabelURL
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return data, nil
+	return readLabelObject(ctx, s.objectStorage, labelURL)
 }
 
-// GetBatchLabelURLs loads label data for multiple shipments.
-// It reads label files from disk based on the label_url stored in each shipment.
+// GetBatchLabelURLs loads label data for multiple shipments from ObjectStorage
+// using the label_url stored on each shipment.
 func (s *ShipmentService) GetBatchLabelURLs(ctx context.Context, tenantID uuid.UUID, shipmentIDs []uuid.UUID) ([]model.BatchLabelResult, error) {
-	var results []model.BatchLabelResult
+	type pending struct {
+		id  uuid.UUID
+		url string
+	}
+	var toRead []pending
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		for _, sid := range shipmentIDs {
 			shipment, err := s.shipmentRepo.FindByID(ctx, tx, sid)
-			if err != nil {
-				results = append(results, model.BatchLabelResult{
-					ShipmentID: sid.String(),
-					Error:      "failed to load shipment",
-				})
+			if err != nil || shipment == nil || shipment.LabelURL == nil || *shipment.LabelURL == "" {
 				continue
 			}
-			if shipment == nil {
-				results = append(results, model.BatchLabelResult{
-					ShipmentID: sid.String(),
-					Error:      "shipment not found",
-				})
-				continue
-			}
-			if shipment.LabelURL == nil || *shipment.LabelURL == "" {
-				results = append(results, model.BatchLabelResult{
-					ShipmentID: sid.String(),
-					Error:      "no label available",
-				})
-				continue
-			}
-
-			labelData, err := readLabelFile(*shipment.LabelURL, s.uploadDir)
-			if err != nil {
-				results = append(results, model.BatchLabelResult{
-					ShipmentID: sid.String(),
-					Error:      "label file not found",
-				})
-				continue
-			}
-			results = append(results, model.BatchLabelResult{
-				ShipmentID: sid.String(),
-				Data:       labelData,
-			})
+			toRead = append(toRead, pending{id: sid, url: *shipment.LabelURL})
 		}
 		return nil
 	})
@@ -535,46 +504,19 @@ func (s *ShipmentService) GetBatchLabelURLs(ctx context.Context, tenantID uuid.U
 		return nil, err
 	}
 
-	// Filter to only results with data
 	var validResults []model.BatchLabelResult
-	for _, r := range results {
-		if r.Data != nil {
-			validResults = append(validResults, r)
+	for _, item := range toRead {
+		labelData, err := readLabelObject(ctx, s.objectStorage, item.url)
+		if err != nil {
+			continue
 		}
+		validResults = append(validResults, model.BatchLabelResult{
+			ShipmentID: item.id.String(),
+			Data:       labelData,
+		})
 	}
 
 	return validResults, nil
-}
-
-// readLabelFile reads a label file from disk. LabelService stores URLs in the
-// form {baseURL}/uploads/{tenantID}/{filename} and writes the bytes under
-// uploadDir (config UPLOAD_DIR). The public /uploads/* prefix is not part of
-// the on-disk path.
-func readLabelFile(labelURL, uploadDir string) ([]byte, error) {
-	const marker = "/uploads/"
-	_, after, ok := strings.Cut(labelURL, marker)
-	if !ok {
-		return nil, fmt.Errorf("%w: invalid label URL format", ErrLabelNotAvailable)
-	}
-
-	relPath := filepath.Clean(after)
-	if relPath == "." || strings.HasPrefix(relPath, "..") || filepath.IsAbs(relPath) {
-		return nil, fmt.Errorf("invalid label path")
-	}
-
-	if uploadDir == "" {
-		return nil, ErrLabelNotAvailable
-	}
-
-	fullPath := filepath.Join(uploadDir, relPath)
-	data, err := os.ReadFile(fullPath) //nolint:gosec // path validated: Clean + traversal check above
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, ErrLabelNotAvailable
-		}
-		return nil, fmt.Errorf("reading label file: %w", err)
-	}
-	return data, nil
 }
 
 // externalIDOrEmpty returns a shipment's carrier external id as a request
