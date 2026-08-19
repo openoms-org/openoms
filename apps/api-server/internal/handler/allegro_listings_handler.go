@@ -239,10 +239,13 @@ func (h *AllegroListingsHandler) CreateListing(w http.ResponseWriter, r *http.Re
 		"location":         req.Location,
 	})
 
-	if offer.Publication == nil || offer.Publication.Status == "" {
-		if live, getErr := client.Offers.Get(ctx, offer.ID); getErr == nil {
-			offer = live
-		}
+	// The 201 body can echo publication.status=ACTIVE while the offer is still
+	// szkic. Read publication from a follow-up GET before we persist.
+	if live, getErr := client.Offers.Get(ctx, offer.ID); getErr != nil {
+		slog.Warn("allegro listings: failed to fetch publication after create",
+			"error", getErr, "offer_id", offer.ID)
+	} else {
+		offer = live
 	}
 
 	now := time.Now()
@@ -686,10 +689,19 @@ func (h *AllegroListingsHandler) ListByProduct(w http.ResponseWriter, r *http.Re
 	writeJSON(w, http.StatusOK, listings)
 }
 
-// refreshAllegroListingPublications overlays live Allegro publication onto
-// stored listing rows so a szkic / INACTIVE offer cannot keep rendering as
-// Aktywna after a create that ignored publication.status.
+// refreshAllegroListingPublications heals leftover rows from the
+// create-writes-active bug. It does not call Allegro on an ordinary list.
 func (h *AllegroListingsHandler) refreshAllegroListingPublications(r *http.Request, listings []*model.ProductListing) {
+	var pending []*model.ProductListing
+	for _, listing := range listings {
+		if allegroListingNeedsPublicationHeal(listing) {
+			pending = append(pending, listing)
+		}
+	}
+	if len(pending) == 0 {
+		return
+	}
+
 	ctx := r.Context()
 	tenantID := middleware.TenantIDFromContext(ctx)
 
@@ -700,10 +712,7 @@ func (h *AllegroListingsHandler) refreshAllegroListingPublications(r *http.Reque
 	defer client.Close()
 	sandbox := isAllegroSandbox(r, h.integrationService, h.encryptionKey)
 
-	for _, listing := range listings {
-		if listing == nil || listing.ExternalID == nil || *listing.ExternalID == "" {
-			continue
-		}
+	for _, listing := range pending {
 		integ, integErr := h.integrationService.Get(ctx, tenantID, listing.IntegrationID)
 		if integErr != nil || integ == nil || integ.Provider != "allegro" {
 			continue
@@ -714,9 +723,6 @@ func (h *AllegroListingsHandler) refreshAllegroListingPublications(r *http.Reque
 		}
 		mapped := listingStatusFromAllegroOffer(live)
 		liveURL := allegroOfferURL(*listing.ExternalID, sandbox)
-		if listing.Status == mapped && listing.URL != nil && *listing.URL == liveURL {
-			continue
-		}
 		listing.Status = mapped
 		listing.URL = &liveURL
 		updateReq := &model.UpdateProductListingRequest{Status: &mapped, URL: &liveURL}

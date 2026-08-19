@@ -11,6 +11,8 @@ import (
 	"time"
 
 	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
+
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
 func TestAllegroTokenRefreshContextDetachesCancellationAndPreservesValues(t *testing.T) {
@@ -161,6 +163,34 @@ func TestListingStatusFromAllegroOffer_UsesPublicationReality(t *testing.T) {
 		Publication: &allegrosdk.OfferPublication{Status: "ACTIVE"},
 	}); got != "active" {
 		t.Fatalf("ACTIVE: got %q, want active", got)
+	}
+}
+
+func TestAllegroListingNeedsPublicationHeal(t *testing.T) {
+	ext := "7781994292"
+	oldURL := "https://allegro.pl.allegrosandbox.pl/moje-allegro/sprzedaz/oferty/7781994292"
+	newURL := "https://allegro.pl.allegrosandbox.pl/oferta/7781994292"
+
+	if !allegroListingNeedsPublicationHeal(&model.ProductListing{
+		Status: "active", ExternalID: &ext, URL: &oldURL,
+	}) {
+		t.Fatal("expected heal for active listing still on the seller-panel URL")
+	}
+	if allegroListingNeedsPublicationHeal(&model.ProductListing{
+		Status: "active", ExternalID: &ext, URL: &newURL,
+	}) {
+		t.Fatal("must not keep refreshing after the public /oferta URL is stored")
+	}
+	if allegroListingNeedsPublicationHeal(&model.ProductListing{
+		Status: "inactive", ExternalID: &ext, URL: &oldURL,
+	}) {
+		t.Fatal("inactive leftover is already not Aktywna")
+	}
+	if allegroListingNeedsPublicationHeal(&model.ProductListing{Status: "active", URL: &oldURL}) {
+		t.Fatal("listing without an offer id cannot be healed from Allegro")
+	}
+	if allegroListingNeedsPublicationHeal(nil) {
+		t.Fatal("nil listing")
 	}
 }
 

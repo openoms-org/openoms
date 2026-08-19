@@ -12,6 +12,7 @@ import (
 	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
@@ -147,4 +148,17 @@ func listingStatusFromAllegroOffer(offer *allegrosdk.Offer) string {
 		return "inactive"
 	}
 	return listingStatusFromAllegroPublication(offer.Publication.Status)
+}
+
+// allegroListingNeedsPublicationHeal is true for leftover rows from the
+// create-writes-active bug: stored as active with the seller-panel URL that 404s.
+// After a heal rewrites the URL to /oferta/{id}, this returns false.
+func allegroListingNeedsPublicationHeal(listing *model.ProductListing) bool {
+	if listing == nil || listing.ExternalID == nil || *listing.ExternalID == "" {
+		return false
+	}
+	if listing.Status != "active" || listing.URL == nil {
+		return false
+	}
+	return strings.Contains(*listing.URL, "/moje-allegro/")
 }
