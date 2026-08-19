@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -366,4 +368,27 @@ func TestCalculateOrderWeight_DuplicateProductIDSumsQuantities(t *testing.T) {
 	got := svc.calculateOrderWeight(context.Background(), nil, order)
 	// 1.0 * (2+3) = 5.0
 	assert.InDelta(t, 5.0, got, 0.001)
+}
+
+func TestReadLabelFile_ReadsStoredPDF(t *testing.T) {
+	tenantID := uuid.New()
+	filename := "label-test.pdf"
+	dir := filepath.Join("uploads", tenantID.String())
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+	t.Cleanup(func() {
+		require.NoError(t, os.RemoveAll(filepath.Join("uploads", tenantID.String())))
+	})
+
+	want := []byte("%PDF-1.4 stored label")
+	require.NoError(t, os.WriteFile(filepath.Join(dir, filename), want, 0o644))
+
+	url := "https://api.openoms.org/uploads/" + tenantID.String() + "/" + filename
+	got, err := readLabelFile(url)
+	require.NoError(t, err)
+	assert.Equal(t, want, got)
+}
+
+func TestReadLabelFile_RejectsTraversal(t *testing.T) {
+	_, err := readLabelFile("https://api.openoms.org/uploads/../secret.pdf")
+	require.Error(t, err)
 }

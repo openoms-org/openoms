@@ -3132,6 +3132,26 @@ paths:
                 $ref: '#/components/schemas/Error'
 
   /v1/shipments/{id}/label:
+    get:
+      tags: [Shipments]
+      summary: Download a stored shipping label
+      operationId: getShipmentLabel
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '200':
+          description: Label PDF
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Shipment or label not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     post:
       tags: [Shipments]
       summary: Generate a shipping label

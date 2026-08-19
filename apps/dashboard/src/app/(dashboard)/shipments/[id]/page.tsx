@@ -26,6 +26,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { ShipmentForm } from "@/components/shipments/shipment-form";
 import { ShipmentStatusActions } from "@/components/shipments/shipment-status-actions";
 import { GenerateLabelDialog } from "@/components/shipments/generate-label-dialog";
+import { ShipmentLabelDownload } from "@/components/shipments/shipment-label-download";
 import { DispatchOrderDialog } from "@/components/shipments/dispatch-order-dialog";
 import { TrackingTimeline } from "@/components/shipments/tracking-timeline";
 import {
@@ -37,7 +38,7 @@ import {
 } from "@/hooks/use-shipments";
 import { useOrder } from "@/hooks/use-orders";
 import { SHIPMENT_STATUSES, SHIPMENT_PROVIDER_LABELS } from "@/lib/constants";
-import { formatDate, shortId, sanitizeUrl } from "@/lib/utils";
+import { formatDate, shortId } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 
 const SENDING_METHOD_LABEL_KEYS: Record<string, string> = {
@@ -160,12 +161,10 @@ export default function ShipmentDetailPage() {
             </Button>
           )}
           {shipment.label_url && (
-            <Button variant="outline" size="sm" asChild>
-              <a href={sanitizeUrl(shipment.label_url)} target="_blank" rel="noopener noreferrer">
-                <FileDown className="h-4 w-4" />
-                {t("downloadLabel")}
-              </a>
-            </Button>
+            <ShipmentLabelDownload shipmentId={shipment.id} variant="outline" size="sm">
+              <FileDown className="h-4 w-4" />
+              {t("downloadLabel")}
+            </ShipmentLabelDownload>
           )}
           {shipment.provider === "inpost" &&
            shipment.status === "label_ready" &&
@@ -257,15 +256,14 @@ export default function ShipmentDetailPage() {
               <div>
                 <p className="text-sm text-muted-foreground">{t("labelUrl")}</p>
                 {shipment.label_url ? (
-                  <a
-                    href={sanitizeUrl(shipment.label_url)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                  <ShipmentLabelDownload
+                    shipmentId={shipment.id}
+                    variant="link"
+                    className="h-auto p-0 text-sm"
                   >
                     {t("openLabel")}
                     <ExternalLink className="h-3 w-3" />
-                  </a>
+                  </ShipmentLabelDownload>
                 ) : (
                   <p className="text-sm">-</p>
                 )}

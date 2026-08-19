@@ -31,6 +31,7 @@ import { mapCreateOrderRequestToUpdateOrderRequest } from "@/components/orders/o
 import { OrderStatusActions } from "@/components/orders/order-status-actions";
 import { OrderInvoicesSection } from "@/components/orders/order-invoices-section";
 import { OrderDropshipManualDialog } from "@/components/orders/order-dropship-manual-dialog";
+import { ShipmentLabelDownload } from "@/components/shipments/shipment-label-download";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,7 +59,7 @@ import { ORDER_STATUSES, PAYMENT_STATUSES, SHIPMENT_STATUSES, RETURN_STATUSES, D
 import { getSelectableShipmentProviders, isFeatureVisible } from "@/lib/readiness";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { useCustomFields } from "@/hooks/use-custom-fields";
-import { formatDate, formatCurrency, shortId, cn, sanitizeUrl } from "@/lib/utils";
+import { formatDate, formatCurrency, shortId, cn } from "@/lib/utils";
 import { getErrorMessage, apiFetch } from "@/lib/api-client";
 import type { CreateOrderRequest } from "@/types/api";
 import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
@@ -672,14 +673,13 @@ export default function OrderDetailPage() {
                       {shipment.label_url && (
                         <div>
                           <p className="text-muted-foreground">{t("detail.label")}</p>
-                          <a
-                            href={sanitizeUrl(shipment.label_url)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-medium text-primary hover:underline"
+                          <ShipmentLabelDownload
+                            shipmentId={shipment.id}
+                            variant="link"
+                            className="h-auto p-0 font-medium"
                           >
                             {tc("download")}
-                          </a>
+                          </ShipmentLabelDownload>
                         </div>
                       )}
                     </div>

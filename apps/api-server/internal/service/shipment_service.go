@@ -26,6 +26,8 @@ var (
 	ErrShipmentNotFound = errors.New("shipment not found")
 	// ErrOrderNotFoundForShipment is returned when a shipment's associated order cannot be found.
 	ErrOrderNotFoundForShipment = errors.New("order not found for shipment")
+	// ErrLabelNotAvailable is returned when a shipment has no stored label file.
+	ErrLabelNotAvailable = errors.New("label not available")
 )
 
 type shipmentLookupQuerier interface {
@@ -453,6 +455,32 @@ func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipme
 		})
 	}
 	return shipment, err
+}
+
+// GetLabelFile loads the already-stored label PDF for a single shipment.
+func (s *ShipmentService) GetLabelFile(ctx context.Context, tenantID, shipmentID uuid.UUID) ([]byte, error) {
+	var data []byte
+	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		shipment, err := s.shipmentRepo.FindByID(ctx, tx, shipmentID)
+		if err != nil {
+			return err
+		}
+		if shipment == nil {
+			return ErrShipmentNotFound
+		}
+		if shipment.LabelURL == nil || *shipment.LabelURL == "" {
+			return ErrLabelNotAvailable
+		}
+		data, err = readLabelFile(*shipment.LabelURL)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 // GetBatchLabelURLs loads label data for multiple shipments.
