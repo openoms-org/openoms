@@ -2,8 +2,12 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"io"
 )
+
+// ErrNotFound is returned by Get when the object key does not exist.
+var ErrNotFound = errors.New("object not found")
 
 // ObjectStorage abstracts file storage backends (local disk, S3, etc.)
 type ObjectStorage interface {

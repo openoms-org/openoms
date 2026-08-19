@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
 // S3Storage stores files in an S3-compatible bucket (AWS S3, MinIO, DigitalOcean Spaces, etc.)
@@ -74,10 +76,22 @@ func (s *S3Storage) Get(ctx context.Context, key string) (io.ReadCloser, error) 
 
 	output, err := s.client.GetObject(ctx, input)
 	if err != nil {
+		if isS3NotFound(err) {
+			return nil, fmt.Errorf("%w: %s", ErrNotFound, key)
+		}
 		return nil, fmt.Errorf("getting from S3 (bucket=%s, key=%s): %w", s.bucket, key, err)
 	}
 
 	return output.Body, nil
+}
+
+func isS3NotFound(err error) bool {
+	var nsk *types.NoSuchKey
+	if errors.As(err, &nsk) {
+		return true
+	}
+	var notFound *types.NotFound
+	return errors.As(err, &notFound)
 }
 
 // Delete removes a file from S3 by key.

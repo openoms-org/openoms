@@ -6,8 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -42,7 +40,6 @@ type LabelService struct {
 	tenantRepo      repository.TenantRepo
 	pool            *pgxpool.Pool
 	encryptionKey   []byte
-	uploadDir       string
 	baseURL         string
 	objectStorage   storage.ObjectStorage
 	fulfillment     *FulfillmentService
@@ -65,7 +62,6 @@ func NewLabelService(
 	tenantRepo repository.TenantRepo,
 	pool *pgxpool.Pool,
 	encryptionKey []byte,
-	uploadDir string,
 	baseURL string,
 	objectStorage storage.ObjectStorage,
 ) *LabelService {
@@ -78,7 +74,6 @@ func NewLabelService(
 		tenantRepo:      tenantRepo,
 		pool:            pool,
 		encryptionKey:   encryptionKey,
-		uploadDir:       uploadDir,
 		baseURL:         baseURL,
 		objectStorage:   objectStorage,
 	}
@@ -337,7 +332,7 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 	}
 
 	// Get label (some carriers may return label URL in CreateShipment, but we always
-	// fetch via GetLabel for a consistent local-file approach)
+	// fetch via GetLabel and persist through ObjectStorage).
 	labelBytes, err := carrier.GetLabel(ctx, resp.ExternalID, req.LabelFormat)
 	if err != nil {
 		// OPE-417: record the failed generate_label attempt + a typed blocker
@@ -379,18 +374,11 @@ func (s *LabelService) GenerateLabel(ctx context.Context, tenantID, shipmentID u
 	default:
 		return nil, fmt.Errorf("unsupported label format")
 	}
-	labelDir := filepath.Join(s.uploadDir, tenantID.String())
-	if err := os.MkdirAll(labelDir, 0750); err != nil {
-		return nil, fmt.Errorf("creating label directory: %w", err)
-	}
-
 	filename := uuid.New().String() + "." + ext
-	labelPath := filepath.Join(labelDir, filename)
-	if err := os.WriteFile(labelPath, labelBytes, 0600); err != nil {
-		return nil, fmt.Errorf("saving label file: %w", err)
+	labelURL, err := storeLabel(ctx, s.objectStorage, s.baseURL, tenantID, filename, labelContentType(ext), labelBytes)
+	if err != nil {
+		return nil, err
 	}
-
-	labelURL := fmt.Sprintf("%s/uploads/%s/%s", s.baseURL, tenantID.String(), filename)
 	trackingNum := resp.TrackingNumber
 
 	slog.Info("carrier label generated",

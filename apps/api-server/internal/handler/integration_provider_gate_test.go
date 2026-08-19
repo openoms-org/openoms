@@ -67,7 +67,7 @@ func TestIntegrationHandler_Create_ProviderGate(t *testing.T) {
 }
 
 func TestShipmentHandler_Create_ProviderGate(t *testing.T) {
-	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil, "")
+	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil, nil)
 	// overLong tracking number forces a service validation error after the
 	// provider gate but before any DB access, keeping passing cases panic-free.
 	overLong := strings.Repeat("x", 201)
