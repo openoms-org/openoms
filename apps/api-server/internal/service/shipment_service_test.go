@@ -374,13 +374,13 @@ func TestReadLabelFile_ReadsStoredPDF(t *testing.T) {
 	tenantID := uuid.New()
 	filename := "label-test.pdf"
 	dir := filepath.Join("uploads", tenantID.String())
-	require.NoError(t, os.MkdirAll(dir, 0o755))
+	require.NoError(t, os.MkdirAll(dir, 0o750))
 	t.Cleanup(func() {
 		require.NoError(t, os.RemoveAll(filepath.Join("uploads", tenantID.String())))
 	})
 
 	want := []byte("%PDF-1.4 stored label")
-	require.NoError(t, os.WriteFile(filepath.Join(dir, filename), want, 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, filename), want, 0o600))
 
 	url := "https://api.openoms.org/uploads/" + tenantID.String() + "/" + filename
 	got, err := readLabelFile(url)
