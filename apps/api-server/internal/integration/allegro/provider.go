@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"time"
 
 	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
@@ -81,41 +82,64 @@ func (p *Provider) Close() {
 	}
 }
 
-// PollOrders polls Allegro order events and fetches full order details.
-func (p *Provider) PollOrders(ctx context.Context, cursor string) ([]integration.MarketplaceOrder, string, error) {
-	events, err := p.client.Events.Poll(ctx, cursor, "READY_FOR_PROCESSING")
-	if err != nil {
-		return nil, cursor, fmt.Errorf("allegro: poll events: %w", err)
-	}
+const checkoutFormPageSize = 100
+const maxCheckoutFormPages = 50
 
-	if len(events.Events) == 0 {
-		return nil, cursor, nil
+// PollOrders lists Allegro checkout-forms and maps them to MarketplaceOrder rows.
+// Cursor is an RFC3339 updatedAt.gte watermark. Non-timestamp leftovers (event IDs)
+// are ignored so a first list after the events-poller era still backfills.
+func (p *Provider) PollOrders(ctx context.Context, cursor string) ([]integration.MarketplaceOrder, string, error) {
+	params := &allegrosdk.ListOrdersParams{Limit: checkoutFormPageSize}
+	if gte, ok := parseCheckoutFormCursor(cursor); ok {
+		params.UpdatedAtGte = &gte
 	}
 
 	var orders []integration.MarketplaceOrder
-	newCursor := cursor
+	newest := cursor
+	var newestTime time.Time
+	if params.UpdatedAtGte != nil {
+		newestTime = *params.UpdatedAtGte
+	}
 
-	for _, event := range events.Events {
-		orderID := event.Order.CheckoutForm.ID
-		if orderID == "" {
-			continue
-		}
-
-		allegroOrder, err := p.client.Orders.Get(ctx, orderID)
+	for page := range maxCheckoutFormPages {
+		params.Offset = page * checkoutFormPageSize
+		list, err := p.client.Orders.List(ctx, params)
 		if err != nil {
-			p.logger.Error("failed to fetch order — stopping batch, will retry from current cursor",
-				"order_id", orderID, "event_id", event.ID, "error", err)
-			// Don't advance cursor past this event — it will be retried on the next poll.
-			// Return successfully fetched orders so far to avoid losing work.
+			return nil, cursor, fmt.Errorf("allegro: list checkout-forms: %w", err)
+		}
+		if list == nil || len(list.CheckoutForms) == 0 {
 			break
 		}
 
-		mo := p.mapAllegroOrder(allegroOrder)
-		orders = append(orders, mo)
-		newCursor = event.ID
+		for i := range list.CheckoutForms {
+			form := list.CheckoutForms[i]
+			orders = append(orders, p.mapAllegroOrder(&form))
+			if form.UpdatedAt.After(newestTime) {
+				newestTime = form.UpdatedAt
+				newest = form.UpdatedAt.UTC().Format(time.RFC3339)
+			}
+		}
+
+		if len(list.CheckoutForms) < checkoutFormPageSize {
+			break
+		}
+		if list.TotalCount > 0 && params.Offset+len(list.CheckoutForms) >= list.TotalCount {
+			break
+		}
 	}
 
-	return orders, newCursor, nil
+	return orders, newest, nil
+}
+
+func parseCheckoutFormCursor(cursor string) (time.Time, bool) {
+	if cursor == "" {
+		return time.Time{}, false
+	}
+	t, err := time.Parse(time.RFC3339, cursor)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return t, true
 }
 
 // GetOrder retrieves a single order from Allegro by external ID.
@@ -296,13 +320,24 @@ func (p *Provider) GenerateProtocol(ctx context.Context, shipmentIDs []string) (
 
 // mapAllegroOrder converts an Allegro SDK Order to the normalized MarketplaceOrder.
 func (p *Provider) mapAllegroOrder(o *allegrosdk.Order) integration.MarketplaceOrder {
+	customerName := strings.TrimSpace(fmt.Sprintf("%s %s", o.Delivery.Address.FirstName, o.Delivery.Address.LastName))
+	if customerName == "" {
+		customerName = o.Buyer.Login
+	}
+	if customerName == "" {
+		customerName = o.Buyer.Email
+	}
+	if customerName == "" {
+		customerName = o.ID
+	}
+
 	mo := integration.MarketplaceOrder{
 		ExternalID:     o.ID,
 		ExternalStatus: o.Status,
-		CustomerName:   fmt.Sprintf("%s %s", o.Delivery.Address.FirstName, o.Delivery.Address.LastName),
+		CustomerName:   customerName,
 		CustomerEmail:  o.Buyer.Email,
 		ShippingAddress: model.ShippingAddress{
-			Name:       fmt.Sprintf("%s %s", o.Delivery.Address.FirstName, o.Delivery.Address.LastName),
+			Name:       customerName,
 			Street:     o.Delivery.Address.Street,
 			City:       o.Delivery.Address.City,
 			PostalCode: o.Delivery.Address.ZipCode,

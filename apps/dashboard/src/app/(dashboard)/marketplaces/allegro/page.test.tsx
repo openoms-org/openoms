@@ -1,7 +1,8 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { renderWithProviders } from "@/test/test-utils";
 import AllegroIntegrationPage from "./page";
 
 const refetchIntegrations = vi.fn();
@@ -88,7 +89,7 @@ describe("Allegro OAuth popup monitoring", () => {
   });
 
   it("continues monitoring the OAuth popup after setup state unmounts", async () => {
-    const { rerender } = render(<AllegroIntegrationPage />);
+    const { rerender } = renderWithProviders(<AllegroIntegrationPage />);
 
     fireEvent.change(screen.getByLabelText("Client ID"), {
       target: { value: "client-id" },
@@ -126,7 +127,7 @@ describe("Allegro OAuth popup monitoring", () => {
   });
 
   it("sends a tenant-scoped webhook secret when provided during setup", async () => {
-    render(<AllegroIntegrationPage />);
+    renderWithProviders(<AllegroIntegrationPage />);
 
     fireEvent.change(screen.getByLabelText("Client ID"), {
       target: { value: "client-id" },
@@ -155,7 +156,7 @@ describe("Allegro OAuth popup monitoring", () => {
   });
 
   it("omits a blank webhook secret during setup", async () => {
-    render(<AllegroIntegrationPage />);
+    renderWithProviders(<AllegroIntegrationPage />);
 
     fireEvent.change(screen.getByLabelText("Client ID"), {
       target: { value: "client-id" },
@@ -188,7 +189,7 @@ describe("Allegro OAuth popup monitoring", () => {
         last_sync_at: "2026-05-08T00:00:00Z",
       },
     ];
-    render(<AllegroIntegrationPage />);
+    renderWithProviders(<AllegroIntegrationPage />);
 
     fireEvent.change(screen.getByLabelText("webhookSecret"), {
       target: { value: "  webhook-secret  " },

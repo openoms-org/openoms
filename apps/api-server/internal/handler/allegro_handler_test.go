@@ -220,6 +220,21 @@ func TestAllegroHandler_AddTracking_BothFieldsMissing(t *testing.T) {
 	assert.Equal(t, "carrier_id and waybill are required", resp["error"])
 }
 
+func TestAllegroHandler_SyncOrders_MissingTenant(t *testing.T) {
+	h := NewAllegroHandler(nil, nil, nil, nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/integrations/allegro/sync", nil)
+	rr := httptest.NewRecorder()
+
+	h.SyncOrders(rr, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+	var resp map[string]string
+	err := json.NewDecoder(rr.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "missing tenant context", resp["error"])
+}
+
 func TestAllegroHandler_AddTracking_MissingOrderIDParam(t *testing.T) {
 	h := NewAllegroHandler(nil, nil, nil, nil)
 
