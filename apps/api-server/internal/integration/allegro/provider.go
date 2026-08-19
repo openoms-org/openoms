@@ -101,7 +101,7 @@ func (p *Provider) PollOrders(ctx context.Context, cursor string) ([]integration
 		newestTime = *params.UpdatedAtGte
 	}
 
-	for page := 0; page < maxCheckoutFormPages; page++ {
+	for page := range maxCheckoutFormPages {
 		params.Offset = page * checkoutFormPageSize
 		list, err := p.client.Orders.List(ctx, params)
 		if err != nil {
