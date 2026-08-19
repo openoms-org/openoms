@@ -342,6 +342,35 @@ func (h *ShipmentHandler) GenerateLabel(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, shipment)
 }
 
+// GetLabel streams the already-stored shipping label PDF for a shipment.
+func (h *ShipmentHandler) GetLabel(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+
+	shipmentID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid shipment ID")
+		return
+	}
+
+	pdfData, err := h.shipmentService.GetLabelFile(r.Context(), tenantID, shipmentID)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrShipmentNotFound):
+			writeError(w, http.StatusNotFound, "shipment not found")
+		case errors.Is(err, service.ErrLabelNotAvailable):
+			writeError(w, http.StatusNotFound, "label not found")
+		default:
+			writeServerError(w, "failed to get label", err)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=label_%s.pdf", shipmentID.String()[:8]))
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(pdfData) //nolint:gosec
+}
+
 // GetTracking returns the tracking status from the carrier for a shipment.
 func (h *ShipmentHandler) GetTracking(w http.ResponseWriter, r *http.Request) {
 	tenantID := middleware.TenantIDFromContext(r.Context())

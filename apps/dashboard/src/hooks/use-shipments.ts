@@ -86,6 +86,13 @@ export function useGenerateLabel(id: string) {
   });
 }
 
+/** Download an already-stored label via the authenticated API client. */
+export async function downloadShipmentLabel(shipmentId: string): Promise<void> {
+  const res = await apiFetch(`/v1/shipments/${shipmentId}/label`);
+  const blob = await res.blob();
+  downloadBlob(blob, `label-${shipmentId.slice(0, 8)}.pdf`);
+}
+
 export function useShipmentTracking(id: string, enabled = true) {
   return useQuery({
     queryKey: ["shipments", id, "tracking"],

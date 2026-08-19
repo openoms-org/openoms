@@ -162,6 +162,25 @@ func TestShipmentHandler_GenerateLabel_InvalidJSON(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
+func TestShipmentHandler_GetLabel_InvalidID(t *testing.T) {
+	h := NewShipmentHandler(nil, nil, "client-ready")
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", "bad")
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/shipments/bad/label", nil)
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+	rr := httptest.NewRecorder()
+
+	h.GetLabel(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	var resp map[string]string
+	err := json.NewDecoder(rr.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "invalid shipment ID", resp["error"])
+}
+
 func TestShipmentHandler_List_InvalidOrderIDFilter(t *testing.T) {
 	h := NewShipmentHandler(nil, nil, "client-ready")
 

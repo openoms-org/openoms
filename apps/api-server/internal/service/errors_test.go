@@ -58,6 +58,7 @@ func TestServiceErrors_AreSentinels(t *testing.T) {
 		ErrUnknownStatus,
 		ErrShipmentNotFound,
 		ErrOrderNotFoundForShipment,
+		ErrLabelNotAvailable,
 		ErrIntegrationNotFound,
 		ErrDuplicateProvider,
 		ErrReturnNotFound,

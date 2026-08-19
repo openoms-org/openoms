@@ -577,6 +577,7 @@ func New(deps RouterDeps) *chi.Mux {
 				r.With(requirePermission(model.PermShipmentsEdit)).Patch("/{id}", deps.Shipment.Update)
 				r.With(requirePermission(model.PermShipmentsEdit)).Post("/{id}/status", deps.Shipment.TransitionStatus)
 				r.With(requirePermission(model.PermShipmentsCreate)).Post("/{id}/label", deps.Shipment.GenerateLabel)
+				r.With(requirePermission(model.PermShipmentsView)).Get("/{id}/label", deps.Shipment.GetLabel)
 				r.With(requirePermission(model.PermShipmentsView)).Get("/{id}/tracking", deps.Shipment.GetTracking)
 				r.With(requirePermission(model.PermShipmentsDelete)).Delete("/{id}", deps.Shipment.Delete)
 			})
