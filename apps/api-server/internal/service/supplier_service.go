@@ -777,7 +777,7 @@ func (s *SupplierService) syncViaXML(ctx context.Context, tenantID, supplierID u
 		return ErrNoFeedURL
 	}
 
-	items, err := btpsdk.ParseCatalogueURL(ctx, *supplier.FeedURL, netutil.SafeHTTPClient(60*time.Second))
+	items, err := btpsdk.ParseCatalogueURL(ctx, *supplier.FeedURL, netutil.SafeHTTPClient(5*time.Minute))
 	if err != nil {
 		errMsg := err.Error()
 		s.recordSyncError(ctx, tenantID, supplierID, errMsg)
@@ -1541,7 +1541,7 @@ func (s *SupplierService) runBTPXMLImport(tenantID, supplierID uuid.UUID, feedUR
 	}
 
 	// Parse XML catalogue
-	items, err := btpsdk.ParseCatalogueURL(ctx, feedURL, netutil.SafeHTTPClient(120*time.Second))
+	items, err := btpsdk.ParseCatalogueURL(ctx, feedURL, netutil.SafeHTTPClient(5*time.Minute))
 	if err != nil {
 		s.logger.Error("btp wizard: XML parse failed", "supplier_id", supplierID, "error", err)
 		_ = database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {

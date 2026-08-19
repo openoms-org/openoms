@@ -173,6 +173,23 @@ func TestParseCatalogueXML_InvalidXML(t *testing.T) {
 	}
 }
 
+func TestDefaultCatalogueMaxBytes(t *testing.T) {
+	const want = 200 * 1024 * 1024
+	if DefaultCatalogueMaxBytes != want {
+		t.Fatalf("DefaultCatalogueMaxBytes = %d, want %d (200 MiB)", DefaultCatalogueMaxBytes, want)
+	}
+}
+
+func TestNormalizeCatalogueParseOptions_UsesDefaultMaxBytes(t *testing.T) {
+	opts := normalizeCatalogueParseOptions(CatalogueParseOptions{})
+	if opts.MaxBytes != DefaultCatalogueMaxBytes {
+		t.Fatalf("MaxBytes = %d, want DefaultCatalogueMaxBytes %d", opts.MaxBytes, DefaultCatalogueMaxBytes)
+	}
+	if opts.MaxProducts != DefaultCatalogueMaxProducts {
+		t.Fatalf("MaxProducts = %d, want DefaultCatalogueMaxProducts %d", opts.MaxProducts, DefaultCatalogueMaxProducts)
+	}
+}
+
 func TestParseCatalogueXML_SizeLimitExceeded(t *testing.T) {
 	_, err := ParseCatalogueXMLWithOptions(strings.NewReader(sampleCatalogueXML), CatalogueParseOptions{
 		MaxBytes:    64,

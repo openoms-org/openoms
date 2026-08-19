@@ -133,7 +133,8 @@ func MapCatalogueProducts(items []btpsdk.CatalogueProduct) []integration.Supplie
 
 // fetchProductsFromXML parses the BTP XML catalogue feed for full product data.
 func (p *Provider) fetchProductsFromXML(ctx context.Context) ([]integration.SupplierProduct, error) {
-	httpClient := netutil.SafeHTTPClient(60 * time.Second)
+	// 5 minutes covers a ~200 MiB ProductCatalogue download. REST catalogue/inventory still uses the 30s client from NewProvider.
+	httpClient := netutil.SafeHTTPClient(5 * time.Minute)
 
 	items, err := btpsdk.ParseCatalogueURL(ctx, p.catalogueURL, httpClient)
 	if err != nil {
