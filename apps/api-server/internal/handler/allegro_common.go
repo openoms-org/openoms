@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
@@ -115,11 +117,48 @@ func isAllegroSandbox(r *http.Request, integrationService *service.IntegrationSe
 	return creds.Sandbox
 }
 
-// allegroOfferURL returns the seller panel URL for an Allegro offer.
-// Public offer URLs require a slug we don't have, so we link to the seller's offer page.
+// allegroOfferURL returns the public offer URL. The seller-panel path
+// /moje-allegro/sprzedaz/oferty/{id} 404s; Allegro serves public pages at /oferta/{id}.
 func allegroOfferURL(offerID string, sandbox bool) string {
 	if sandbox {
-		return "https://allegro.pl.allegrosandbox.pl/moje-allegro/sprzedaz/oferty/" + offerID
+		return "https://allegro.pl.allegrosandbox.pl/oferta/" + offerID
 	}
-	return "https://allegro.pl/moje-allegro/sprzedaz/oferty/" + offerID
+	return "https://allegro.pl/oferta/" + offerID
+}
+
+// listingStatusFromAllegroPublication maps Allegro publication.status onto
+// product_listings.status. Only a live ACTIVE offer is stored as active.
+// DRAFT / INACTIVE / IN_PROGRESS / szkic / checking and any other non-live
+// state reuse inactive (Nieaktywna). ENDED is stored as ended.
+func listingStatusFromAllegroPublication(status string) string {
+	switch strings.ToUpper(strings.TrimSpace(status)) {
+	case "ACTIVE":
+		return "active"
+	case "ENDED":
+		return "ended"
+	default:
+		return "inactive"
+	}
+}
+
+// listingStatusFromAllegroOffer persists publication reality after create.
+// A missing publication on HTTP 201 is inactive, not active.
+func listingStatusFromAllegroOffer(offer *allegrosdk.Offer) string {
+	if offer == nil || offer.Publication == nil {
+		return "inactive"
+	}
+	return listingStatusFromAllegroPublication(offer.Publication.Status)
+}
+
+// allegroListingNeedsPublicationHeal is true for leftover rows from the
+// create-writes-active bug: stored as active with the seller-panel URL that 404s.
+// After a heal rewrites the URL to /oferta/{id}, this returns false.
+func allegroListingNeedsPublicationHeal(listing *model.ProductListing) bool {
+	if listing == nil || listing.ExternalID == nil || *listing.ExternalID == "" {
+		return false
+	}
+	if listing.Status != "active" || listing.URL == nil {
+		return false
+	}
+	return strings.Contains(*listing.URL, "/moje-allegro/")
 }
