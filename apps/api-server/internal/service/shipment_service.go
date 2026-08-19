@@ -552,12 +552,12 @@ func (s *ShipmentService) GetBatchLabelURLs(ctx context.Context, tenantID uuid.U
 // the on-disk path.
 func readLabelFile(labelURL, uploadDir string) ([]byte, error) {
 	const marker = "/uploads/"
-	idx := strings.Index(labelURL, marker)
-	if idx < 0 {
+	_, after, ok := strings.Cut(labelURL, marker)
+	if !ok {
 		return nil, fmt.Errorf("%w: invalid label URL format", ErrLabelNotAvailable)
 	}
 
-	relPath := filepath.Clean(labelURL[idx+len(marker):])
+	relPath := filepath.Clean(after)
 	if relPath == "." || strings.HasPrefix(relPath, "..") || filepath.IsAbs(relPath) {
 		return nil, fmt.Errorf("invalid label path")
 	}
