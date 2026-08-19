@@ -197,7 +197,7 @@ func TestShipmentHandler_List_InvalidOrderIDFilter(t *testing.T) {
 }
 
 func TestShipmentHandler_Create_ValidationError(t *testing.T) {
-	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil)
+	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil, "")
 	h := NewShipmentHandler(svc, nil, "client-ready")
 
 	tenantID := uuid.New()
@@ -219,7 +219,7 @@ func TestShipmentHandler_Create_ValidationError(t *testing.T) {
 }
 
 func TestShipmentHandler_TransitionStatus_ValidationError(t *testing.T) {
-	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil)
+	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil, "")
 	h := NewShipmentHandler(svc, nil, "client-ready")
 
 	tenantID := uuid.New()
@@ -242,7 +242,7 @@ func TestShipmentHandler_TransitionStatus_ValidationError(t *testing.T) {
 }
 
 func TestShipmentHandler_Update_ValidationError(t *testing.T) {
-	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil)
+	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil, "")
 	h := NewShipmentHandler(svc, nil, "client-ready")
 
 	tenantID := uuid.New()
@@ -760,7 +760,7 @@ func TestShipmentHandler_BatchLabels_EmptyBody(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestShipmentHandler_Create_MissingOrderID(t *testing.T) {
-	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil)
+	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil, "")
 	h := NewShipmentHandler(svc, nil, "client-ready")
 
 	tenantID := uuid.New()
@@ -781,7 +781,7 @@ func TestShipmentHandler_Create_MissingOrderID(t *testing.T) {
 }
 
 func TestShipmentHandler_Create_InPostProviderMissingOrderID(t *testing.T) {
-	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil)
+	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil, "")
 	h := NewShipmentHandler(svc, nil, "client-ready")
 
 	tenantID := uuid.New()
@@ -804,7 +804,7 @@ func TestShipmentHandler_Create_InPostProviderMissingOrderID(t *testing.T) {
 func TestShipmentHandler_Create_InPostProviderValidPayload(t *testing.T) {
 	// With a nil pool, the service will panic at the database layer, not at validation.
 	// We catch the panic to confirm the handler got past validation.
-	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil)
+	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil, "")
 	h := NewShipmentHandler(svc, nil, "client-ready")
 
 	tenantID := uuid.New()
@@ -827,7 +827,7 @@ func TestShipmentHandler_Create_InPostProviderValidPayload(t *testing.T) {
 }
 
 func TestShipmentHandler_Create_InPostWithCarrierData(t *testing.T) {
-	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil)
+	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil, "")
 	h := NewShipmentHandler(svc, nil, "client-ready")
 
 	tenantID := uuid.New()
@@ -1114,7 +1114,7 @@ func TestShipmentHandler_Delete_ValidUUID(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestShipmentHandler_TransitionStatus_WhitespaceOnlyStatus(t *testing.T) {
-	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil)
+	svc := service.NewShipmentService(nil, nil, nil, nil, nil, nil, nil, "")
 	h := NewShipmentHandler(svc, nil, "client-ready")
 
 	tenantID := uuid.New()

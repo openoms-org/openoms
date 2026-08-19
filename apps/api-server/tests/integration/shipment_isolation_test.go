@@ -39,7 +39,7 @@ func TestShipmentService_UpdateStatusByTrackingNumber_TenantIsolation(t *testing
 	require.NoError(t, err, "seed shipment for tenant A")
 
 	// Service runs on the RLS-scoped app pool (openoms_app, NOBYPASSRLS).
-	svc := service.NewShipmentService(nil, nil, nil, nil, nil, appPool, nil)
+	svc := service.NewShipmentService(nil, nil, nil, nil, nil, appPool, nil, "")
 
 	statusOf := func() string {
 		var s string

@@ -390,7 +390,7 @@ func run() error {
 	operationsHandler := handler.NewOperationsHandler(fulfillmentReadService)
 	orderService := service.NewOrderService(orderRepo, auditRepo, tenantRepo, pool, emailService, webhookDispatchService, fulfillmentService)
 	returnService := service.NewReturnService(returnRepo, orderRepo, auditRepo, pool, webhookDispatchService)
-	shipmentService := service.NewShipmentService(shipmentRepo, orderRepo, productRepo, auditRepo, tenantRepo, pool, webhookDispatchService)
+	shipmentService := service.NewShipmentService(shipmentRepo, orderRepo, productRepo, auditRepo, tenantRepo, pool, webhookDispatchService, cfg.UploadDir)
 	shipmentService.SetWorkerPool(workerPool)
 	shipmentService.SetFulfillmentService(fulfillmentService) // OPE-417: gated best-effort recording
 	productService := service.NewProductService(productRepo, auditRepo, pool, webhookDispatchService)
