@@ -239,6 +239,12 @@ func (h *AllegroListingsHandler) CreateListing(w http.ResponseWriter, r *http.Re
 		"location":         req.Location,
 	})
 
+	if offer.Publication == nil || offer.Publication.Status == "" {
+		if live, getErr := client.Offers.Get(ctx, offer.ID); getErr == nil {
+			offer = live
+		}
+	}
+
 	now := time.Now()
 	sandbox := isAllegroSandbox(r, h.integrationService, h.encryptionKey)
 	offerURL := allegroOfferURL(offer.ID, sandbox)
@@ -248,7 +254,7 @@ func (h *AllegroListingsHandler) CreateListing(w http.ResponseWriter, r *http.Re
 		ProductID:     productID,
 		IntegrationID: integrationID,
 		ExternalID:    &offer.ID,
-		Status:        "active",
+		Status:        listingStatusFromAllegroOffer(offer),
 		URL:           &offerURL,
 		PriceOverride: req.PriceOverride,
 		StockOverride: req.StockOverride,
@@ -675,7 +681,52 @@ func (h *AllegroListingsHandler) ListByProduct(w http.ResponseWriter, r *http.Re
 		listings = []*model.ProductListing{}
 	}
 
+	h.refreshAllegroListingPublications(r, listings)
+
 	writeJSON(w, http.StatusOK, listings)
+}
+
+// refreshAllegroListingPublications overlays live Allegro publication onto
+// stored listing rows so a szkic / INACTIVE offer cannot keep rendering as
+// Aktywna after a create that ignored publication.status.
+func (h *AllegroListingsHandler) refreshAllegroListingPublications(r *http.Request, listings []*model.ProductListing) {
+	ctx := r.Context()
+	tenantID := middleware.TenantIDFromContext(ctx)
+
+	client, err := h.newAllegroClient(r)
+	if err != nil {
+		return
+	}
+	defer client.Close()
+	sandbox := isAllegroSandbox(r, h.integrationService, h.encryptionKey)
+
+	for _, listing := range listings {
+		if listing == nil || listing.ExternalID == nil || *listing.ExternalID == "" {
+			continue
+		}
+		integ, integErr := h.integrationService.Get(ctx, tenantID, listing.IntegrationID)
+		if integErr != nil || integ == nil || integ.Provider != "allegro" {
+			continue
+		}
+		live, getErr := client.Offers.Get(ctx, *listing.ExternalID)
+		if getErr != nil {
+			continue
+		}
+		mapped := listingStatusFromAllegroOffer(live)
+		liveURL := allegroOfferURL(*listing.ExternalID, sandbox)
+		if listing.Status == mapped && listing.URL != nil && *listing.URL == liveURL {
+			continue
+		}
+		listing.Status = mapped
+		listing.URL = &liveURL
+		updateReq := &model.UpdateProductListingRequest{Status: &mapped, URL: &liveURL}
+		if persistErr := database.WithTenant(ctx, h.pool, tenantID, func(tx pgx.Tx) error {
+			return h.listingRepo.Update(ctx, tx, listing.ID, updateReq)
+		}); persistErr != nil {
+			slog.Warn("allegro listings: failed to persist publication status",
+				"error", persistErr, "listing_id", listing.ID)
+		}
+	}
 }
 
 // GetListing returns a single listing by ID.
@@ -889,11 +940,17 @@ func (h *AllegroListingsHandler) SyncListing(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Update listing sync status
+	// Update listing sync status from Allegro publication, not "synced == active".
 	now := time.Now()
 	syncStatus := "synced"
 	updateReq := &model.UpdateProductListingRequest{
 		SyncStatus: &syncStatus,
+	}
+	if live, getErr := client.Offers.Get(ctx, externalID); getErr == nil {
+		mapped := listingStatusFromAllegroOffer(live)
+		updateReq.Status = &mapped
+		liveURL := allegroOfferURL(externalID, isAllegroSandbox(r, h.integrationService, h.encryptionKey))
+		updateReq.URL = &liveURL
 	}
 
 	err = database.WithTenant(ctx, h.pool, tenantID, func(tx pgx.Tx) error {

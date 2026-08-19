@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"testing"
 	"time"
+
+	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
 )
 
 func TestAllegroTokenRefreshContextDetachesCancellationAndPreservesValues(t *testing.T) {
@@ -108,4 +110,65 @@ func isRequestContextCall(n ast.Node) bool {
 	}
 	receiver, ok := sel.X.(*ast.Ident)
 	return ok && receiver.Name == "r"
+}
+
+func TestListingStatusFromAllegroPublication(t *testing.T) {
+	tests := []struct {
+		in   string
+		want string
+	}{
+		{"ACTIVE", "active"},
+		{"active", "active"},
+		{"INACTIVE", "inactive"},
+		{"DRAFT", "inactive"},
+		{"IN_PROGRESS", "inactive"},
+		{"ACTIVATING", "inactive"},
+		{"CHECKING", "inactive"},
+		{"szkic", "inactive"},
+		{"ENDED", "ended"},
+		{"", "inactive"},
+		{"UNKNOWN", "inactive"},
+	}
+	for _, tt := range tests {
+		if got := listingStatusFromAllegroPublication(tt.in); got != tt.want {
+			t.Errorf("listingStatusFromAllegroPublication(%q) = %q, want %q", tt.in, got, tt.want)
+		}
+	}
+}
+
+func TestListingStatusFromAllegroOffer_MissingPublicationIsInactive(t *testing.T) {
+	if got := listingStatusFromAllegroOffer(nil); got != "inactive" {
+		t.Fatalf("nil offer: got %q, want inactive", got)
+	}
+	if got := listingStatusFromAllegroOffer(&allegrosdk.Offer{ID: "7781994292"}); got != "inactive" {
+		t.Fatalf("offer without publication: got %q, want inactive", got)
+	}
+	if got := listingStatusFromAllegroOffer(&allegrosdk.Offer{
+		ID:          "7781994292",
+		Publication: &allegrosdk.OfferPublication{},
+	}); got != "inactive" {
+		t.Fatalf("empty publication status: got %q, want inactive", got)
+	}
+}
+
+func TestListingStatusFromAllegroOffer_UsesPublicationReality(t *testing.T) {
+	if got := listingStatusFromAllegroOffer(&allegrosdk.Offer{
+		Publication: &allegrosdk.OfferPublication{Status: "INACTIVE"},
+	}); got != "inactive" {
+		t.Fatalf("INACTIVE: got %q, want inactive", got)
+	}
+	if got := listingStatusFromAllegroOffer(&allegrosdk.Offer{
+		Publication: &allegrosdk.OfferPublication{Status: "ACTIVE"},
+	}); got != "active" {
+		t.Fatalf("ACTIVE: got %q, want active", got)
+	}
+}
+
+func TestAllegroOfferURLIsPublicOfertaPath(t *testing.T) {
+	if got := allegroOfferURL("7781994292", false); got != "https://allegro.pl/oferta/7781994292" {
+		t.Fatalf("prod URL = %q", got)
+	}
+	if got := allegroOfferURL("7781994292", true); got != "https://allegro.pl.allegrosandbox.pl/oferta/7781994292" {
+		t.Fatalf("sandbox URL = %q", got)
+	}
 }
