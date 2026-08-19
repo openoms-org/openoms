@@ -48,6 +48,7 @@ type ShipmentService struct {
 	automationService *AutomationService
 	allegroSync       *AllegroSyncService
 	fulfillment       *FulfillmentService
+	uploadDir         string
 }
 
 // SetFulfillmentService wires the gated fulfillment service used for best-effort
@@ -87,6 +88,7 @@ func NewShipmentService(
 	tenantRepo repository.TenantRepo,
 	pool *pgxpool.Pool,
 	webhookDispatch *WebhookDispatchService,
+	uploadDir string,
 ) *ShipmentService {
 	return &ShipmentService{
 		shipmentRepo:    shipmentRepo,
@@ -96,6 +98,7 @@ func NewShipmentService(
 		tenantRepo:      tenantRepo,
 		pool:            pool,
 		webhookDispatch: webhookDispatch,
+		uploadDir:       uploadDir,
 	}
 }
 
@@ -471,7 +474,7 @@ func (s *ShipmentService) GetLabelFile(ctx context.Context, tenantID, shipmentID
 		if shipment.LabelURL == nil || *shipment.LabelURL == "" {
 			return ErrLabelNotAvailable
 		}
-		data, err = readLabelFile(*shipment.LabelURL)
+		data, err = readLabelFile(*shipment.LabelURL, s.uploadDir)
 		if err != nil {
 			return err
 		}
@@ -513,7 +516,7 @@ func (s *ShipmentService) GetBatchLabelURLs(ctx context.Context, tenantID uuid.U
 				continue
 			}
 
-			labelData, err := readLabelFile(*shipment.LabelURL)
+			labelData, err := readLabelFile(*shipment.LabelURL, s.uploadDir)
 			if err != nil {
 				results = append(results, model.BatchLabelResult{
 					ShipmentID: sid.String(),
@@ -543,40 +546,35 @@ func (s *ShipmentService) GetBatchLabelURLs(ctx context.Context, tenantID uuid.U
 	return validResults, nil
 }
 
-// readLabelFile reads a label file from disk. The URL is in the form:
-// {baseURL}/uploads/{tenantID}/{filename}
-// We extract the path from the URL and read the file.
-func readLabelFile(labelURL string) ([]byte, error) {
-	// The label URL looks like: http://localhost:8080/uploads/tenant-uuid/filename.pdf
-	// We need to extract the path after /uploads/ and resolve it to disk.
-	idx := 0
+// readLabelFile reads a label file from disk. LabelService stores URLs in the
+// form {baseURL}/uploads/{tenantID}/{filename} and writes the bytes under
+// uploadDir (config UPLOAD_DIR). The public /uploads/* prefix is not part of
+// the on-disk path.
+func readLabelFile(labelURL, uploadDir string) ([]byte, error) {
 	const marker = "/uploads/"
-	for i := range labelURL {
-		if i+len(marker) <= len(labelURL) && labelURL[i:i+len(marker)] == marker {
-			idx = i + len(marker)
-			break
-		}
-	}
-	if idx == 0 {
-		return nil, fmt.Errorf("invalid label URL format: %s", labelURL)
+	_, after, ok := strings.Cut(labelURL, marker)
+	if !ok {
+		return nil, fmt.Errorf("%w: invalid label URL format", ErrLabelNotAvailable)
 	}
 
-	relPath := filepath.Clean(labelURL[idx:])
-	// Prevent path traversal
-	if strings.HasPrefix(relPath, "..") || filepath.IsAbs(relPath) {
+	relPath := filepath.Clean(after)
+	if relPath == "." || strings.HasPrefix(relPath, "..") || filepath.IsAbs(relPath) {
 		return nil, fmt.Errorf("invalid label path")
 	}
 
-	// Try common upload directories
-	for _, base := range []string{"uploads", "./uploads", "/tmp/uploads"} {
-		fullPath := filepath.Join(base, relPath)
-		data, err := os.ReadFile(fullPath) //nolint:gosec // path validated: Clean + traversal check above
-		if err == nil {
-			return data, nil
-		}
+	if uploadDir == "" {
+		return nil, ErrLabelNotAvailable
 	}
 
-	return nil, fmt.Errorf("label file not found for URL: %s", labelURL)
+	fullPath := filepath.Join(uploadDir, relPath)
+	data, err := os.ReadFile(fullPath) //nolint:gosec // path validated: Clean + traversal check above
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, ErrLabelNotAvailable
+		}
+		return nil, fmt.Errorf("reading label file: %w", err)
+	}
+	return data, nil
 }
 
 // externalIDOrEmpty returns a shipment's carrier external id as a request
