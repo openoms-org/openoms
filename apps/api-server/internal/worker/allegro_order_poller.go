@@ -2,13 +2,13 @@
 package worker
 
 import (
-	"encoding/json"
 	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/integration"
+	allegroint "github.com/openoms-org/openoms/apps/api-server/internal/integration/allegro"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 )
@@ -29,27 +29,6 @@ func NewAllegroOrderPoller(pool *pgxpool.Pool, encryptionKey []byte, orderRepo r
 	})
 }
 
-func allegroOrderMapper(mo integration.MarketplaceOrder, ti TenantIntegration, req model.CreateOrderRequest) model.Order {
-	order, metadata := newBaseMarketplaceOrder(mo, ti, req)
-
-	// Fallback: if buyer phone is missing, use shipping address phone
-	if (order.CustomerPhone == nil || *order.CustomerPhone == "") && mo.ShippingAddress.Phone != "" {
-		order.CustomerPhone = &mo.ShippingAddress.Phone
-	}
-
-	// Allegro-specific: delivery method and pickup point from RawData
-	if mo.RawData != nil {
-		if dmName, ok := mo.RawData["delivery_method_name"].(string); ok {
-			order.DeliveryMethod = &dmName
-		}
-		if ppID, ok := mo.RawData["pickup_point_id"].(string); ok {
-			order.PickupPointID = &ppID
-		}
-	}
-
-	metadataJSON, _ := json.Marshal(metadata)
-	order.Metadata = metadataJSON
-	order.Tags = []string{}
-
-	return order
+func allegroOrderMapper(mo integration.MarketplaceOrder, ti TenantIntegration, _ model.CreateOrderRequest) model.Order {
+	return allegroint.ToOMSOrder(mo, ti.TenantID, ti.IntegrationID)
 }

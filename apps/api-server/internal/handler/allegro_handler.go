@@ -22,6 +22,7 @@ type AllegroHandler struct {
 	integrationService   *service.IntegrationService
 	orderService         *service.OrderService
 	allegroImportService *service.AllegroImportService
+	orderInbound         *service.AllegroOrderInboundService
 	encryptionKey        []byte
 }
 
@@ -33,6 +34,14 @@ func NewAllegroHandler(integrationService *service.IntegrationService, orderServ
 		allegroImportService: allegroImportService,
 		encryptionKey:        encryptionKey,
 	}
+}
+
+// SetOrderInbound wires the checkout-form → OMS upsert used by POST /sync.
+func (h *AllegroHandler) SetOrderInbound(inbound *service.AllegroOrderInboundService) {
+	if h == nil {
+		return
+	}
+	h.orderInbound = inbound
 }
 
 // getProvider creates an Allegro provider from the integration credentials for the given tenant.
@@ -185,29 +194,31 @@ func (h *AllegroHandler) ListCarriers(w http.ResponseWriter, r *http.Request) {
 }
 
 // SyncOrders handles POST /v1/integrations/allegro/sync.
-// It triggers an immediate order poll from Allegro.
+// It lists checkout-forms and upserts them as source=allegro OMS orders.
 func (h *AllegroHandler) SyncOrders(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	tenantID := middleware.TenantIDFromContext(ctx)
-
-	provider, err := h.getProvider(ctx, tenantID)
-	if err != nil {
-		writeServerError(w, "failed to connect to Allegro", err)
+	if tenantID == uuid.Nil {
+		writeError(w, http.StatusUnauthorized, "missing tenant context")
 		return
 	}
-	defer provider.Close()
-
-	orders, cursor, err := provider.PollOrders(ctx, "")
-	if err != nil {
-		slog.Error("allegro sync: poll failed", "error", err)
-		writeAllegroError(w, "failed to poll orders from Allegro", err)
+	if h.orderInbound == nil {
+		writeServerError(w, "order sync is not configured", errors.New("allegro order inbound service is nil"))
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{
-		"synced_count": len(orders),
-		"cursor":       cursor,
-	})
+	result, err := h.orderInbound.SyncOrders(ctx, tenantID)
+	if err != nil {
+		if errors.Is(err, service.ErrIntegrationNotFound) {
+			writeError(w, http.StatusNotFound, "allegro integration not found")
+			return
+		}
+		slog.Error("allegro sync: inbound import failed", "error", err)
+		writeAllegroError(w, "failed to sync orders from Allegro", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, result)
 }
 
 // ImportOffers handles POST /v1/integrations/allegro/import-offers.

@@ -32,6 +32,7 @@ import {
 import { MarketplaceShipmentSettings } from "@/components/integrations/marketplace-shipment-settings";
 import { AllegroTabNav } from "@/components/marketplaces/allegro-tab-nav";
 import { useAllegroAccount } from "@/hooks/use-allegro";
+import { useAllegroSync } from "@/hooks/use-allegro-fulfillment";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { INTEGRATION_STATUSES } from "@/lib/constants";
 import { formatDate } from "@/lib/utils";
@@ -497,7 +498,26 @@ function ConnectedState({
   const t = useTranslations("marketplaces");
   const updateIntegration = useUpdateIntegration(integration.id);
   const deleteIntegration = useDeleteIntegration();
+  const syncOrders = useAllegroSync();
   const [isReauthorizing, setIsReauthorizing] = useState(false);
+
+  const handleSyncOrders = () => {
+    syncOrders.mutate(undefined, {
+      onSuccess: (result) => {
+        if (result.created_count > 0) {
+          toast.success(t("syncOrdersSuccess", { count: result.created_count }));
+        } else {
+          toast.success(t("syncOrdersNone"));
+        }
+        onRefetch();
+      },
+      onError: (error) => {
+        toast.error(
+          error instanceof Error ? error.message : t("syncOrdersError")
+        );
+      },
+    });
+  };
 
   const handleDisconnect = () => {
     updateIntegration.mutate(
@@ -775,6 +795,21 @@ function ConnectedState({
                   <RefreshCw className="mr-2 h-4 w-4" />
                 )}
                 {t("odswiezToken")}
+              </Button>
+            )}
+            {integration.status === "active" && (
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={handleSyncOrders}
+                disabled={syncOrders.isPending}
+              >
+                {syncOrders.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                {t("syncOrdersNow")}
               </Button>
             )}
             {integration.status === "active" && (

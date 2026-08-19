@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, apiFetch } from "@/lib/api-client";
 import { downloadBlob } from "@/lib/download";
+import { integrationQueryKeys } from "./integration-query-keys";
 
 // --- Types ---
 
@@ -114,12 +115,13 @@ export function useAllegroSync() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () =>
-      apiClient<{ synced_count: number; cursor: string }>(
+      apiClient<{ synced_count: number; created_count: number; cursor: string }>(
         "/v1/integrations/allegro/sync",
         { method: "POST" }
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: integrationQueryKeys.all });
     },
   });
 }

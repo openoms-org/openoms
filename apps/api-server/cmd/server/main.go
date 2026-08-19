@@ -696,6 +696,8 @@ func run() error {
 
 	// Allegro fulfillment + tracking handler (Batch 1)
 	allegroHandler := handler.NewAllegroHandler(integrationService, orderService, allegroImportService, encryptionKey)
+	allegroOrderInbound := service.NewAllegroOrderInboundService(integrationService, orderRepo, auditRepo, pool)
+	allegroHandler.SetOrderInbound(allegroOrderInbound)
 
 	// Allegro shipment management handler ("Wysyłam z Allegro")
 	allegroShipmentHandler := handler.NewAllegroShipmentHandler(integrationService, shipmentService, orderRepo, shipmentRepo, pool, encryptionKey)
