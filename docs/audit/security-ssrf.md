@@ -43,16 +43,16 @@ The OpenOMS API server has a well-designed centralized SSRF protection mechanism
 
 | Check | Rating | Details |
 |-------|--------|---------|
-| SSRF protection on feed fetch | **OK** | All three feed fetch paths use `netutil.SafeHTTPClient(60*time.Second)` or `netutil.SafeHTTPClient(120*time.Second)`: BTP catalogue (line 742), IOF parser (line 828), and BTP wizard (line 1462). |
+| SSRF protection on feed fetch | **OK** | All three feed fetch paths use `netutil.SafeHTTPClient`: BTP XML catalogue and wizard (5 minutes for the ~200 MiB ProductCatalogue), IOF parser (60 seconds). |
 | Cloud metadata attack | **OK** | `feed_url` set to `http://169.254.169.254/...` would be blocked by `NoPrivateDialer` (169.254.0.0/16 is in the blocked CIDRs list). |
 | URL validation at save time | **WARNING** | When a supplier is created (line 140), the `feed_url` is stored directly without checking `IsPrivateURL`. The SSRF check happens at fetch time (via SafeHTTPClient), not at save time. This means a private URL will be stored but fail when fetched. Consider adding save-time validation for better UX. |
-| Timeout | **OK** | 60-second or 120-second timeouts. |
+| Timeout | **OK** | 5-minute timeout on BTP XML catalogue fetches; 60-second timeout on IOF. |
 
 **File:** `apps/api-server/internal/integration/btp/provider.go` (line 135)
 
 | Check | Rating | Details |
 |-------|--------|---------|
-| BTP provider feed fetch | **OK** | Uses `netutil.SafeHTTPClient(60 * time.Second)`. |
+| BTP provider feed fetch | **OK** | Uses `netutil.SafeHTTPClient(5 * time.Minute)` for the XML catalogue only. REST catalogue/inventory keep the 30s client. |
 
 ---
 

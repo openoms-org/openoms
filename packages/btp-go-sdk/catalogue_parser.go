@@ -15,7 +15,8 @@ import (
 
 const (
 	// DefaultCatalogueMaxBytes is the maximum BTP XML catalogue response size accepted by default.
-	DefaultCatalogueMaxBytes int64 = 50 * 1024 * 1024
+	// 200 MiB covers the live Comarch EDI ProductCatalogue feed (the June 50 MiB cutoff rejected it).
+	DefaultCatalogueMaxBytes int64 = 200 * 1024 * 1024
 	// DefaultCatalogueMaxProducts is the maximum number of products parsed from one BTP XML catalogue.
 	DefaultCatalogueMaxProducts = 50_000
 )
