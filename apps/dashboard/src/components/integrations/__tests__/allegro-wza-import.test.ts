@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { wzaLabelDownloadTarget } from "../allegro-wza-import";
+import { ApiClientError } from "@/lib/api-client";
+import { wzaImportDialogError, wzaLabelDownloadTarget } from "../allegro-wza-import";
 
 describe("wzaLabelDownloadTarget", () => {
   it("uses the logged-in OMS shipment label route when a PDF was stored", () => {
@@ -32,5 +33,49 @@ describe("wzaLabelDownloadTarget", () => {
         label_ready: false,
       })
     ).toEqual({ kind: "none" });
+  });
+});
+
+describe("wzaImportDialogError", () => {
+  it("surfaces a 409 empty checkout as a dialog error, not a silent success", () => {
+    expect(
+      wzaImportDialogError({
+        error: new ApiClientError(
+          409,
+          "wysyłam z Allegro has no existing shipment for this checkout"
+        ),
+      })
+    ).toEqual({ kind: "empty" });
+  });
+
+  it("surfaces a 200 with no imported rows as a dialog error", () => {
+    expect(wzaImportDialogError({ shipments: [] })).toEqual({ kind: "empty" });
+  });
+
+  it("keeps other request failures visible in the dialog", () => {
+    expect(
+      wzaImportDialogError({
+        error: new ApiClientError(500, "Failed to store imported shipment"),
+      })
+    ).toEqual({
+      kind: "request",
+      message: "Failed to store imported shipment",
+    });
+  });
+
+  it("is silent only when a shipment was actually imported", () => {
+    expect(
+      wzaImportDialogError({
+        shipments: [
+          {
+            id: "oms-1",
+            provider: "allegro",
+            label_ready: false,
+            created: true,
+            waybill: "605500867604760112200733",
+          },
+        ],
+      })
+    ).toBeNull();
   });
 });

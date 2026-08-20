@@ -27,6 +27,7 @@ import {
 import { allegroSalesCenterCreateShipmentURL } from "@/components/integrations/allegro-sales-center";
 import {
   type ImportedWzAShipment,
+  wzaImportDialogError,
   wzaLabelDownloadTarget,
 } from "@/components/integrations/allegro-wza-import";
 
@@ -55,6 +56,7 @@ export function AllegroShipmentDialog({
   const [importedShipment, setImportedShipment] = useState<ImportedWzAShipment | null>(
     null
   );
+  const [importError, setImportError] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
   const {
@@ -83,6 +85,7 @@ export function AllegroShipmentDialog({
       setHeight("15");
       setCreatedShipmentId(null);
       setImportedShipment(null);
+      setImportError(null);
     }
   }, [open]);
 
@@ -159,11 +162,22 @@ export function AllegroShipmentDialog({
   };
 
   const handleImportExisting = async () => {
+    setImportError(null);
     try {
       const result = await importExisting.mutateAsync();
+      const failure = wzaImportDialogError({ shipments: result.shipments ?? [] });
+      if (failure) {
+        const message =
+          failure.kind === "empty" ? t("noExistingWzAShipment") : failure.message;
+        setImportError(message);
+        toast.error(message);
+        return;
+      }
       const first = result.shipments[0];
       if (!first) {
-        toast.error(t("noExistingWzAShipment"));
+        const message = t("noExistingWzAShipment");
+        setImportError(message);
+        toast.error(message);
         return;
       }
       setImportedShipment(first);
@@ -171,7 +185,15 @@ export function AllegroShipmentDialog({
       setStep("result");
       toast.success(t("wzaImported"));
     } catch (error) {
-      toast.error(getErrorMessage(error));
+      const failure = wzaImportDialogError({ error });
+      const message =
+        failure?.kind === "empty"
+          ? t("noExistingWzAShipment")
+          : failure?.kind === "request"
+            ? failure.message
+            : getErrorMessage(error);
+      setImportError(message);
+      toast.error(message);
     }
   };
 
@@ -249,6 +271,7 @@ export function AllegroShipmentDialog({
       onCancel={step === "package-details" ? () => setStep("select-service") : undefined}
       onConfirm={handleDialogConfirm}
       contentClassName="max-w-lg"
+      error={importError}
     >
       {step === "select-service" && (
         <div>
