@@ -286,6 +286,7 @@
     "noChangesIntroduced": "Nie wprowadzono żadnych zmian",
     "noDeliveryServices": "Brak dostępnych usług dostawy. Sprawdź konfigurację Allegro.",
     "noIntegrations": "Brak integracji",
+    "noWzAMethodForCheckout": "Wysyłam z Allegro nie ma metody dostawy dla tego zamówienia ({method}). Nie wybieraj zastępczej usługi z katalogu.",
     "noneOption": "Brak",
     "notConfigured": "Nieskonfigurowany",
     "notSet": "Nie ustawiono",
@@ -324,6 +325,7 @@
       }
     },
     "unassigned": "Nieprzypisany",
+    "unknownCheckoutMethod": "metoda z checkoutu nieznana",
     "updateData": "Zaktualizuj dane",
     "updateIntegrationData": "Aktualizuj dane integracji",
     "updating": "Aktualizowanie...",

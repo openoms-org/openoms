@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -101,6 +102,20 @@ func TestAllegroShipmentHandler_CancelShipment_EmptyShipmentIDInRoute(t *testing
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
 	assert.Equal(t, "Missing shipment ID", resp["error"])
+}
+
+func TestResolveCheckoutFormID_UsesRawAllegroCheckoutFormID(t *testing.T) {
+	h := NewAllegroShipmentHandler(nil, nil, nil, nil, nil, nil)
+	id := "19829450-9c54-11f1-bd08-9328d2ed1733"
+	got := h.resolveCheckoutFormID(context.Background(), uuid.Nil, &id)
+	assert.Equal(t, id, got)
+}
+
+func TestResolveCheckoutFormID_EmptyOrNil(t *testing.T) {
+	h := NewAllegroShipmentHandler(nil, nil, nil, nil, nil, nil)
+	assert.Equal(t, "", h.resolveCheckoutFormID(context.Background(), uuid.Nil, nil))
+	empty := "  "
+	assert.Equal(t, "", h.resolveCheckoutFormID(context.Background(), uuid.Nil, &empty))
 }
 
 func TestAllegroShipmentHandler_GetDeliveryProposals_MissingOrderID(t *testing.T) {

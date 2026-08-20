@@ -206,6 +206,62 @@ func TestShipmentAddress_ZipCodeFallbackAndPostalCodeMarshal(t *testing.T) {
 	}
 }
 
+const emptyDeliveryProposalsJSON = `{
+	"orderId": "19829450-9c54-11f1-bd08-9328d2ed1733",
+	"suggestedInput": {
+		"deliveryMethodId": "",
+		"credentialsId": null,
+		"sender": {
+			"name": "OpenOMS Sandbox",
+			"street": "Główna 30",
+			"postalCode": "10-200",
+			"city": "Warszawa",
+			"countryCode": "PL"
+		},
+		"receiver": {
+			"name": "Anna Testowa",
+			"street": "Marszałkowska 1",
+			"postalCode": "00-001",
+			"city": "Warszawa",
+			"countryCode": "PL"
+		}
+	},
+	"deliveryOptions": [
+		{"deliveryType": "DOOR", "paymentType": "PREPAID", "packageType": "PACKAGE"}
+	]
+}`
+
+func TestDeliveryProposals_EmptyMethodStaysEmpty(t *testing.T) {
+	var proposals DeliveryProposals
+	if err := json.Unmarshal([]byte(emptyDeliveryProposalsJSON), &proposals); err != nil {
+		t.Fatalf("unmarshal empty delivery-proposals: %v", err)
+	}
+	if proposals.SuggestedInput.DeliveryMethodID != "" {
+		t.Errorf("DeliveryMethodID = %q, want empty (do not invent a service)", proposals.SuggestedInput.DeliveryMethodID)
+	}
+}
+
+func TestValidateWzACreateMethod_EmptyProposalRefusesCatalogFallback(t *testing.T) {
+	const kurierOneWEDO = "allegro-kurier-one-wedo"
+	err := ValidateWzACreateMethod("", kurierOneWEDO)
+	if err == nil {
+		t.Fatal("expected refuse when proposals have no deliveryMethodId")
+	}
+	if err != ErrWzANoProposalMethod {
+		t.Errorf("err = %v, want ErrWzANoProposalMethod", err)
+	}
+}
+
+func TestValidateWzACreateMethod_RejectsMismatchAndAcceptsProposal(t *testing.T) {
+	const proposed = "c3066682-97a3-42fe-9eb5-3beeccab840c"
+	if err := ValidateWzACreateMethod(proposed, "allegro-kurier-one-allegro"); err != ErrWzAMethodMismatch {
+		t.Errorf("mismatch err = %v, want ErrWzAMethodMismatch", err)
+	}
+	if err := ValidateWzACreateMethod(proposed, proposed); err != nil {
+		t.Errorf("matching proposal: %v", err)
+	}
+}
+
 func TestGetDeliveryProposals_OfficialPath(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/shipment-management/delivery-proposals/19829450-9c54-11f1-bd08-9328d2ed1733" {
