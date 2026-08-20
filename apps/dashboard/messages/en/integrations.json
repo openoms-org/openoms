@@ -286,6 +286,7 @@
     "noChangesIntroduced": "No changes were made",
     "noDeliveryServices": "No available delivery services — check Allegro configuration",
     "noIntegrations": "No Integrations",
+    "noWzAMethodForCheckout": "Wysyłam z Allegro has no delivery method for this checkout ({method}). Do not pick a substitute service.",
     "noneOption": "None Option",
     "notConfigured": "Not Configured",
     "notSet": "Not set",
@@ -324,6 +325,7 @@
       }
     },
     "unassigned": "Unassigned",
+    "unknownCheckoutMethod": "checkout method unknown",
     "updateData": "Update data",
     "updateIntegrationData": "Update Integration Data",
     "updating": "Updating...",

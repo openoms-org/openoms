@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -149,6 +150,19 @@ func (h *AllegroShipmentHandler) CreateShipment(w http.ResponseWriter, r *http.R
 	}
 	defer provider.Close()
 
+	if checkoutFormID := h.resolveCheckoutFormID(r.Context(), tenantID, req.OrderID); checkoutFormID != "" {
+		proposals, propErr := provider.GetDeliveryProposals(r.Context(), checkoutFormID)
+		if propErr != nil {
+			slog.Error("allegro shipment: failed to get delivery proposals before create", "error", propErr)
+			writeAllegroError(w, "Failed to fetch delivery proposals from Allegro", propErr)
+			return
+		}
+		if valErr := allegrosdk.ValidateWzACreateMethod(proposals.SuggestedInput.DeliveryMethodID, req.Input.DeliveryMethodID); valErr != nil {
+			writeError(w, http.StatusConflict, valErr.Error())
+			return
+		}
+	}
+
 	// Create the shipment on Allegro's side.
 	resp, err := provider.CreateShipment(r.Context(), req.CreateShipmentCommand)
 	if err != nil {
@@ -161,6 +175,39 @@ func (h *AllegroShipmentHandler) CreateShipment(w http.ResponseWriter, r *http.R
 	h.linkAllegroShipment(r.Context(), tenantID, actorID, integration, resp, req.OrderID, req.CreateShipmentCommand)
 
 	writeJSON(w, http.StatusCreated, resp)
+}
+
+// resolveCheckoutFormID returns the Allegro checkout-form id used by delivery-proposals.
+// order_id may be an OMS order UUID or the checkout-form id itself (also a UUID).
+func (h *AllegroShipmentHandler) resolveCheckoutFormID(ctx context.Context, tenantID uuid.UUID, orderIDStr *string) string {
+	if orderIDStr == nil {
+		return ""
+	}
+	id := strings.TrimSpace(*orderIDStr)
+	if id == "" {
+		return ""
+	}
+	parsed, err := uuid.Parse(id)
+	if err != nil {
+		return id
+	}
+	if h.pool != nil && h.orderRepo != nil {
+		var externalID string
+		_ = database.WithTenant(ctx, h.pool, tenantID, func(tx pgx.Tx) error {
+			order, findErr := h.orderRepo.FindByID(ctx, tx, parsed)
+			if findErr != nil {
+				return findErr
+			}
+			if order != nil && order.ExternalID != nil && *order.ExternalID != "" {
+				externalID = *order.ExternalID
+			}
+			return nil
+		})
+		if externalID != "" {
+			return externalID
+		}
+	}
+	return id
 }
 
 // linkAllegroShipment creates an OpenOMS shipment record linked to the Allegro-managed shipment.

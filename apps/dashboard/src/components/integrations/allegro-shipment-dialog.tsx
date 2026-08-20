@@ -8,13 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   useAllegroDeliveryServices,
   useAllegroDeliveryProposals,
   useCreateAllegroShipment,
@@ -23,6 +16,10 @@ import {
 import type { Order } from "@/types/api";
 import { getErrorMessage } from "@/lib/api-client";
 import { useTranslations } from "next-intl";
+import {
+  checkoutMethodLabel,
+  resolveWzACreateDeliveryMethod,
+} from "@/components/integrations/allegro-wza-method";
 
 interface AllegroShipmentDialogProps {
   open: boolean;
@@ -39,7 +36,6 @@ export function AllegroShipmentDialog({
 }: AllegroShipmentDialogProps) {
   const t = useTranslations("integrations");
   const [step, setStep] = useState<Step>("select-service");
-  const [selectedServiceId, setSelectedServiceId] = useState("");
   const [weight, setWeight] = useState("1");
   const [length, setLength] = useState("30");
   const [width, setWidth] = useState("20");
@@ -67,7 +63,6 @@ export function AllegroShipmentDialog({
   useEffect(() => {
     if (!open) {
       setStep("select-service");
-      setSelectedServiceId("");
       setWeight("1");
       setLength("30");
       setWidth("20");
@@ -82,18 +77,20 @@ export function AllegroShipmentDialog({
     typeof order.metadata?.delivery_method_id === "string"
       ? order.metadata.delivery_method_id
       : "";
-
-  useEffect(() => {
-    if (!open) return;
-    const nextId = suggested?.deliveryMethodId || checkoutMethodId;
-    if (nextId) {
-      setSelectedServiceId(nextId);
-    }
-  }, [open, suggested?.deliveryMethodId, checkoutMethodId]);
+  const checkoutMethodName =
+    typeof order.metadata?.delivery_method_name === "string"
+      ? order.metadata.delivery_method_name
+      : order.delivery_method || "";
+  const methodDecision = resolveWzACreateDeliveryMethod({
+    proposedDeliveryMethodId: suggested?.deliveryMethodId,
+    checkoutMethodId,
+    checkoutMethodName,
+  });
+  const proposedMethodId = methodDecision.ok ? methodDecision.deliveryMethodId : "";
 
   const handleCreateShipment = async () => {
-    if (!selectedServiceId) {
-      toast.error(t("selectDeliveryService"));
+    if (!methodDecision.ok) {
+      toast.error(t("noWzAMethodForCheckout", { method: checkoutMethodLabel(methodDecision) || t("unknownCheckoutMethod") }));
       return;
     }
     if (!suggested?.sender?.street || !(suggested.sender.postalCode || suggested.sender.zipCode)) {
@@ -107,7 +104,7 @@ export function AllegroShipmentDialog({
         order_id: order.id,
         input: {
           ...suggested,
-          deliveryMethodId: selectedServiceId,
+          deliveryMethodId: methodDecision.deliveryMethodId,
           credentialsId: suggested.credentialsId,
           packages: [
             {
@@ -197,7 +194,7 @@ export function AllegroShipmentDialog({
       cancelLabel={step === "package-details" ? t("back") : t("cancel")}
       confirmDisabled={
         (step === "select-service" &&
-          (!selectedServiceId ||
+          (!methodDecision.ok ||
             !suggested?.sender?.street ||
             !(suggested.sender.postalCode || suggested.sender.zipCode))) ||
         (step === "package-details" && createShipment.isPending)
@@ -219,30 +216,22 @@ export function AllegroShipmentDialog({
             <p className="mt-2 text-sm text-destructive">
               {getErrorMessage(proposalsError)}
             </p>
+          ) : !methodDecision.ok ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t("noWzAMethodForCheckout", {
+                method: checkoutMethodLabel(methodDecision) || t("unknownCheckoutMethod"),
+              })}
+            </p>
           ) : !suggested?.sender?.street ? (
             <p className="mt-2 text-sm text-muted-foreground">
               {t("noDeliveryServices")}
             </p>
-          ) : deliveryServices.length === 0 ? (
-            <p className="mt-2 text-sm text-muted-foreground">
-              {order.delivery_method || suggested.deliveryMethodId}
-            </p>
           ) : (
-            <Select
-              value={selectedServiceId}
-              onValueChange={setSelectedServiceId}
-            >
-              <SelectTrigger className="mt-1">
-                <SelectValue placeholder={t("selectDeliveryServicePlaceholder")} />
-              </SelectTrigger>
-              <SelectContent>
-                {deliveryServices.map((svc) => (
-                  <SelectItem key={svc.id} value={svc.id}>
-                    {svc.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <p className="mt-2 text-sm">
+              {deliveryServices.find((svc) => svc.id === proposedMethodId)?.name ||
+                checkoutMethodName ||
+                proposedMethodId}
+            </p>
           )}
           {isServicesError && !isProposalsError && (
             <p className="mt-2 text-sm text-muted-foreground">

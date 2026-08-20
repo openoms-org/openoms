@@ -3,11 +3,35 @@ package allegro
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 )
+
+// ErrWzANoProposalMethod is returned when GET delivery-proposals has no
+// suggestedInput.deliveryMethodId. Allegro will not print that checkout via WzA;
+// guessing a row from GET delivery-services is rejected.
+var ErrWzANoProposalMethod = errors.New("wysyłam z Allegro has no delivery method for this checkout")
+
+// ErrWzAMethodMismatch is returned when create-commands deliveryMethodId is not
+// the id Allegro put on suggestedInput.
+var ErrWzAMethodMismatch = errors.New("deliveryMethodId must match delivery-proposals suggestedInput.deliveryMethodId")
+
+// ValidateWzACreateMethod refuses create-commands unless Allegro proposed the
+// exact deliveryMethodId. An empty proposal must not fall back to the seller catalog.
+func ValidateWzACreateMethod(proposedDeliveryMethodID, requestedDeliveryMethodID string) error {
+	proposed := strings.TrimSpace(proposedDeliveryMethodID)
+	requested := strings.TrimSpace(requestedDeliveryMethodID)
+	if proposed == "" {
+		return ErrWzANoProposalMethod
+	}
+	if requested != proposed {
+		return ErrWzAMethodMismatch
+	}
+	return nil
+}
 
 // UnmarshalJSON accepts Allegro's official DeliveryServicesDto.services key
 // and the older deliveryServices envelope as a fallback.
