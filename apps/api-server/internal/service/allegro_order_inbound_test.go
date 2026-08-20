@@ -47,7 +47,8 @@ func sampleMarketplaceCheckoutForm() integration.MarketplaceOrder {
 			},
 		},
 		RawData: map[string]any{
-			"delivery_method_name": "InPost Paczkomaty 24/7",
+			"delivery_method_id":   "c3066682-97a3-42fe-9eb5-3beeccab840c",
+			"delivery_method_name": "Allegro miniKurier24 InPost",
 			"pickup_point_id":      "WAW01A",
 		},
 	}
@@ -74,7 +75,7 @@ func TestToOMSOrder_MapsCheckoutFormFields(t *testing.T) {
 	assert.Equal(t, "paid", order.PaymentStatus)
 	assert.Equal(t, "ONLINE", *order.PaymentMethod)
 	require.NotNil(t, order.DeliveryMethod)
-	assert.Equal(t, "InPost Paczkomaty 24/7", *order.DeliveryMethod)
+	assert.Equal(t, "Allegro miniKurier24 InPost", *order.DeliveryMethod)
 	require.NotNil(t, order.PickupPointID)
 	assert.Equal(t, "WAW01A", *order.PickupPointID)
 
@@ -90,6 +91,8 @@ func TestToOMSOrder_MapsCheckoutFormFields(t *testing.T) {
 	var metadata map[string]any
 	require.NoError(t, json.Unmarshal(order.Metadata, &metadata))
 	assert.Equal(t, "cf-7781994292", metadata["external_id"])
+	assert.Equal(t, "c3066682-97a3-42fe-9eb5-3beeccab840c", metadata["delivery_method_id"])
+	assert.Equal(t, "Allegro miniKurier24 InPost", metadata["delivery_method_name"])
 }
 
 func TestUpsertAllegroCheckoutForm_CreatesThenIdempotent(t *testing.T) {

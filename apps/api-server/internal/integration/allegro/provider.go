@@ -263,6 +263,15 @@ func (p *Provider) ListDeliveryServices(ctx context.Context) ([]allegrosdk.Deliv
 	return services, nil
 }
 
+// GetDeliveryProposals returns the official prefilled WzA create body for a checkout-form.
+func (p *Provider) GetDeliveryProposals(ctx context.Context, orderID string) (*allegrosdk.DeliveryProposals, error) {
+	proposals, err := p.client.ShipmentManagement.GetDeliveryProposals(ctx, orderID)
+	if err != nil {
+		return nil, fmt.Errorf("allegro: get delivery proposals: %w", err)
+	}
+	return proposals, nil
+}
+
 // CreateShipment creates a managed shipment via Allegro shipment management.
 func (p *Provider) CreateShipment(ctx context.Context, cmd allegrosdk.CreateShipmentCommand) (*allegrosdk.CreateShipmentResponse, error) {
 	resp, err := p.client.ShipmentManagement.CreateShipment(ctx, cmd)

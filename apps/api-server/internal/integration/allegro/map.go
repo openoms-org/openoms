@@ -56,6 +56,14 @@ func ToOMSOrder(mo integration.MarketplaceOrder, tenantID, integrationID uuid.UU
 	}
 
 	metadata := map[string]any{"external_id": mo.ExternalID}
+	if mo.RawData != nil {
+		if dmID, ok := mo.RawData["delivery_method_id"].(string); ok && dmID != "" {
+			metadata["delivery_method_id"] = dmID
+		}
+		if dmName, ok := mo.RawData["delivery_method_name"].(string); ok && dmName != "" {
+			metadata["delivery_method_name"] = dmName
+		}
+	}
 	if metadataJSON, err := json.Marshal(metadata); err == nil {
 		order.Metadata = metadataJSON
 	}

@@ -23,20 +23,29 @@ export interface AllegroCreateShipmentCommand {
     receiver: AllegroShipmentAddress;
     packages: AllegroShipmentPackage[];
     labelFormat?: string;
+    referenceNumber?: string;
   };
   // Optional: OpenOMS order UUID or Allegro external order ID to link the shipment
   order_id?: string;
+}
+
+export interface AllegroDeliveryProposals {
+  orderId: string;
+  suggestedInput: AllegroCreateShipmentCommand["input"];
 }
 
 interface AllegroShipmentAddress {
   name?: string;
   company?: string;
   street: string;
+  streetNumber?: string;
   city: string;
-  zipCode: string;
+  postalCode?: string;
+  zipCode?: string;
   countryCode: string;
   phone?: string;
   email?: string;
+  point?: string;
 }
 
 interface AllegroShipmentPackage {
@@ -136,6 +145,17 @@ export function useAllegroDeliveryServices() {
       apiClient<{ delivery_services: AllegroDeliveryService[] }>(
         "/v1/integrations/allegro/delivery-services"
       ),
+  });
+}
+
+export function useAllegroDeliveryProposals(orderId: string | undefined) {
+  return useQuery({
+    queryKey: ["allegro", "delivery-proposals", orderId],
+    queryFn: () =>
+      apiClient<AllegroDeliveryProposals>(
+        `/v1/integrations/allegro/delivery-proposals/${orderId}`
+      ),
+    enabled: !!orderId,
   });
 }
 

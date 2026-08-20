@@ -331,6 +331,34 @@ func TestListDeliveryServices_OfficialServicesEnvelope(t *testing.T) {
 	assert.Equal(t, "ALLEGRO", services[0].Owner)
 }
 
+func TestGetDeliveryProposals_OfficialSuggestedInput(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/shipment-management/delivery-proposals/19829450-9c54-11f1-bd08-9328d2ed1733" {
+			t.Errorf("path = %q, want delivery-proposals/{orderId}", r.URL.Path)
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"orderId": "19829450-9c54-11f1-bd08-9328d2ed1733",
+			"suggestedInput": {
+				"deliveryMethodId": "c3066682-97a3-42fe-9eb5-3beeccab840c",
+				"sender": {"street":"Główna 30","postalCode":"10-200","city":"Warszawa","countryCode":"PL"},
+				"receiver": {"street":"Marszałkowska 1","postalCode":"00-001","city":"Warszawa","countryCode":"PL"}
+			}
+		}`))
+	}))
+	defer srv.Close()
+
+	p := newTestProvider(t, srv.URL)
+	proposals, err := p.GetDeliveryProposals(context.Background(), "19829450-9c54-11f1-bd08-9328d2ed1733")
+
+	require.NoError(t, err)
+	require.NotNil(t, proposals)
+	assert.Equal(t, "c3066682-97a3-42fe-9eb5-3beeccab840c", proposals.SuggestedInput.DeliveryMethodID)
+	assert.Equal(t, "10-200", proposals.SuggestedInput.Sender.PostalCode)
+}
+
 func ptrOrder(o allegrosdk.Order) *allegrosdk.Order {
 	return &o
 }

@@ -682,6 +682,7 @@ func New(deps RouterDeps) *chi.Mux {
 
 					// Shipment management ("Wysyłam z Allegro")
 					r.Get("/delivery-services", deps.AllegroShipment.ListDeliveryServices)
+					r.Get("/delivery-proposals/{orderId}", deps.AllegroShipment.GetDeliveryProposals)
 					r.Post("/shipments", deps.AllegroShipment.CreateShipment)
 					r.Get("/shipments/{shipmentId}/label", deps.AllegroShipment.GetLabel)
 					r.Delete("/shipments/{shipmentId}", deps.AllegroShipment.CancelShipment)

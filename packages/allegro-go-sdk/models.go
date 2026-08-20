@@ -1,6 +1,9 @@
 package allegro
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // TokenResponse represents the OAuth 2.0 token endpoint response.
 type TokenResponse struct {
@@ -415,24 +418,40 @@ type CreateShipmentCommand struct {
 
 // CreateShipmentInput contains the details for a new managed shipment.
 type CreateShipmentInput struct {
-	DeliveryMethodID string          `json:"deliveryMethodId"`
-	CredentialsID    string          `json:"credentialsId,omitempty"`
-	Sender           ShipmentAddress `json:"sender"`
-	Receiver         ShipmentAddress `json:"receiver"`
-	Packages         []ShipmentPkg   `json:"packages"`
-	LabelFormat      string          `json:"labelFormat,omitempty"`
+	DeliveryMethodID     string            `json:"deliveryMethodId"`
+	CredentialsID        string            `json:"credentialsId,omitempty"`
+	Sender               ShipmentAddress   `json:"sender"`
+	Receiver             ShipmentAddress   `json:"receiver"`
+	Packages             []ShipmentPkg     `json:"packages"`
+	LabelFormat          string            `json:"labelFormat,omitempty"`
+	ReferenceNumber      string            `json:"referenceNumber,omitempty"`
+	Insurance            json.RawMessage   `json:"insurance,omitempty"`
+	CashOnDelivery       json.RawMessage   `json:"cashOnDelivery,omitempty"`
+	AdditionalServices   []string          `json:"additionalServices,omitempty"`
+	AdditionalProperties map[string]string `json:"additionalProperties,omitempty"`
+}
+
+// DeliveryProposals is GET /shipment-management/delivery-proposals/{orderId}.
+type DeliveryProposals struct {
+	OrderID        string              `json:"orderId"`
+	SuggestedInput CreateShipmentInput `json:"suggestedInput"`
 }
 
 // ShipmentAddress represents sender or receiver address for a managed shipment.
+// Official create-commands use postalCode; zipCode is accepted on decode only.
 type ShipmentAddress struct {
-	Name        string `json:"name,omitempty"`
-	Company     string `json:"company,omitempty"`
-	Street      string `json:"street"`
-	City        string `json:"city"`
-	ZipCode     string `json:"zipCode"`
-	CountryCode string `json:"countryCode"`
-	Phone       string `json:"phone,omitempty"`
-	Email       string `json:"email,omitempty"`
+	Name         string `json:"name,omitempty"`
+	Company      string `json:"company,omitempty"`
+	Street       string `json:"street"`
+	StreetNumber string `json:"streetNumber,omitempty"`
+	City         string `json:"city"`
+	PostalCode   string `json:"postalCode,omitempty"`
+	ZipCode      string `json:"zipCode,omitempty"`
+	State        string `json:"state,omitempty"`
+	CountryCode  string `json:"countryCode"`
+	Phone        string `json:"phone,omitempty"`
+	Email        string `json:"email,omitempty"`
+	Point        string `json:"point,omitempty"`
 }
 
 // ShipmentPkg represents a package within a managed shipment.
@@ -448,6 +467,23 @@ type ShipmentPkg struct {
 type Dimension struct {
 	Value float64 `json:"value"`
 	Unit  string  `json:"unit"`
+}
+
+// ShipmentCommandStatus is GET /shipment-management/shipments/create-commands/{commandId}.
+type ShipmentCommandStatus struct {
+	CommandID  string            `json:"commandId"`
+	Status     string            `json:"status"`
+	ShipmentID string            `json:"shipmentId"`
+	Errors     []CommandAPIError `json:"errors,omitempty"`
+}
+
+// CommandAPIError is one Allegro command-status error.
+type CommandAPIError struct {
+	Code        string `json:"code"`
+	Details     string `json:"details"`
+	Message     string `json:"message"`
+	Path        string `json:"path"`
+	UserMessage string `json:"userMessage"`
 }
 
 // CreateShipmentResponse is returned after creating a managed shipment.
