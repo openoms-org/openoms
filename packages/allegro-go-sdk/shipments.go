@@ -195,7 +195,7 @@ func (s *ShipmentManagementService) CreateShipment(ctx context.Context, cmd Crea
 func (s *ShipmentManagementService) waitForCreateCommand(ctx context.Context, commandID string) (*CreateShipmentResponse, error) {
 	path := fmt.Sprintf("/shipment-management/shipments/create-commands/%s", commandID)
 	var last ShipmentCommandStatus
-	for attempt := 0; attempt < createCommandPollAttempts; attempt++ {
+	for attempt := range createCommandPollAttempts {
 		if attempt > 0 {
 			select {
 			case <-ctx.Done():
