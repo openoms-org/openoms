@@ -48,8 +48,12 @@ export function AllegroShipmentDialog({
   );
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const { data: deliveryData, isLoading: isLoadingServices } =
-    useAllegroDeliveryServices();
+  const {
+    data: deliveryData,
+    isLoading: isLoadingServices,
+    isError: isServicesError,
+    error: servicesError,
+  } = useAllegroDeliveryServices();
   const createShipment = useCreateAllegroShipment();
 
   // Reset state when dialog opens/closes
@@ -198,6 +202,10 @@ export function AllegroShipmentDialog({
               <Loader2 className="h-4 w-4 animate-spin" />
               {t("loadingDeliveryServices")}
             </div>
+          ) : isServicesError ? (
+            <p className="mt-2 text-sm text-destructive">
+              {getErrorMessage(servicesError)}
+            </p>
           ) : deliveryServices.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">
               {t("noDeliveryServices")}

@@ -296,6 +296,41 @@ func TestPollOrders_AcceptsOfferExternalObjectAndNull(t *testing.T) {
 	assert.Equal(t, "2026-08-20T10:00:00Z", cursor)
 }
 
+func TestListDeliveryServices_OfficialServicesEnvelope(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/shipment-management/delivery-services" {
+			t.Errorf("path = %q, want /shipment-management/delivery-services", r.URL.Path)
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"services": [
+				{
+					"id": {
+						"deliveryMethodId": "c3066682-97a3-42fe-9eb5-3beeccab840c",
+						"credentialsId": null
+					},
+					"name": "Allegro miniKurier24 InPost",
+					"carrierId": "INPOST",
+					"owner": "ALLEGRO"
+				}
+			]
+		}`))
+	}))
+	defer srv.Close()
+
+	p := newTestProvider(t, srv.URL)
+	services, err := p.ListDeliveryServices(context.Background())
+
+	require.NoError(t, err)
+	require.Len(t, services, 1)
+	assert.Equal(t, "c3066682-97a3-42fe-9eb5-3beeccab840c", services[0].ID)
+	assert.Equal(t, "Allegro miniKurier24 InPost", services[0].Name)
+	assert.Equal(t, "INPOST", services[0].CarrierID)
+	assert.Equal(t, "ALLEGRO", services[0].Owner)
+}
+
 func ptrOrder(o allegrosdk.Order) *allegrosdk.Order {
 	return &o
 }
