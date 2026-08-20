@@ -20,6 +20,7 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
+	"github.com/openoms-org/openoms/apps/api-server/internal/storage"
 )
 
 // AllegroShipmentHandler handles Allegro shipment management ("Wysyłam z Allegro") endpoints.
@@ -30,6 +31,8 @@ type AllegroShipmentHandler struct {
 	shipmentRepo       repository.ShipmentRepo
 	pool               *pgxpool.Pool
 	encryptionKey      []byte
+	objectStorage      storage.ObjectStorage
+	baseURL            string
 }
 
 // NewAllegroShipmentHandler creates a new AllegroShipmentHandler.

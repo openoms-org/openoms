@@ -176,6 +176,31 @@ export function useCreateAllegroShipment() {
   });
 }
 
+export interface AllegroImportedWzAShipment {
+  id: string;
+  waybill?: string;
+  allegro_shipment_id?: string;
+  provider: string;
+  label_ready: boolean;
+  created: boolean;
+}
+
+export function useImportExistingWzAShipment(orderId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiClient<{ shipments: AllegroImportedWzAShipment[] }>(
+        `/v1/integrations/allegro/orders/${orderId}/wza-shipments/import`,
+        { method: "POST" }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders", orderId, "shipments"] });
+      queryClient.invalidateQueries({ queryKey: ["shipments"] });
+      queryClient.invalidateQueries({ queryKey: ["allegro", "shipments"] });
+    },
+  });
+}
+
 export async function downloadAllegroLabel(shipmentId: string) {
   const res = await apiFetch(
     `/v1/integrations/allegro/shipments/${shipmentId}/label`
