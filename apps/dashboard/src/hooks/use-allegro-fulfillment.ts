@@ -11,6 +11,7 @@ export interface AllegroDeliveryService {
   id: string;
   name: string;
   carrierId: string;
+  owner?: string;
 }
 
 export interface AllegroCreateShipmentCommand {

@@ -2,8 +2,67 @@ package allegro
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 )
+
+// UnmarshalJSON accepts Allegro's official DeliveryServicesDto.services key
+// and the older deliveryServices envelope as a fallback.
+func (l *DeliveryServiceList) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Services         []DeliveryService `json:"services"`
+		DeliveryServices []DeliveryService `json:"deliveryServices"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if raw.Services != nil {
+		l.DeliveryServices = raw.Services
+		return nil
+	}
+	l.DeliveryServices = raw.DeliveryServices
+	return nil
+}
+
+// UnmarshalJSON accepts a bare string id or official DeliveryServiceIdDto
+// ({deliveryMethodId, credentialsId}).
+func (s *DeliveryService) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		ID        json.RawMessage `json:"id"`
+		Name      string          `json:"name"`
+		CarrierID string          `json:"carrierId"`
+		Owner     string          `json:"owner"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	id, err := unmarshalDeliveryServiceID(raw.ID)
+	if err != nil {
+		return err
+	}
+	s.ID = id
+	s.Name = raw.Name
+	s.CarrierID = raw.CarrierID
+	s.Owner = raw.Owner
+	return nil
+}
+
+func unmarshalDeliveryServiceID(data json.RawMessage) (string, error) {
+	if len(data) == 0 || string(data) == "null" {
+		return "", nil
+	}
+	var id string
+	if err := json.Unmarshal(data, &id); err == nil {
+		return id, nil
+	}
+	var obj struct {
+		DeliveryMethodID string `json:"deliveryMethodId"`
+	}
+	if err := json.Unmarshal(data, &obj); err != nil {
+		return "", err
+	}
+	return obj.DeliveryMethodID, nil
+}
 
 // ShipmentManagementService handles communication with the "Wysyłam z Allegro"
 // shipment management endpoints.

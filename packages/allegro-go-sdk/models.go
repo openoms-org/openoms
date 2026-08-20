@@ -404,6 +404,7 @@ type DeliveryService struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
 	CarrierID string `json:"carrierId"`
+	Owner     string `json:"owner,omitempty"`
 }
 
 // CreateShipmentCommand is the request body for creating a managed shipment.
