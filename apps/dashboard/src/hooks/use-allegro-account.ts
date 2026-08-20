@@ -20,6 +20,7 @@ export interface AllegroSellerQuality {
 export interface AllegroAccountInfo {
   user: AllegroUser;
   quality: AllegroSellerQuality;
+  sandbox?: boolean;
 }
 
 // --- Billing Types ---
@@ -249,11 +250,12 @@ export interface AllegroDeliveryMethodList {
 
 // --- Account Hooks ---
 
-export function useAllegroAccount() {
+export function useAllegroAccount(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ["allegro", "account"],
     queryFn: () =>
       apiClient<AllegroAccountInfo>("/v1/integrations/allegro/account"),
+    enabled: options?.enabled ?? true,
   });
 }
 
