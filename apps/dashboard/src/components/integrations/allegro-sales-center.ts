@@ -13,23 +13,3 @@ export function allegroSalesCenterCreateShipmentURL(input: {
     : "https://salescenter.allegro.com";
   return `${host}/ship-with-allegro/swa/create-shipment/${encodeURIComponent(checkoutFormId)}?sellerId=${encodeURIComponent(sellerId)}`;
 }
-
-export function resolveWzASalesCenterURL(input: {
-  proposalsUrl?: string;
-  checkoutFormId?: string;
-  sellerId?: string;
-  sandbox?: boolean;
-}): string {
-  const fromProposals = input.proposalsUrl?.trim() ?? "";
-  if (fromProposals) {
-    return fromProposals;
-  }
-  if (typeof input.sandbox !== "boolean") {
-    return "";
-  }
-  return allegroSalesCenterCreateShipmentURL({
-    checkoutFormId: input.checkoutFormId,
-    sellerId: input.sellerId,
-    sandbox: input.sandbox,
-  });
-}

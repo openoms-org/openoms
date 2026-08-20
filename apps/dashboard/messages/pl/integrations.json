@@ -288,8 +288,6 @@
     "noIntegrations": "Brak integracji",
     "noWzAMethodForCheckout": "Wysyłam z Allegro nie ma metody dostawy dla tego zamówienia ({method}). Nie wybieraj zastępczej usługi z katalogu.",
     "openSalesCenterCreateShipment": "Otwórz Centrum Sprzedaży i wydrukuj",
-    "loadingSalesCenterLink": "Szukam linku do Centrum Sprzedaży…",
-    "salesCenterLinkUnavailable": "Nie udało się zbudować linku do Centrum Sprzedaży. Brak identyfikatora sprzedawcy.",
     "noneOption": "Brak",
     "notConfigured": "Nieskonfigurowany",
     "notSet": "Nie ustawiono",

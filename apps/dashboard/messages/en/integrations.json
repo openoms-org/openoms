@@ -288,8 +288,6 @@
     "noIntegrations": "No Integrations",
     "noWzAMethodForCheckout": "Wysyłam z Allegro has no delivery method for this checkout ({method}). Do not pick a substitute service.",
     "openSalesCenterCreateShipment": "Open Sales Center to print",
-    "loadingSalesCenterLink": "Looking up Sales Center link…",
-    "salesCenterLinkUnavailable": "Sales Center link could not be built. Seller id is unavailable.",
     "noneOption": "None Option",
     "notConfigured": "Not Configured",
     "notSet": "Not set",

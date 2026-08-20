@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -106,30 +105,16 @@ func allegroTokenRefreshContext(ctx context.Context) (context.Context, context.C
 
 // isAllegroSandbox checks if the Allegro integration uses the sandbox environment.
 func isAllegroSandbox(r *http.Request, integrationService *service.IntegrationService, _ []byte) bool {
-	sandbox, ok := allegroIntegrationSandbox(r, integrationService)
-	return ok && sandbox
-}
-
-func allegroIntegrationSandbox(r *http.Request, integrationService *service.IntegrationService) (sandbox bool, ok bool) {
 	tenantID := middleware.TenantIDFromContext(r.Context())
 	credJSON, _, err := integrationService.GetDecryptedCredentialsByProvider(r.Context(), tenantID, "allegro")
 	if err != nil {
-		return false, false
+		return false
 	}
 	var creds allegroCredentials
 	if err := json.Unmarshal(credJSON, &creds); err != nil {
-		return false, false
+		return false
 	}
-	return creds.Sandbox, true
-}
-
-// salesCenterURLForEmptyProposal attaches a Sales Center link only when WzA
-// proposed no deliveryMethodId. A non-empty proposal must not get a fallback URL.
-func salesCenterURLForEmptyProposal(proposedMethodID, checkoutFormID, sellerID string, sandbox bool) string {
-	if strings.TrimSpace(proposedMethodID) != "" {
-		return ""
-	}
-	return allegroSalesCenterCreateShipmentURL(checkoutFormID, sellerID, sandbox)
+	return creds.Sandbox
 }
 
 // allegroOfferURL returns the public offer URL. The seller-panel path
@@ -139,21 +124,6 @@ func allegroOfferURL(offerID string, sandbox bool) string {
 		return "https://allegro.pl.allegrosandbox.pl/oferta/" + offerID
 	}
 	return "https://allegro.pl/oferta/" + offerID
-}
-
-// allegroSalesCenterCreateShipmentURL is the Sales Center ship-with-allegro
-// create-shipment form for one checkout. Marketplace /nadaj-paczke?orderId= 404s.
-func allegroSalesCenterCreateShipmentURL(checkoutFormID, sellerID string, sandbox bool) string {
-	checkoutFormID = strings.TrimSpace(checkoutFormID)
-	sellerID = strings.TrimSpace(sellerID)
-	if checkoutFormID == "" || sellerID == "" {
-		return ""
-	}
-	host := "https://salescenter.allegro.com"
-	if sandbox {
-		host = "https://salescenter.allegro.com.allegrosandbox.pl"
-	}
-	return host + "/ship-with-allegro/swa/create-shipment/" + url.PathEscape(checkoutFormID) + "?sellerId=" + url.QueryEscape(sellerID)
 }
 
 // listingStatusFromAllegroPublication maps Allegro publication.status onto

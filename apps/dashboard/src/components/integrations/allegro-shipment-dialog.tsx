@@ -22,7 +22,7 @@ import {
   checkoutMethodLabel,
   resolveWzACreateDeliveryMethod,
 } from "@/components/integrations/allegro-wza-method";
-import { resolveWzASalesCenterURL } from "@/components/integrations/allegro-sales-center";
+import { allegroSalesCenterCreateShipmentURL } from "@/components/integrations/allegro-sales-center";
 
 interface AllegroShipmentDialogProps {
   open: boolean;
@@ -61,13 +61,7 @@ export function AllegroShipmentDialog({
     error: proposalsError,
   } = useAllegroDeliveryProposals(order.external_id);
   const createShipment = useCreateAllegroShipment();
-  const accountQuery = useAllegroAccount({
-    enabled:
-      open &&
-      !!proposals &&
-      !(proposals.suggestedInput?.deliveryMethodId?.trim() ?? "") &&
-      !proposals.salesCenterCreateShipmentUrl,
-  });
+  const accountQuery = useAllegroAccount({ enabled: open });
 
   // Reset state when dialog opens/closes
   useEffect(() => {
@@ -97,11 +91,10 @@ export function AllegroShipmentDialog({
     checkoutMethodName,
   });
   const proposedMethodId = methodDecision.ok ? methodDecision.deliveryMethodId : "";
-  const salesCenterUrl = resolveWzASalesCenterURL({
-    proposalsUrl: proposals?.salesCenterCreateShipmentUrl,
+  const salesCenterUrl = allegroSalesCenterCreateShipmentURL({
     checkoutFormId: order.external_id,
     sellerId: accountQuery.data?.user.id,
-    sandbox: accountQuery.data?.sandbox,
+    sandbox: accountQuery.data?.sandbox === true,
   });
 
   const handleCreateShipment = async () => {
@@ -250,16 +243,7 @@ export function AllegroShipmentDialog({
                     {t("openSalesCenterCreateShipment")}
                   </a>
                 </Button>
-              ) : accountQuery.isLoading ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {t("loadingSalesCenterLink")}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  {t("salesCenterLinkUnavailable")}
-                </p>
-              )}
+              ) : null}
             </div>
           ) : !suggested?.sender?.street ? (
             <p className="mt-2 text-sm text-muted-foreground">

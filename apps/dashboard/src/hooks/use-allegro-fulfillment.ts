@@ -32,7 +32,6 @@ export interface AllegroCreateShipmentCommand {
 export interface AllegroDeliveryProposals {
   orderId: string;
   suggestedInput: AllegroCreateShipmentCommand["input"];
-  salesCenterCreateShipmentUrl?: string;
 }
 
 interface AllegroShipmentAddress {
