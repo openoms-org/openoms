@@ -63,6 +63,16 @@ describe("wzaImportDialogError", () => {
     });
   });
 
+  it("keeps the exact store/audit inet cause on the dialog", () => {
+    const message =
+      'Failed to store imported shipment: audit log: ERROR: invalid input syntax for type inet: "allegro-wza-import" (SQLSTATE 22P02)';
+    expect(
+      wzaImportDialogError({
+        error: new ApiClientError(500, message),
+      })
+    ).toEqual({ kind: "request", message });
+  });
+
   it("is silent only when a shipment was actually imported", () => {
     expect(
       wzaImportDialogError({

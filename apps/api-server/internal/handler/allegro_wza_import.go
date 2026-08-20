@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 	"strings"
 
@@ -79,6 +80,53 @@ func wzaExternalID(item allegrosdk.ExistingWzAShipment) string {
 	return strings.TrimSpace(item.Waybill)
 }
 
+// wzaImportAuditIP is the value stored on audit_log.ip_address (inet).
+// #702/#703 passed the literal "allegro-wza-import"; Postgres rejected it
+// (SQLSTATE 22P02) and rolled back the shipment insert.
+func wzaImportAuditIP(ip string) string {
+	host := strings.TrimSpace(ip)
+	if parsed := net.ParseIP(host); parsed != nil {
+		return parsed.String()
+	}
+	return "0.0.0.0"
+}
+
+func wzaImportStoreError(err error) string {
+	const fallback = "Failed to store imported shipment"
+	if err == nil || strings.TrimSpace(err.Error()) == "" {
+		return fallback
+	}
+	return fallback + ": " + err.Error()
+}
+
+func wzaImportCreateRequest(orderID uuid.UUID, integrationID *uuid.UUID, item allegrosdk.ExistingWzAShipment) model.CreateShipmentRequest {
+	waybill := strings.TrimSpace(item.Waybill)
+	externalID := wzaExternalID(item)
+	carrierData, _ := json.Marshal(map[string]any{
+		"allegro_shipment_id": item.ShipmentID,
+		"waybill":             waybill,
+		"carrier_id":          item.CarrierID,
+		"carrier":             item.Carrier,
+		"delivery_method_id":  item.DeliveryMethodID,
+		"managed_by":          "allegro",
+		"billing":             "allegro_wza",
+		"imported":            true,
+	})
+	req := model.CreateShipmentRequest{
+		OrderID:       orderID,
+		Provider:      wzaImportProvider(item),
+		IntegrationID: integrationID,
+		CarrierData:   carrierData,
+	}
+	if externalID != "" {
+		req.ExternalID = &externalID
+	}
+	if waybill != "" {
+		req.TrackingNumber = &waybill
+	}
+	return req
+}
+
 // SetLabelStore wires object storage used to persist imported WzA PDFs so
 // GET /v1/shipments/{id}/label can serve them through the logged-in API.
 func (h *AllegroShipmentHandler) SetLabelStore(store storage.ObjectStorage, baseURL string) {
@@ -142,14 +190,14 @@ func (h *AllegroShipmentHandler) ImportExistingShipments(w http.ResponseWriter, 
 		results = append(results, wzaImportResultFromOMS(existing, false))
 	}
 	for _, item := range plan.Creates {
-		created, createErr := h.persistImportedWzA(r.Context(), tenantID, actorID, integration, omsOrderID, item, provider)
+		created, createErr := h.persistImportedWzA(r.Context(), tenantID, actorID, integration, omsOrderID, item, provider, clientIP(r))
 		if createErr != nil {
 			slog.Error("allegro wza import: failed to persist OMS shipment",
 				"error", createErr,
 				"waybill", item.Waybill,
 				"allegro_shipment_id", item.ShipmentID,
 			)
-			writeError(w, http.StatusInternalServerError, "Failed to store imported shipment")
+			writeError(w, http.StatusInternalServerError, wzaImportStoreError(createErr))
 			return
 		}
 		results = append(results, wzaImportResultFromOMS(*created, true))
@@ -228,20 +276,8 @@ func (h *AllegroShipmentHandler) persistImportedWzA(
 	provider interface {
 		GetLabel(context.Context, []string) ([]byte, error)
 	},
+	ip string,
 ) (*model.Shipment, error) {
-	waybill := strings.TrimSpace(item.Waybill)
-	externalID := wzaExternalID(item)
-	carrierData, _ := json.Marshal(map[string]any{
-		"allegro_shipment_id": item.ShipmentID,
-		"waybill":             waybill,
-		"carrier_id":          item.CarrierID,
-		"carrier":             item.Carrier,
-		"delivery_method_id":  item.DeliveryMethodID,
-		"managed_by":          "allegro",
-		"billing":             "allegro_wza",
-		"imported":            true,
-	})
-
 	var labelURL *string
 	if item.ShipmentID != "" && provider != nil && h.objectStorage != nil {
 		pdf, labelErr := provider.GetLabel(ctx, []string{item.ShipmentID})
@@ -269,17 +305,10 @@ func (h *AllegroShipmentHandler) persistImportedWzA(
 		integrationID = &id
 	}
 
-	req := model.CreateShipmentRequest{
-		OrderID:        orderID,
-		Provider:       wzaImportProvider(item),
-		IntegrationID:  integrationID,
-		ExternalID:     &externalID,
-		TrackingNumber: &waybill,
-		LabelURL:       labelURL,
-		CarrierData:    carrierData,
-	}
+	req := wzaImportCreateRequest(orderID, integrationID, item)
+	req.LabelURL = labelURL
 
-	created, err := h.shipmentService.Create(ctx, tenantID, req, actorID, "allegro-wza-import")
+	created, err := h.shipmentService.Create(ctx, tenantID, req, actorID, wzaImportAuditIP(ip))
 	if err != nil {
 		return nil, err
 	}
