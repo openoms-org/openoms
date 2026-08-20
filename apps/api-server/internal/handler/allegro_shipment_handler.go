@@ -100,6 +100,34 @@ func (h *AllegroShipmentHandler) ListDeliveryServices(w http.ResponseWriter, r *
 	})
 }
 
+// GetDeliveryProposals returns the official prefilled create-commands body for a checkout-form.
+// GET /v1/integrations/allegro/delivery-proposals/{orderId}
+func (h *AllegroShipmentHandler) GetDeliveryProposals(w http.ResponseWriter, r *http.Request) {
+	tenantID := middleware.TenantIDFromContext(r.Context())
+	orderID := chi.URLParam(r, "orderId")
+	if orderID == "" {
+		writeError(w, http.StatusBadRequest, "Missing Allegro order ID")
+		return
+	}
+
+	provider, err := h.getProvider(r.Context(), tenantID)
+	if err != nil {
+		slog.Error("allegro shipment: failed to get provider", "error", err)
+		writeError(w, http.StatusBadRequest, "Failed to connect to Allegro. Check integration configuration.")
+		return
+	}
+	defer provider.Close()
+
+	proposals, err := provider.GetDeliveryProposals(r.Context(), orderID)
+	if err != nil {
+		slog.Error("allegro shipment: failed to get delivery proposals", "error", err)
+		writeAllegroError(w, "Failed to fetch delivery proposals from Allegro", err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, proposals)
+}
+
 // CreateShipment creates a new managed shipment via Allegro and links it to an OpenOMS shipment record.
 // POST /v1/integrations/allegro/shipments
 func (h *AllegroShipmentHandler) CreateShipment(w http.ResponseWriter, r *http.Request) {

@@ -103,6 +103,21 @@ func TestAllegroShipmentHandler_CancelShipment_EmptyShipmentIDInRoute(t *testing
 	assert.Equal(t, "Missing shipment ID", resp["error"])
 }
 
+func TestAllegroShipmentHandler_GetDeliveryProposals_MissingOrderID(t *testing.T) {
+	h := NewAllegroShipmentHandler(nil, nil, nil, nil, nil, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/integrations/allegro/delivery-proposals/", nil)
+	rr := httptest.NewRecorder()
+
+	h.GetDeliveryProposals(rr, req)
+
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+	var resp map[string]string
+	err := json.NewDecoder(rr.Body).Decode(&resp)
+	require.NoError(t, err)
+	assert.Equal(t, "Missing Allegro order ID", resp["error"])
+}
+
 // --- GetPickupProposals ---
 
 func TestAllegroShipmentHandler_GetPickupProposals_InvalidJSON(t *testing.T) {

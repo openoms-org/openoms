@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import {
   useAllegroDeliveryServices,
+  useAllegroDeliveryProposals,
   useCreateAllegroShipment,
   downloadAllegroLabel,
 } from "@/hooks/use-allegro";
@@ -54,6 +55,12 @@ export function AllegroShipmentDialog({
     isError: isServicesError,
     error: servicesError,
   } = useAllegroDeliveryServices();
+  const {
+    data: proposals,
+    isLoading: isLoadingProposals,
+    isError: isProposalsError,
+    error: proposalsError,
+  } = useAllegroDeliveryProposals(order.external_id);
   const createShipment = useCreateAllegroShipment();
 
   // Reset state when dialog opens/closes
@@ -70,53 +77,56 @@ export function AllegroShipmentDialog({
   }, [open]);
 
   const deliveryServices = deliveryData?.delivery_services ?? [];
+  const suggested = proposals?.suggestedInput;
+  const checkoutMethodId =
+    typeof order.metadata?.delivery_method_id === "string"
+      ? order.metadata.delivery_method_id
+      : "";
+
+  useEffect(() => {
+    if (!open) return;
+    const nextId = suggested?.deliveryMethodId || checkoutMethodId;
+    if (nextId) {
+      setSelectedServiceId(nextId);
+    }
+  }, [open, suggested?.deliveryMethodId, checkoutMethodId]);
 
   const handleCreateShipment = async () => {
     if (!selectedServiceId) {
       toast.error(t("selectDeliveryService"));
       return;
     }
-
-    const shippingAddr = order.shipping_address;
+    if (!suggested?.sender?.street || !(suggested.sender.postalCode || suggested.sender.zipCode)) {
+      toast.error(t("selectDeliveryService"));
+      return;
+    }
 
     try {
       const result = await createShipment.mutateAsync({
         commandId: crypto.randomUUID(),
+        order_id: order.id,
         input: {
+          ...suggested,
           deliveryMethodId: selectedServiceId,
-          sender: {
-            name: "",
-            street: "",
-            city: "",
-            zipCode: "",
-            countryCode: "PL",
-          },
-          receiver: {
-            name: shippingAddr?.name || order.customer_name || "",
-            street: shippingAddr?.street || "",
-            city: shippingAddr?.city || "",
-            zipCode: shippingAddr?.postal_code || "",
-            countryCode: shippingAddr?.country || "PL",
-            phone: order.customer_phone || "",
-            email: order.customer_email || "",
-          },
+          credentialsId: suggested.credentialsId,
           packages: [
             {
+              type: suggested.packages?.[0]?.type || "PACKAGE",
               weight: {
                 value: parseFloat(weight) || 1,
                 unit: "KILOGRAMS",
               },
               length: {
                 value: parseFloat(length) || 30,
-                unit: "CENTIMETERS",
+                unit: "CENTIMETER",
               },
               width: {
                 value: parseFloat(width) || 20,
-                unit: "CENTIMETERS",
+                unit: "CENTIMETER",
               },
               height: {
                 value: parseFloat(height) || 15,
-                unit: "CENTIMETERS",
+                unit: "CENTIMETER",
               },
             },
           ],
@@ -186,7 +196,10 @@ export function AllegroShipmentDialog({
       confirmLabel={confirmLabel}
       cancelLabel={step === "package-details" ? t("back") : t("cancel")}
       confirmDisabled={
-        (step === "select-service" && !selectedServiceId) ||
+        (step === "select-service" &&
+          (!selectedServiceId ||
+            !suggested?.sender?.street ||
+            !(suggested.sender.postalCode || suggested.sender.zipCode))) ||
         (step === "package-details" && createShipment.isPending)
       }
       hideCancel={step === "result"}
@@ -197,18 +210,22 @@ export function AllegroShipmentDialog({
       {step === "select-service" && (
         <div>
           <Label>{t("deliveryService")}</Label>
-          {isLoadingServices ? (
+          {isLoadingProposals || isLoadingServices ? (
             <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               {t("loadingDeliveryServices")}
             </div>
-          ) : isServicesError ? (
+          ) : isProposalsError ? (
             <p className="mt-2 text-sm text-destructive">
-              {getErrorMessage(servicesError)}
+              {getErrorMessage(proposalsError)}
+            </p>
+          ) : !suggested?.sender?.street ? (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {t("noDeliveryServices")}
             </p>
           ) : deliveryServices.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">
-              {t("noDeliveryServices")}
+              {order.delivery_method || suggested.deliveryMethodId}
             </p>
           ) : (
             <Select
@@ -226,6 +243,11 @@ export function AllegroShipmentDialog({
                 ))}
               </SelectContent>
             </Select>
+          )}
+          {isServicesError && !isProposalsError && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {getErrorMessage(servicesError)}
+            </p>
           )}
         </div>
       )}
