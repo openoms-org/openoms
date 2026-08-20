@@ -1,3 +1,5 @@
+import { ApiClientError } from "@/lib/api-client";
+
 export type ImportedWzAShipment = {
   id: string;
   waybill?: string;
@@ -6,6 +8,31 @@ export type ImportedWzAShipment = {
   label_ready: boolean;
   created: boolean;
 };
+
+export type WzAImportDialogError =
+  | { kind: "empty" }
+  | { kind: "request"; message: string };
+
+// Keep import failures on the dialog. A 3s toast behind the overlay looked
+// like a successful no-op on the live locker order.
+export function wzaImportDialogError(input: {
+  error?: unknown;
+  shipments?: ImportedWzAShipment[];
+}): WzAImportDialogError | null {
+  if (input.error instanceof ApiClientError && (input.error.status === 409 || input.error.status === 404)) {
+    return { kind: "empty" };
+  }
+  if (input.error instanceof Error && input.error.message) {
+    return { kind: "request", message: input.error.message };
+  }
+  if (input.error) {
+    return { kind: "empty" };
+  }
+  if (input.shipments && input.shipments.length === 0) {
+    return { kind: "empty" };
+  }
+  return null;
+}
 
 export type WzALabelDownloadTarget =
   | { kind: "oms"; shipmentId: string }

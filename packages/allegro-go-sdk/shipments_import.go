@@ -2,6 +2,7 @@ package allegro
 
 import (
 	"context"
+	"encoding/base64"
 	"strings"
 )
 
@@ -55,10 +56,7 @@ func resolveExistingWzA(
 ) ([]ExistingWzAShipment, error) {
 	var found []ExistingWzAShipment
 	for _, tr := range trackings {
-		waybill := strings.TrimSpace(tr.Waybill)
-		if waybill == "" {
-			continue
-		}
+		waybill := firstNonEmpty(strings.TrimSpace(tr.Waybill), waybillFromTrackingAssignmentID(tr.ID))
 		item := ExistingWzAShipment{
 			Waybill:   waybill,
 			CarrierID: strings.TrimSpace(tr.CarrierID),
@@ -77,12 +75,37 @@ func resolveExistingWzA(
 				}
 			}
 		}
+		if item.Waybill == "" {
+			continue
+		}
 		found = append(found, item)
 	}
 	if len(found) == 0 {
 		return nil, ErrWzANoExistingShipment
 	}
 	return found, nil
+}
+
+// waybillFromTrackingAssignmentID decodes the official checkout-forms shipment
+// id (base64 of "CARRIER:waybill"). A WzA UUID must not be treated as a waybill.
+func waybillFromTrackingAssignmentID(id string) string {
+	id = strings.TrimSpace(id)
+	if id == "" || looksLikeWzAShipmentID(id) {
+		return ""
+	}
+	raw, err := base64.StdEncoding.DecodeString(id)
+	if err != nil {
+		raw, err = base64.RawStdEncoding.DecodeString(id)
+		if err != nil {
+			return ""
+		}
+	}
+	decoded := strings.TrimSpace(string(raw))
+	carrier, waybill, ok := strings.Cut(decoded, ":")
+	if !ok || strings.TrimSpace(carrier) == "" {
+		return ""
+	}
+	return strings.TrimSpace(waybill)
 }
 
 func looksLikeWzAShipmentID(id string) bool {
