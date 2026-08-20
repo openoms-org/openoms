@@ -407,6 +407,9 @@ func allegroErrorMessage(fallback string, err error) string {
 			return fmt.Sprintf("%s: %s", fallback, apiErr.Message)
 		}
 	}
+	if err != nil && err.Error() != "" {
+		return fallback + ": " + err.Error()
+	}
 	return fallback
 }
 
@@ -439,5 +442,5 @@ func writeAllegroError(w http.ResponseWriter, fallback string, err error) {
 		writeError(w, status, allegroErrorMessage(fallback, err))
 		return
 	}
-	writeError(w, http.StatusUnprocessableEntity, fallback)
+	writeError(w, http.StatusUnprocessableEntity, allegroErrorMessage(fallback, err))
 }

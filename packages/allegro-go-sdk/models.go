@@ -117,10 +117,11 @@ type LineItem struct {
 }
 
 // LineItemOffer represents a reference to the offer within a line item.
+// External matches Allegro OrderLineItemOfferReference: object {id} or null.
 type LineItemOffer struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	External string `json:"external"`
+	ID       string         `json:"id"`
+	Name     string         `json:"name"`
+	External *OfferExternal `json:"external"`
 }
 
 // EventList represents a list of order events.

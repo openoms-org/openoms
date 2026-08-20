@@ -85,6 +85,12 @@ func (p *Provider) Close() {
 const checkoutFormPageSize = 100
 const maxCheckoutFormPages = 50
 
+// checkoutFormLookback is used when PollOrders has no RFC3339 cursor (manual
+// SyncOrders passes ""). Allegro GET /order/checkout-forms returns 400 when the
+// request has no status / boughtAt / updatedAt filter. 365d is the documented
+// history window.
+const checkoutFormLookback = 365 * 24 * time.Hour
+
 // PollOrders lists Allegro checkout-forms and maps them to MarketplaceOrder rows.
 // Cursor is an RFC3339 updatedAt.gte watermark. Non-timestamp leftovers (event IDs)
 // are ignored so a first list after the events-poller era still backfills.
@@ -92,6 +98,9 @@ func (p *Provider) PollOrders(ctx context.Context, cursor string) ([]integration
 	params := &allegrosdk.ListOrdersParams{Limit: checkoutFormPageSize}
 	if gte, ok := parseCheckoutFormCursor(cursor); ok {
 		params.UpdatedAtGte = &gte
+	} else {
+		lookback := time.Now().UTC().Add(-checkoutFormLookback)
+		params.UpdatedAtGte = &lookback
 	}
 
 	var orders []integration.MarketplaceOrder
@@ -387,10 +396,14 @@ func (p *Provider) mapAllegroOrder(o *allegrosdk.Order) integration.MarketplaceO
 	// Line items
 	for _, li := range o.LineItems {
 		unitPrice, _ := strconv.ParseFloat(li.Price.Amount, 64)
+		sku := ""
+		if li.Offer.External != nil {
+			sku = li.Offer.External.ID
+		}
 		mo.Items = append(mo.Items, integration.MarketplaceOrderItem{
 			ExternalID: li.Offer.ID,
 			Name:       li.Offer.Name,
-			SKU:        li.Offer.External,
+			SKU:        sku,
 			Quantity:   li.Quantity,
 			UnitPrice:  unitPrice,
 			TotalPrice: unitPrice * float64(li.Quantity),
