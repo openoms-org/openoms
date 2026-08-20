@@ -11,9 +11,11 @@ import {
   useAllegroDeliveryServices,
   useAllegroDeliveryProposals,
   useCreateAllegroShipment,
+  useImportExistingWzAShipment,
   downloadAllegroLabel,
   useAllegroAccount,
 } from "@/hooks/use-allegro";
+import { downloadShipmentLabel } from "@/hooks/use-shipments";
 import { sanitizeUrl } from "@/lib/utils";
 import type { Order } from "@/types/api";
 import { getErrorMessage } from "@/lib/api-client";
@@ -23,6 +25,10 @@ import {
   resolveWzACreateDeliveryMethod,
 } from "@/components/integrations/allegro-wza-method";
 import { allegroSalesCenterCreateShipmentURL } from "@/components/integrations/allegro-sales-center";
+import {
+  type ImportedWzAShipment,
+  wzaLabelDownloadTarget,
+} from "@/components/integrations/allegro-wza-import";
 
 interface AllegroShipmentDialogProps {
   open: boolean;
@@ -46,6 +52,9 @@ export function AllegroShipmentDialog({
   const [createdShipmentId, setCreatedShipmentId] = useState<string | null>(
     null
   );
+  const [importedShipment, setImportedShipment] = useState<ImportedWzAShipment | null>(
+    null
+  );
   const [isDownloading, setIsDownloading] = useState(false);
 
   const {
@@ -61,6 +70,7 @@ export function AllegroShipmentDialog({
     error: proposalsError,
   } = useAllegroDeliveryProposals(order.external_id);
   const createShipment = useCreateAllegroShipment();
+  const importExisting = useImportExistingWzAShipment(order.id);
   const accountQuery = useAllegroAccount({ enabled: open });
 
   // Reset state when dialog opens/closes
@@ -72,6 +82,7 @@ export function AllegroShipmentDialog({
       setWidth("20");
       setHeight("15");
       setCreatedShipmentId(null);
+      setImportedShipment(null);
     }
   }, [open]);
 
@@ -147,11 +158,37 @@ export function AllegroShipmentDialog({
     }
   };
 
+  const handleImportExisting = async () => {
+    try {
+      const result = await importExisting.mutateAsync();
+      const first = result.shipments[0];
+      if (!first) {
+        toast.error(t("noExistingWzAShipment"));
+        return;
+      }
+      setImportedShipment(first);
+      setCreatedShipmentId(first.allegro_shipment_id || first.id);
+      setStep("result");
+      toast.success(t("wzaImported"));
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
+  };
+
   const handleDownloadLabel = async () => {
-    if (!createdShipmentId) return;
+    const target = importedShipment
+      ? wzaLabelDownloadTarget(importedShipment)
+      : createdShipmentId
+        ? { kind: "allegro" as const, shipmentId: createdShipmentId }
+        : { kind: "none" as const };
+    if (target.kind === "none") return;
     setIsDownloading(true);
     try {
-      await downloadAllegroLabel(createdShipmentId);
+      if (target.kind === "oms") {
+        await downloadShipmentLabel(target.shipmentId);
+      } else {
+        await downloadAllegroLabel(target.shipmentId);
+      }
       toast.success(t("labelDownloaded"));
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -232,6 +269,20 @@ export function AllegroShipmentDialog({
                   method: checkoutMethodLabel(methodDecision) || t("unknownCheckoutMethod"),
                 })}
               </p>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => void handleImportExisting()}
+                disabled={importExisting.isPending}
+              >
+                {importExisting.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {importExisting.isPending ? t("importingWzA") : t("importExistingWzA")}
+              </Button>
               {salesCenterUrl ? (
                 <Button variant="outline" size="sm" asChild>
                   <a
@@ -250,11 +301,27 @@ export function AllegroShipmentDialog({
               {t("noDeliveryServices")}
             </p>
           ) : (
-            <p className="mt-2 text-sm">
-              {deliveryServices.find((svc) => svc.id === proposedMethodId)?.name ||
-                checkoutMethodName ||
-                proposedMethodId}
-            </p>
+            <div className="mt-2 space-y-3">
+              <p className="text-sm">
+                {deliveryServices.find((svc) => svc.id === proposedMethodId)?.name ||
+                  checkoutMethodName ||
+                  proposedMethodId}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void handleImportExisting()}
+                disabled={importExisting.isPending}
+              >
+                {importExisting.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-2 h-4 w-4" />
+                )}
+                {importExisting.isPending ? t("importingWzA") : t("importExistingWzA")}
+              </Button>
+            </div>
           )}
           {isServicesError && !isProposalsError && (
             <p className="mt-2 text-sm text-muted-foreground">
@@ -328,20 +395,34 @@ export function AllegroShipmentDialog({
         </>
       )}
 
-      {step === "result" && createdShipmentId && (
+      {step === "result" && (createdShipmentId || importedShipment) && (
         <>
           <div className="flex flex-col items-center gap-3 py-4">
             <CheckCircle2 className="h-12 w-12 text-green-500" />
-            <p className="text-lg font-medium">{t("triggers.shipment.created")}</p>
+            <p className="text-lg font-medium">
+              {importedShipment ? t("wzaImported") : t("triggers.shipment.created")}
+            </p>
+            {importedShipment?.waybill ? (
+              <p className="text-center text-sm font-medium">
+                {t("wzaWaybillLabel", { waybill: importedShipment.waybill })}
+              </p>
+            ) : null}
             <p className="text-center text-sm text-muted-foreground">
-              {t("shipmentIdLabel", { id: createdShipmentId })}
+              {t("shipmentIdLabel", {
+                id: importedShipment?.allegro_shipment_id || createdShipmentId || importedShipment?.id || "",
+              })}
             </p>
           </div>
 
           <Button
             className="w-full"
             onClick={handleDownloadLabel}
-            disabled={isDownloading}
+            disabled={
+              isDownloading ||
+              (importedShipment
+                ? wzaLabelDownloadTarget(importedShipment).kind === "none"
+                : !createdShipmentId)
+            }
           >
             {isDownloading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

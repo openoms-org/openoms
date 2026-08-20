@@ -19,6 +19,10 @@ var ErrWzANoProposalMethod = errors.New("wysyłam z Allegro has no delivery meth
 // the id Allegro put on suggestedInput.
 var ErrWzAMethodMismatch = errors.New("deliveryMethodId must match delivery-proposals suggestedInput.deliveryMethodId")
 
+// ErrWzANoExistingShipment is returned when GET /order/checkout-forms/{id}/shipments
+// has no tracking numbers. Import must fail closed and must not create a WzA shipment.
+var ErrWzANoExistingShipment = errors.New("wysyłam z Allegro has no existing shipment for this checkout")
+
 // ValidateWzACreateMethod refuses create-commands unless Allegro proposed the
 // exact deliveryMethodId. An empty proposal must not fall back to the seller catalog.
 func ValidateWzACreateMethod(proposedDeliveryMethodID, requestedDeliveryMethodID string) error {

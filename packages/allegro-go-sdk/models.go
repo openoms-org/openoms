@@ -363,9 +363,11 @@ type ShipmentInput struct {
 
 // OrderShipment represents a shipment associated with an order.
 type OrderShipment struct {
-	CarrierID string    `json:"carrierId"`
-	Waybill   string    `json:"waybill"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID          string    `json:"id"`
+	CarrierID   string    `json:"carrierId"`
+	CarrierName string    `json:"carrierName,omitempty"`
+	Waybill     string    `json:"waybill"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 // ShipmentList is the response for listing order shipments.
@@ -494,12 +496,39 @@ type CreateShipmentResponse struct {
 }
 
 // ManagedShipment represents a shipment managed through Allegro.
+// Official GET /shipment-management/shipments/{id} puts the waybill on
+// packages[].waybill, not a top-level field.
 type ManagedShipment struct {
-	ID        string `json:"id"`
-	Status    string `json:"status"`
-	Waybill   string `json:"waybill"`
-	CarrierID string `json:"carrierId"`
-	LabelURL  string `json:"labelUrl"`
+	ID               string           `json:"id"`
+	Status           string           `json:"status"`
+	Waybill          string           `json:"waybill"`
+	DeliveryMethodID string           `json:"deliveryMethodId"`
+	CredentialsID    string           `json:"credentialsId,omitempty"`
+	CarrierID        string           `json:"carrierId"`
+	Carrier          string           `json:"carrier"`
+	LabelURL         string           `json:"labelUrl"`
+	LabelFormat      string           `json:"labelFormat,omitempty"`
+	Sender           ShipmentAddress  `json:"sender"`
+	Receiver         ShipmentAddress  `json:"receiver"`
+	Packages         []ManagedPackage `json:"packages"`
+	ReferenceNumber  string           `json:"referenceNumber,omitempty"`
+}
+
+// ManagedPackage is one package on GET /shipment-management/shipments/{id}.
+type ManagedPackage struct {
+	Waybill          string                 `json:"waybill"`
+	Type             string                 `json:"type,omitempty"`
+	Length           *Dimension             `json:"length,omitempty"`
+	Width            *Dimension             `json:"width,omitempty"`
+	Height           *Dimension             `json:"height,omitempty"`
+	Weight           *Dimension             `json:"weight,omitempty"`
+	TransportingInfo []ManagedTransportInfo `json:"transportingInfo,omitempty"`
+}
+
+// ManagedTransportInfo is packages[].transportingInfo on a managed shipment.
+type ManagedTransportInfo struct {
+	CarrierID      string `json:"carrierId"`
+	CarrierWaybill string `json:"carrierWaybill"`
 }
 
 // PickupProposalRequest is the request body for retrieving pickup proposals.

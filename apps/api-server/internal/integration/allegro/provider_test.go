@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -385,6 +386,65 @@ func TestGetDeliveryProposals_EmptyMethodRefusesCatalogFallback(t *testing.T) {
 	require.NotNil(t, proposals)
 	assert.Empty(t, proposals.SuggestedInput.DeliveryMethodID)
 	assert.ErrorIs(t, allegrosdk.ValidateWzACreateMethod(proposals.SuggestedInput.DeliveryMethodID, "kurier-one-wedo"), allegrosdk.ErrWzANoProposalMethod)
+}
+
+func TestFindExistingWzA_ReadsCheckoutShipmentsAndNeverCreates(t *testing.T) {
+	var posts int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			posts++
+			t.Errorf("unexpected write %s %s", r.Method, r.URL.Path)
+			http.Error(w, "create is forbidden", http.StatusForbidden)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/order/checkout-forms/2d8367d0-9c96-11f1-bd08-9328d2ed1733/shipments":
+			_, _ = w.Write([]byte(`{"shipments":[{"id":"cb92efe4-1b2f-4cac-9e35-da69b0000001","waybill":"605500867604760112200733","carrierId":"INPOST"}]}`))
+		case "/shipment-management/shipments/cb92efe4-1b2f-4cac-9e35-da69b0000001":
+			_, _ = w.Write([]byte(`{"id":"cb92efe4-1b2f-4cac-9e35-da69b0000001","carrier":"ALLEGRO","packages":[{"waybill":"605500867604760112200733"}]}`))
+		default:
+			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	p := newTestProvider(t, srv.URL)
+	p.client = allegrosdk.NewClient("id", "secret",
+		allegrosdk.WithBaseURL(srv.URL),
+		allegrosdk.WithHTTPClient(srv.Client()),
+		allegrosdk.WithTokens("tok", "", time.Now().Add(time.Hour)),
+	)
+	found, err := p.FindExistingWzA(context.Background(), "2d8367d0-9c96-11f1-bd08-9328d2ed1733")
+	require.NoError(t, err)
+	require.Len(t, found, 1)
+	assert.Equal(t, "605500867604760112200733", found[0].Waybill)
+	assert.Equal(t, "cb92efe4-1b2f-4cac-9e35-da69b0000001", found[0].ShipmentID)
+	assert.Equal(t, 0, posts)
+}
+
+func TestFindExistingWzA_EmptyCheckoutFailsClosed(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || !strings.HasSuffix(r.URL.Path, "/shipments") {
+			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+			http.Error(w, "create is forbidden", http.StatusForbidden)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"shipments":[]}`))
+	}))
+	defer srv.Close()
+
+	p := newTestProvider(t, srv.URL)
+	p.client = allegrosdk.NewClient("id", "secret",
+		allegrosdk.WithBaseURL(srv.URL),
+		allegrosdk.WithHTTPClient(srv.Client()),
+		allegrosdk.WithTokens("tok", "", time.Now().Add(time.Hour)),
+	)
+	found, err := p.FindExistingWzA(context.Background(), "2d8367d0-9c96-11f1-bd08-9328d2ed1733")
+	assert.ErrorIs(t, err, allegrosdk.ErrWzANoExistingShipment)
+	assert.Nil(t, found)
 }
 
 func ptrOrder(o allegrosdk.Order) *allegrosdk.Order {

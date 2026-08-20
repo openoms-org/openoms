@@ -701,6 +701,7 @@ func run() error {
 
 	// Allegro shipment management handler ("Wysyłam z Allegro")
 	allegroShipmentHandler := handler.NewAllegroShipmentHandler(integrationService, shipmentService, orderRepo, shipmentRepo, pool, encryptionKey)
+	allegroShipmentHandler.SetLabelStore(objectStorage, cfg.BaseURL)
 
 	// Allegro communications handler (messaging, returns, refunds)
 	allegroCommsHandler := handler.NewAllegroCommsHandler(integrationService, encryptionKey)

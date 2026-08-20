@@ -4,6 +4,7 @@ package allegro
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -261,6 +262,19 @@ func (p *Provider) ListDeliveryServices(ctx context.Context) ([]allegrosdk.Deliv
 		return nil, fmt.Errorf("allegro: list delivery services: %w", err)
 	}
 	return services, nil
+}
+
+// FindExistingWzA lists already-created WzA shipments for a checkout-form.
+// Read-only: never POSTs create-commands or AddTracking.
+func (p *Provider) FindExistingWzA(ctx context.Context, checkoutFormID string) ([]allegrosdk.ExistingWzAShipment, error) {
+	found, err := p.client.FindExistingWzA(ctx, checkoutFormID)
+	if err != nil {
+		if errors.Is(err, allegrosdk.ErrWzANoExistingShipment) {
+			return nil, allegrosdk.ErrWzANoExistingShipment
+		}
+		return nil, fmt.Errorf("allegro: find existing wza: %w", err)
+	}
+	return found, nil
 }
 
 // GetDeliveryProposals returns the official prefilled WzA create body for a checkout-form.

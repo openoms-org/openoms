@@ -13,6 +13,12 @@ import (
 	"github.com/openoms-org/openoms/apps/api-server/internal/storage"
 )
 
+// PersistShipmentLabel writes label bytes to object storage and returns the
+// canonical /uploads/{tenant}/{file} URL used by GET /v1/shipments/{id}/label.
+func PersistShipmentLabel(ctx context.Context, store storage.ObjectStorage, baseURL string, tenantID uuid.UUID, filename, contentType string, data []byte) (string, error) {
+	return storeLabel(ctx, store, baseURL, tenantID, filename, contentType, data)
+}
+
 func storeLabel(ctx context.Context, store storage.ObjectStorage, baseURL string, tenantID uuid.UUID, filename, contentType string, data []byte) (string, error) {
 	if store == nil {
 		return "", fmt.Errorf("object storage is not configured")
