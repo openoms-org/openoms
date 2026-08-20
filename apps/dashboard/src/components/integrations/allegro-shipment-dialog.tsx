@@ -61,7 +61,13 @@ export function AllegroShipmentDialog({
     error: proposalsError,
   } = useAllegroDeliveryProposals(order.external_id);
   const createShipment = useCreateAllegroShipment();
-  const accountQuery = useAllegroAccount({ enabled: open });
+  const accountQuery = useAllegroAccount({
+    enabled:
+      open &&
+      !!proposals &&
+      !(proposals.suggestedInput?.deliveryMethodId?.trim() ?? "") &&
+      !proposals.salesCenterCreateShipmentUrl,
+  });
 
   // Reset state when dialog opens/closes
   useEffect(() => {
@@ -244,7 +250,16 @@ export function AllegroShipmentDialog({
                     {t("openSalesCenterCreateShipment")}
                   </a>
                 </Button>
-              ) : null}
+              ) : accountQuery.isLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t("loadingSalesCenterLink")}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {t("salesCenterLinkUnavailable")}
+                </p>
+              )}
             </div>
           ) : !suggested?.sender?.street ? (
             <p className="mt-2 text-sm text-muted-foreground">

@@ -127,9 +127,7 @@ func (h *AllegroShipmentHandler) GetDeliveryProposals(w http.ResponseWriter, r *
 	}
 
 	resp := allegroDeliveryProposalsResponse{DeliveryProposals: *proposals}
-	if strings.TrimSpace(proposals.SuggestedInput.DeliveryMethodID) == "" {
-		resp.SalesCenterCreateShipmentURL = h.salesCenterCreateShipmentURL(r, provider, orderID)
-	}
+	resp.SalesCenterCreateShipmentURL = h.salesCenterCreateShipmentURL(r, provider, orderID, proposals.SuggestedInput.DeliveryMethodID)
 	writeJSON(w, http.StatusOK, resp)
 }
 
@@ -140,7 +138,10 @@ type allegroDeliveryProposalsResponse struct {
 	SalesCenterCreateShipmentURL string `json:"salesCenterCreateShipmentUrl,omitempty"`
 }
 
-func (h *AllegroShipmentHandler) salesCenterCreateShipmentURL(r *http.Request, provider *allegroprovider.Provider, checkoutFormID string) string {
+func (h *AllegroShipmentHandler) salesCenterCreateShipmentURL(r *http.Request, provider *allegroprovider.Provider, checkoutFormID, proposedMethodID string) string {
+	if strings.TrimSpace(proposedMethodID) != "" {
+		return ""
+	}
 	client := provider.SDKClient()
 	if client == nil || client.Account == nil {
 		return ""
@@ -150,7 +151,12 @@ func (h *AllegroShipmentHandler) salesCenterCreateShipmentURL(r *http.Request, p
 		slog.Warn("allegro shipment: Sales Center link skipped, GetMe failed", "error", err)
 		return ""
 	}
-	return allegroSalesCenterCreateShipmentURL(checkoutFormID, user.ID, isAllegroSandbox(r, h.integrationService, h.encryptionKey))
+	sandbox, ok := allegroIntegrationSandbox(r, h.integrationService)
+	if !ok {
+		slog.Warn("allegro shipment: Sales Center link skipped, sandbox flag unread")
+		return ""
+	}
+	return salesCenterURLForEmptyProposal(proposedMethodID, checkoutFormID, user.ID, sandbox)
 }
 
 // CreateShipment creates a new managed shipment via Allegro and links it to an OpenOMS shipment record.

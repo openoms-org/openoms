@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -229,5 +230,42 @@ func TestAllegroSalesCenterCreateShipmentURL(t *testing.T) {
 	}
 	if got := allegroSalesCenterCreateShipmentURL(checkoutFormID, "  ", false); got != "" {
 		t.Fatalf("empty sellerID: got %q", got)
+	}
+}
+
+func TestSalesCenterURLForEmptyProposal_AttachVsOmit(t *testing.T) {
+	const checkoutFormID = "19829450-9c54-11f1-bd08-9328d2ed1733"
+	const sellerID = "110974929"
+
+	if got := salesCenterURLForEmptyProposal("c3066682-97a3-42fe-9eb5-3beeccab840c", checkoutFormID, sellerID, true); got != "" {
+		t.Fatalf("non-empty proposal must not attach a Sales Center URL: %q", got)
+	}
+
+	want := "https://salescenter.allegro.com.allegrosandbox.pl/ship-with-allegro/swa/create-shipment/19829450-9c54-11f1-bd08-9328d2ed1733?sellerId=110974929"
+	if got := salesCenterURLForEmptyProposal("", checkoutFormID, sellerID, true); got != want {
+		t.Fatalf("empty proposal URL = %q, want %q", got, want)
+	}
+
+	raw, err := json.Marshal(allegroDeliveryProposalsResponse{
+		DeliveryProposals: allegrosdk.DeliveryProposals{
+			OrderID: checkoutFormID,
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal omitted link: %v", err)
+	}
+	if strings.Contains(string(raw), "salesCenterCreateShipmentUrl") {
+		t.Fatalf("empty URL must omit salesCenterCreateShipmentUrl: %s", raw)
+	}
+
+	raw, err = json.Marshal(allegroDeliveryProposalsResponse{
+		DeliveryProposals:            allegrosdk.DeliveryProposals{OrderID: checkoutFormID},
+		SalesCenterCreateShipmentURL: want,
+	})
+	if err != nil {
+		t.Fatalf("marshal attached link: %v", err)
+	}
+	if !strings.Contains(string(raw), `"salesCenterCreateShipmentUrl":"`+want+`"`) {
+		t.Fatalf("attached URL missing from JSON: %s", raw)
 	}
 }
