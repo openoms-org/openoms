@@ -35,7 +35,7 @@ func TestOrdersList(t *testing.T) {
 					},
 					"invoice": {"required": false},
 					"lineItems": [
-						{"id": "li-1", "offer": {"id": "off-1", "name": "Widget", "external": "SKU-001"}, "quantity": 2, "price": {"amount": "49.99", "currency": "PLN"}}
+						{"id": "li-1", "offer": {"id": "off-1", "name": "Widget", "external": {"id": "SKU-001"}}, "quantity": 2, "price": {"amount": "49.99", "currency": "PLN"}}
 					],
 					"updatedAt": "2024-01-15T10:30:00Z"
 				}
@@ -173,6 +173,47 @@ func TestOrdersGetError(t *testing.T) {
 	_, err := c.Orders.Get(context.Background(), "nonexistent")
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestOrdersList_OfferExternalObjectAndNull(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"checkoutForms": [{
+				"id": "19640fd0-9c54-11f1-bd08-9328d2ed1733",
+				"status": "READY_FOR_PROCESSING",
+				"lineItems": [
+					{"id": "li-1", "offer": {"id": "7781994292", "name": "BTP SKU", "external": {"id": "SKU-1"}}, "quantity": 1, "price": {"amount": "22.48", "currency": "PLN"}},
+					{"id": "li-2", "offer": {"id": "66681830", "name": "Leftover", "external": null}, "quantity": 1, "price": {"amount": "1.00", "currency": "PLN"}}
+				],
+				"updatedAt": "2026-08-20T10:00:00Z"
+			}],
+			"count": 1,
+			"totalCount": 1
+		}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient("id", "secret", WithBaseURL(srv.URL), WithHTTPClient(srv.Client()))
+	defer c.Close()
+
+	list, err := c.Orders.List(context.Background(), &ListOrdersParams{Limit: 10})
+	if err != nil {
+		t.Fatalf("Orders.List error: %v", err)
+	}
+	if len(list.CheckoutForms) != 1 {
+		t.Fatalf("len(CheckoutForms) = %d, want 1", len(list.CheckoutForms))
+	}
+	items := list.CheckoutForms[0].LineItems
+	if len(items) != 2 {
+		t.Fatalf("len(LineItems) = %d, want 2", len(items))
+	}
+	if items[0].Offer.External == nil || items[0].Offer.External.ID != "SKU-1" {
+		t.Errorf("line 0 external = %#v, want {ID: SKU-1}", items[0].Offer.External)
+	}
+	if items[1].Offer.External != nil {
+		t.Errorf("line 1 external = %#v, want nil", items[1].Offer.External)
 	}
 }
 

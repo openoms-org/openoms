@@ -71,7 +71,7 @@ func sampleCheckoutForm() allegrosdk.Order {
 				Offer: allegrosdk.LineItemOffer{
 					ID:       "7781994292",
 					Name:     "Sandbox widget",
-					External: "SKU-SANDBOX",
+					External: &allegrosdk.OfferExternal{ID: "SKU-SANDBOX"},
 				},
 				Quantity: 1,
 				Price: allegrosdk.Amount{
@@ -170,7 +170,7 @@ func TestPollOrders_ListsCheckoutForms(t *testing.T) {
 				},
 				"invoice": {"required": false},
 				"lineItems": [
-					{"id": "li-1", "offer": {"id": "7781994292", "name": "Sandbox widget", "external": "SKU-SANDBOX"}, "quantity": 1, "price": {"amount": "9.99", "currency": "PLN"}}
+					{"id": "li-1", "offer": {"id": "7781994292", "name": "Sandbox widget", "external": {"id": "SKU-SANDBOX"}}, "quantity": 1, "price": {"amount": "9.99", "currency": "PLN"}}
 				],
 				"updatedAt": "2026-08-19T10:00:00Z"
 			}],
@@ -222,7 +222,78 @@ func TestPollOrders_IgnoresLegacyEventIDCursor(t *testing.T) {
 	_, _, err := p.PollOrders(context.Background(), "legacy-event-id-abc")
 
 	require.NoError(t, err)
-	assert.Empty(t, gotGte, "non-RFC3339 cursors must be ignored so leftover event IDs do a full list")
+	require.NotEmpty(t, gotGte, "non-RFC3339 leftover event IDs must not be forwarded; send a lookback filter instead")
+	assert.NotEqual(t, "legacy-event-id-abc", gotGte)
+	gte, err := time.Parse(time.RFC3339, gotGte)
+	require.NoError(t, err)
+	assert.True(t, gte.Before(time.Now().UTC()), "lookback must be in the past")
+}
+
+func TestPollOrders_EmptyCursorSendsDateFilter(t *testing.T) {
+	var gotURL *http.Request
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotURL = r
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"checkoutForms":[],"count":0,"totalCount":0}`))
+	}))
+	defer srv.Close()
+
+	p := newTestProvider(t, srv.URL)
+	_, _, err := p.PollOrders(context.Background(), "")
+	require.NoError(t, err)
+	require.NotNil(t, gotURL)
+
+	q := gotURL.URL.Query()
+	assert.Equal(t, "100", q.Get("limit"))
+	gte := q.Get("updatedAt.gte")
+	require.NotEmpty(t, gte, "manual SyncOrders calls PollOrders with an empty cursor; Allegro 400s a limit-only list")
+	parsed, err := time.Parse(time.RFC3339, gte)
+	require.NoError(t, err, "updatedAt.gte must be RFC3339, got %q", gte)
+	assert.True(t, parsed.Before(time.Now().UTC()), "lookback must be in the past")
+	assert.Empty(t, q.Get("status"), "do not filter to READY_FOR_PROCESSING; unpaid forms stay in the list")
+}
+
+func TestPollOrders_AcceptsOfferExternalObjectAndNull(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/order/checkout-forms" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"checkoutForms": [{
+				"id": "19640fd0-9c54-11f1-bd08-9328d2ed1733",
+				"buyer": {"id": "buyer-1", "login": "anna", "email": "anna@test.pl"},
+				"payment": {"id": "pay-1", "type": "ONLINE", "paidAmount": {"amount": "22.48", "currency": "PLN"}},
+				"status": "READY_FOR_PROCESSING",
+				"fulfillment": {"status": "NEW"},
+				"delivery": {
+					"address": {"firstName": "Anna", "lastName": "Testowa", "street": "Testowa 1", "city": "Poznan", "zipCode": "60-001", "countryCode": "PL"},
+					"method": {"id": "dm-1", "name": "InPost"}
+				},
+				"invoice": {"required": false},
+				"lineItems": [
+					{"id": "li-1", "offer": {"id": "7781994292", "name": "BTP SKU", "external": {"id": "SKU-1"}}, "quantity": 1, "price": {"amount": "22.48", "currency": "PLN"}},
+					{"id": "li-2", "offer": {"id": "66681830", "name": "Leftover", "external": null}, "quantity": 1, "price": {"amount": "1.00", "currency": "PLN"}}
+				],
+				"updatedAt": "2026-08-20T10:00:00Z"
+			}],
+			"count": 1,
+			"totalCount": 1
+		}`))
+	}))
+	defer srv.Close()
+
+	p := newTestProvider(t, srv.URL)
+	orders, cursor, err := p.PollOrders(context.Background(), "")
+
+	require.NoError(t, err)
+	require.Len(t, orders, 1)
+	assert.Equal(t, "19640fd0-9c54-11f1-bd08-9328d2ed1733", orders[0].ExternalID)
+	require.Len(t, orders[0].Items, 2)
+	assert.Equal(t, "SKU-1", orders[0].Items[0].SKU)
+	assert.Empty(t, orders[0].Items[1].SKU)
+	assert.Equal(t, "2026-08-20T10:00:00Z", cursor)
 }
 
 func ptrOrder(o allegrosdk.Order) *allegrosdk.Order {
