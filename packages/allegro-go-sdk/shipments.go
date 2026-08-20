@@ -13,7 +13,7 @@ import (
 // ErrWzANoProposalMethod is returned when GET delivery-proposals has no
 // suggestedInput.deliveryMethodId. Allegro will not print that checkout via WzA;
 // guessing a row from GET delivery-services is rejected.
-var ErrWzANoProposalMethod = errors.New("Wysyłam z Allegro has no delivery method for this checkout")
+var ErrWzANoProposalMethod = errors.New("wysyłam z Allegro has no delivery method for this checkout")
 
 // ErrWzAMethodMismatch is returned when create-commands deliveryMethodId is not
 // the id Allegro put on suggestedInput.
