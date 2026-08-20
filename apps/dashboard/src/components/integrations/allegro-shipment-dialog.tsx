@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Loader2, Download, Package, CheckCircle2 } from "lucide-react";
+import { Loader2, Download, Package, CheckCircle2, ExternalLink } from "lucide-react";
 import { ActionDialog } from "@/components/shared/action-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,9 @@ import {
   useAllegroDeliveryProposals,
   useCreateAllegroShipment,
   downloadAllegroLabel,
+  useAllegroAccount,
 } from "@/hooks/use-allegro";
+import { sanitizeUrl } from "@/lib/utils";
 import type { Order } from "@/types/api";
 import { getErrorMessage } from "@/lib/api-client";
 import { useTranslations } from "next-intl";
@@ -20,6 +22,7 @@ import {
   checkoutMethodLabel,
   resolveWzACreateDeliveryMethod,
 } from "@/components/integrations/allegro-wza-method";
+import { resolveWzASalesCenterURL } from "@/components/integrations/allegro-sales-center";
 
 interface AllegroShipmentDialogProps {
   open: boolean;
@@ -58,6 +61,7 @@ export function AllegroShipmentDialog({
     error: proposalsError,
   } = useAllegroDeliveryProposals(order.external_id);
   const createShipment = useCreateAllegroShipment();
+  const accountQuery = useAllegroAccount({ enabled: open });
 
   // Reset state when dialog opens/closes
   useEffect(() => {
@@ -87,6 +91,12 @@ export function AllegroShipmentDialog({
     checkoutMethodName,
   });
   const proposedMethodId = methodDecision.ok ? methodDecision.deliveryMethodId : "";
+  const salesCenterUrl = resolveWzASalesCenterURL({
+    proposalsUrl: proposals?.salesCenterCreateShipmentUrl,
+    checkoutFormId: order.external_id,
+    sellerId: accountQuery.data?.user.id,
+    sandbox: accountQuery.data?.sandbox,
+  });
 
   const handleCreateShipment = async () => {
     if (!methodDecision.ok) {
@@ -217,11 +227,25 @@ export function AllegroShipmentDialog({
               {getErrorMessage(proposalsError)}
             </p>
           ) : !methodDecision.ok ? (
-            <p className="mt-2 text-sm text-muted-foreground">
-              {t("noWzAMethodForCheckout", {
-                method: checkoutMethodLabel(methodDecision) || t("unknownCheckoutMethod"),
-              })}
-            </p>
+            <div className="mt-2 space-y-3">
+              <p className="text-sm text-muted-foreground">
+                {t("noWzAMethodForCheckout", {
+                  method: checkoutMethodLabel(methodDecision) || t("unknownCheckoutMethod"),
+                })}
+              </p>
+              {salesCenterUrl ? (
+                <Button variant="outline" size="sm" asChild>
+                  <a
+                    href={sanitizeUrl(salesCenterUrl)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    {t("openSalesCenterCreateShipment")}
+                  </a>
+                </Button>
+              ) : null}
+            </div>
           ) : !suggested?.sender?.street ? (
             <p className="mt-2 text-sm text-muted-foreground">
               {t("noDeliveryServices")}

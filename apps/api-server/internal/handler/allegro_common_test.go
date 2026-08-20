@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -200,5 +201,33 @@ func TestAllegroOfferURLIsPublicOfertaPath(t *testing.T) {
 	}
 	if got := allegroOfferURL("7781994292", true); got != "https://allegro.pl.allegrosandbox.pl/oferta/7781994292" {
 		t.Fatalf("sandbox URL = %q", got)
+	}
+}
+
+func TestAllegroSalesCenterCreateShipmentURL(t *testing.T) {
+	const checkoutFormID = "19829450-9c54-11f1-bd08-9328d2ed1733"
+	const sellerID = "110974929"
+
+	gotSandbox := allegroSalesCenterCreateShipmentURL(checkoutFormID, sellerID, true)
+	wantSandbox := "https://salescenter.allegro.com.allegrosandbox.pl/ship-with-allegro/swa/create-shipment/19829450-9c54-11f1-bd08-9328d2ed1733?sellerId=110974929"
+	if gotSandbox != wantSandbox {
+		t.Fatalf("sandbox URL = %q, want %q", gotSandbox, wantSandbox)
+	}
+
+	gotProd := allegroSalesCenterCreateShipmentURL(checkoutFormID, sellerID, false)
+	wantProd := "https://salescenter.allegro.com/ship-with-allegro/swa/create-shipment/19829450-9c54-11f1-bd08-9328d2ed1733?sellerId=110974929"
+	if gotProd != wantProd {
+		t.Fatalf("prod URL = %q, want %q", gotProd, wantProd)
+	}
+
+	if strings.Contains(gotSandbox, "nadaj-paczke") || strings.Contains(gotSandbox, "orderId=") {
+		t.Fatalf("must not use marketplace nadaj-paczke?orderId= (404s): %q", gotSandbox)
+	}
+
+	if got := allegroSalesCenterCreateShipmentURL("", sellerID, true); got != "" {
+		t.Fatalf("empty checkoutFormID: got %q", got)
+	}
+	if got := allegroSalesCenterCreateShipmentURL(checkoutFormID, "  ", false); got != "" {
+		t.Fatalf("empty sellerID: got %q", got)
 	}
 }

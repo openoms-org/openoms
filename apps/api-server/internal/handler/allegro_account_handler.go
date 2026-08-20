@@ -51,6 +51,7 @@ func (h *AllegroAccountHandler) GetAccount(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, map[string]any{
 		"user":    user,
 		"quality": quality,
+		"sandbox": isAllegroSandbox(r, h.integrationService, h.encryptionKey),
 	})
 }
 

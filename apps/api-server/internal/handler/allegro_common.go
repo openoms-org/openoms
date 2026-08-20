@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -124,6 +125,21 @@ func allegroOfferURL(offerID string, sandbox bool) string {
 		return "https://allegro.pl.allegrosandbox.pl/oferta/" + offerID
 	}
 	return "https://allegro.pl/oferta/" + offerID
+}
+
+// allegroSalesCenterCreateShipmentURL is the Sales Center ship-with-allegro
+// create-shipment form for one checkout. Marketplace /nadaj-paczke?orderId= 404s.
+func allegroSalesCenterCreateShipmentURL(checkoutFormID, sellerID string, sandbox bool) string {
+	checkoutFormID = strings.TrimSpace(checkoutFormID)
+	sellerID = strings.TrimSpace(sellerID)
+	if checkoutFormID == "" || sellerID == "" {
+		return ""
+	}
+	host := "https://salescenter.allegro.com"
+	if sandbox {
+		host = "https://salescenter.allegro.com.allegrosandbox.pl"
+	}
+	return host + "/ship-with-allegro/swa/create-shipment/" + url.PathEscape(checkoutFormID) + "?sellerId=" + url.QueryEscape(sellerID)
 }
 
 // listingStatusFromAllegroPublication maps Allegro publication.status onto
