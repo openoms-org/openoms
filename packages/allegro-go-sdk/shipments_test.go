@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 const officialMiniKurierServiceJSON = `{
@@ -383,6 +384,12 @@ func TestGetDeliveryProposals_OfficialPath(t *testing.T) {
 	}
 }
 
+func TestCreateCommandPollTimeoutIsLongerThanSandboxMiss(t *testing.T) {
+	if createCommandPollTimeout < 30*time.Second {
+		t.Fatalf("createCommandPollTimeout = %s, want at least 30s so IN_PROGRESS is not a 4s miss", createCommandPollTimeout)
+	}
+}
+
 func TestCreateShipment_PollsCommandStatusForShipmentID(t *testing.T) {
 	var posts, gets int
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -427,6 +434,177 @@ func TestCreateShipment_PollsCommandStatusForShipmentID(t *testing.T) {
 	if resp.Status != "SUCCESS" {
 		t.Errorf("Status = %q", resp.Status)
 	}
+}
+
+func TestCreateShipment_SurfacesCommandERRORCodeAndMessage(t *testing.T) {
+	const commandID = "58d250bc-5441-48a0-a7f9-ea7497b4a3a1"
+	var posts int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/shipment-management/shipments/create-commands":
+			posts++
+			_, _ = w.Write([]byte(`{"commandId":"` + commandID + `"}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/shipment-management/shipments/create-commands/"+commandID:
+			_, _ = w.Write([]byte(`{
+				"commandId":"` + commandID + `",
+				"status":"ERROR",
+				"errors":[{
+					"code":"SHIPMENT_VALIDATION_ERROR",
+					"message":"A request can contain only one parcel",
+					"details":"Shipment request has validation errors",
+					"path":"packages",
+					"userMessage":"A request can contain only one parcel"
+				}]
+			}`))
+		default:
+			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	c := NewClient("id", "secret",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+	)
+	defer c.Close()
+
+	_, err := c.ShipmentManagement.CreateShipment(context.Background(), CreateShipmentCommand{
+		CommandID: commandID,
+		Input: CreateShipmentInput{
+			DeliveryMethodID: "9081532b-5ad3-467d-80bc-9252982e9dd8",
+		},
+	})
+	if err == nil {
+		t.Fatal("expected Allegro ERROR, got success")
+	}
+	got := err.Error()
+	if strings.Contains(got, "timed out") {
+		t.Fatalf("collapsed ERROR into timeout: %s", got)
+	}
+	for _, want := range []string{commandID, "ERROR", "SHIPMENT_VALIDATION_ERROR", "A request can contain only one parcel"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("error %q missing %q", got, want)
+		}
+	}
+	if posts != 1 {
+		t.Errorf("posts=%d, want 1 (do not POST create-commands again)", posts)
+	}
+}
+
+func TestCreateShipment_InProgressTimeoutIncludesCommandIDAndStatus(t *testing.T) {
+	withCreateCommandPoll(t, 40*time.Millisecond, 5*time.Millisecond)
+	const commandID = "58d250bc-5441-48a0-a7f9-ea7497b4a3a1"
+	var posts int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/shipment-management/shipments/create-commands":
+			posts++
+			_, _ = w.Write([]byte(`{"commandId":"` + commandID + `"}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/shipment-management/shipments/create-commands/"+commandID:
+			_, _ = w.Write([]byte(`{"commandId":"` + commandID + `","status":"IN_PROGRESS"}`))
+		default:
+			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	c := NewClient("id", "secret",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+	)
+	defer c.Close()
+
+	_, err := c.ShipmentManagement.CreateShipment(context.Background(), CreateShipmentCommand{
+		CommandID: commandID,
+		Input: CreateShipmentInput{
+			DeliveryMethodID: "9081532b-5ad3-467d-80bc-9252982e9dd8",
+		},
+	})
+	if err == nil {
+		t.Fatal("expected timeout while IN_PROGRESS")
+	}
+	got := err.Error()
+	if !strings.Contains(got, commandID) {
+		t.Errorf("timeout missing command id: %s", got)
+	}
+	if !strings.Contains(got, "timed out") {
+		t.Errorf("timeout missing timed out: %s", got)
+	}
+	if !strings.Contains(got, "IN_PROGRESS") {
+		t.Errorf("timeout missing last status IN_PROGRESS: %s", got)
+	}
+	if posts != 1 {
+		t.Errorf("posts=%d, want 1 (do not POST create-commands again)", posts)
+	}
+}
+
+func TestCreateShipment_SuccessAfterDelayedPollReturnsShipmentID(t *testing.T) {
+	withCreateCommandPoll(t, 2*time.Second, 5*time.Millisecond)
+	const commandID = "14e142cf-e8e0-48cc-bcf6-399b5fd90b32"
+	const shipmentID = "ba88f0fb-acf3-438a-877e-580da50c0874"
+	var posts, gets int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/shipment-management/shipments/create-commands":
+			posts++
+			_, _ = w.Write([]byte(`{"commandId":"` + commandID + `"}`))
+		case r.Method == http.MethodGet && r.URL.Path == "/shipment-management/shipments/create-commands/"+commandID:
+			gets++
+			if gets < 3 {
+				_, _ = w.Write([]byte(`{"commandId":"` + commandID + `","status":"IN_PROGRESS"}`))
+				return
+			}
+			_, _ = w.Write([]byte(`{"commandId":"` + commandID + `","status":"SUCCESS","shipmentId":"` + shipmentID + `"}`))
+		default:
+			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	c := NewClient("id", "secret",
+		WithBaseURL(srv.URL),
+		WithHTTPClient(srv.Client()),
+	)
+	defer c.Close()
+
+	resp, err := c.ShipmentManagement.CreateShipment(context.Background(), CreateShipmentCommand{
+		CommandID: commandID,
+		Input: CreateShipmentInput{
+			DeliveryMethodID: "9081532b-5ad3-467d-80bc-9252982e9dd8",
+		},
+	})
+	if err != nil {
+		t.Fatalf("CreateShipment after delayed SUCCESS: %v", err)
+	}
+	if posts != 1 {
+		t.Errorf("posts=%d, want 1", posts)
+	}
+	if gets < 3 {
+		t.Errorf("gets=%d, want at least 3 polls before SUCCESS", gets)
+	}
+	if resp.ShipmentID != shipmentID {
+		t.Errorf("ShipmentID = %q, want %q", resp.ShipmentID, shipmentID)
+	}
+	if resp.Status != "SUCCESS" {
+		t.Errorf("Status = %q", resp.Status)
+	}
+}
+
+func withCreateCommandPoll(t *testing.T, timeout, interval time.Duration) {
+	t.Helper()
+	oldTimeout, oldInterval := createCommandPollTimeout, createCommandPollInterval
+	createCommandPollTimeout = timeout
+	createCommandPollInterval = interval
+	t.Cleanup(func() {
+		createCommandPollTimeout = oldTimeout
+		createCommandPollInterval = oldInterval
+	})
 }
 
 func jsonContains(raw []byte, needle string) bool {

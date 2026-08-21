@@ -256,9 +256,12 @@ func (d *Dimension) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-const (
-	createCommandPollAttempts = 20
-	createCommandPollInterval = 200 * time.Millisecond
+// Production poll budget for GET create-commands/{commandId}.
+// Allegro sandbox door/InPost can stay IN_PROGRESS well past the old
+// 20×200ms (~4s) window; 60s stays under typical proxy idle limits.
+var (
+	createCommandPollTimeout  = 60 * time.Second
+	createCommandPollInterval = 500 * time.Millisecond
 )
 
 // ListDeliveryServices retrieves available delivery services for shipment management.
@@ -301,19 +304,13 @@ func (s *ShipmentManagementService) CreateShipment(ctx context.Context, cmd Crea
 
 func (s *ShipmentManagementService) waitForCreateCommand(ctx context.Context, commandID string) (*CreateShipmentResponse, error) {
 	path := fmt.Sprintf("/shipment-management/shipments/create-commands/%s", commandID)
+	deadline := time.Now().Add(createCommandPollTimeout)
 	var last ShipmentCommandStatus
-	for attempt := range createCommandPollAttempts {
-		if attempt > 0 {
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			case <-time.After(createCommandPollInterval):
-			}
-		}
+	for {
 		if err := s.client.do(ctx, "GET", path, nil, &last); err != nil {
 			return nil, err
 		}
-		switch strings.ToUpper(last.Status) {
+		switch strings.ToUpper(strings.TrimSpace(last.Status)) {
 		case "SUCCESS":
 			return &CreateShipmentResponse{
 				CommandID:  last.CommandID,
@@ -321,15 +318,7 @@ func (s *ShipmentManagementService) waitForCreateCommand(ctx context.Context, co
 				Status:     last.Status,
 			}, nil
 		case "ERROR", "ERROR_LIMIT_EXCEEDED", "CANCELED", "CANCELLED":
-			msg := last.Status
-			if len(last.Errors) > 0 {
-				if last.Errors[0].UserMessage != "" {
-					msg = last.Errors[0].UserMessage
-				} else if last.Errors[0].Message != "" {
-					msg = last.Errors[0].Message
-				}
-			}
-			return nil, fmt.Errorf("allegro: create-commands %s: %s", last.Status, msg)
+			return nil, createCommandStatusError(commandID, last)
 		}
 		if last.ShipmentID != "" {
 			return &CreateShipmentResponse{
@@ -338,8 +327,45 @@ func (s *ShipmentManagementService) waitForCreateCommand(ctx context.Context, co
 				Status:     last.Status,
 			}, nil
 		}
+		wait := createCommandPollInterval
+		if remaining := time.Until(deadline); remaining <= 0 {
+			return nil, createCommandTimeoutError(commandID, last.Status)
+		} else if wait > remaining {
+			wait = remaining
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(wait):
+		}
 	}
-	return nil, fmt.Errorf("allegro: create-commands %s timed out waiting for shipmentId", commandID)
+}
+
+func createCommandStatusError(commandID string, last ShipmentCommandStatus) error {
+	detail := last.Status
+	if len(last.Errors) > 0 {
+		e := last.Errors[0]
+		msg := e.UserMessage
+		if msg == "" {
+			msg = e.Message
+		}
+		switch {
+		case e.Code != "" && msg != "":
+			detail = e.Code + ": " + msg
+		case e.Code != "":
+			detail = e.Code
+		case msg != "":
+			detail = msg
+		}
+	}
+	return fmt.Errorf("allegro: create-commands %s %s: %s", commandID, last.Status, detail)
+}
+
+func createCommandTimeoutError(commandID, status string) error {
+	if strings.TrimSpace(status) == "" {
+		status = "unknown"
+	}
+	return fmt.Errorf("allegro: create-commands %s timed out waiting for shipmentId (last status %s)", commandID, status)
 }
 
 // GetShipment retrieves a managed shipment by ID.

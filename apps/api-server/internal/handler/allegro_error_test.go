@@ -37,6 +37,33 @@ func TestWriteAllegroError_ReconnectRequiredIsClearAndDoesNotAskPassword(t *test
 	assert.NotContains(t, strings.ToLower(resp["error"]), "password")
 }
 
+func TestWriteAllegroError_CreateCommandERRORIncludesCodeNotTimeout(t *testing.T) {
+	rr := httptest.NewRecorder()
+	writeAllegroError(rr, "Failed to create shipment on Allegro",
+		errors.New("allegro: create shipment: allegro: create-commands 58d250bc-5441-48a0-a7f9-ea7497b4a3a1 ERROR: SHIPMENT_VALIDATION_ERROR: A request can contain only one parcel"))
+
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+	var resp map[string]string
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
+	assert.Contains(t, resp["error"], "58d250bc-5441-48a0-a7f9-ea7497b4a3a1")
+	assert.Contains(t, resp["error"], "SHIPMENT_VALIDATION_ERROR")
+	assert.Contains(t, resp["error"], "A request can contain only one parcel")
+	assert.NotContains(t, resp["error"], "timed out")
+}
+
+func TestWriteAllegroError_CreateCommandTimeoutIncludesCommandIDAndStatus(t *testing.T) {
+	rr := httptest.NewRecorder()
+	writeAllegroError(rr, "Failed to create shipment on Allegro",
+		errors.New("allegro: create shipment: allegro: create-commands 58d250bc-5441-48a0-a7f9-ea7497b4a3a1 timed out waiting for shipmentId (last status IN_PROGRESS)"))
+
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+	var resp map[string]string
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
+	assert.Contains(t, resp["error"], "58d250bc-5441-48a0-a7f9-ea7497b4a3a1")
+	assert.Contains(t, resp["error"], "IN_PROGRESS")
+	assert.Contains(t, resp["error"], "timed out")
+}
+
 func TestWriteAllegroError_APIError400EmptyBodyIncludesCause(t *testing.T) {
 	rr := httptest.NewRecorder()
 	writeAllegroError(rr, "failed to sync orders from Allegro", &allegrosdk.APIError{StatusCode: 400})
