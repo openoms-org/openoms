@@ -2,6 +2,7 @@ package allegro
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,60 @@ import (
 
 	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
 )
+
+func TestNewProvider_RefreshPersistsAccessAndRefreshTokens(t *testing.T) {
+	var persistCalls int
+	var persistedAT, persistedRT string
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/token"):
+			require.NoError(t, r.ParseForm())
+			assert.Equal(t, "old-rt", r.FormValue("refresh_token"))
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"access_token":"new-at","refresh_token":"new-rt","expires_in":3600}`))
+		case r.URL.Path == "/order/checkout-forms":
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"checkoutForms":[],"count":0,"totalCount":0}`))
+		default:
+			t.Errorf("unexpected %s %s", r.Method, r.URL.Path)
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+
+	credJSON, err := json.Marshal(Credentials{
+		ClientID:     "cid",
+		ClientSecret: "csecret",
+		AccessToken:  "old-at",
+		RefreshToken: "old-rt",
+		TokenExpiry:  time.Now().Add(-time.Minute).Format(time.RFC3339),
+		Sandbox:      true,
+	})
+	require.NoError(t, err)
+
+	p, err := NewProvider(credJSON, nil,
+		WithSDKOptions(
+			allegrosdk.WithBaseURL(srv.URL),
+			allegrosdk.WithAuthBaseURL(srv.URL),
+			allegrosdk.WithHTTPClient(srv.Client()),
+		),
+		WithTokenRefreshPersist(func(accessToken, refreshToken string, _ time.Time) error {
+			persistCalls++
+			persistedAT = accessToken
+			persistedRT = refreshToken
+			return nil
+		}),
+	)
+	require.NoError(t, err)
+	defer p.Close()
+
+	_, _, err = p.PollOrders(context.Background(), "")
+	require.NoError(t, err)
+	assert.Equal(t, 1, persistCalls, "successful refresh must persist tokens")
+	assert.Equal(t, "new-at", persistedAT)
+	assert.Equal(t, "new-rt", persistedRT)
+}
 
 func newTestProvider(t *testing.T, srvURL string) *Provider {
 	t.Helper()

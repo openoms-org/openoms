@@ -3,6 +3,7 @@ package allegro
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -52,7 +53,10 @@ func (c *Client) RefreshAccessToken(ctx context.Context) (*TokenResponse, error)
 
 	tok, err := c.postToken(ctx, data)
 	if err != nil {
-		return nil, err
+		return nil, wrapTokenRefreshError(err)
+	}
+	if tok.AccessToken == "" || tok.RefreshToken == "" {
+		return nil, fmt.Errorf("allegro: token response missing access_token or refresh_token")
 	}
 
 	c.applyTokenResponse(tok)
@@ -65,10 +69,20 @@ func (c *Client) RefreshAccessToken(ctx context.Context) (*TokenResponse, error)
 	c.mu.Unlock()
 
 	if callback != nil {
-		callback(at, refreshTok, expiry)
+		if persistErr := callback(at, refreshTok, expiry); persistErr != nil {
+			return tok, fmt.Errorf("allegro: persist refreshed tokens: %w", persistErr)
+		}
 	}
 
 	return tok, nil
+}
+
+func wrapTokenRefreshError(err error) error {
+	var apiErr *APIError
+	if errors.As(err, &apiErr) && (apiErr.StatusCode == http.StatusBadRequest || apiErr.StatusCode == http.StatusUnauthorized) {
+		return fmt.Errorf("%w: %w", ErrReconnectRequired, apiErr)
+	}
+	return err
 }
 
 // SetTokens manually updates the stored OAuth tokens.
@@ -117,6 +131,8 @@ func (c *Client) applyTokenResponse(tok *TokenResponse) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.accessToken = tok.AccessToken
-	c.refreshToken = tok.RefreshToken
+	if tok.RefreshToken != "" {
+		c.refreshToken = tok.RefreshToken
+	}
 	c.tokenExpiry = time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second)
 }

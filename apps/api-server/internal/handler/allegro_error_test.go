@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -22,6 +23,18 @@ func TestWriteAllegroError_NonAPIErrorIncludesCause(t *testing.T) {
 	require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
 	assert.Contains(t, resp["error"], "failed to sync orders from Allegro")
 	assert.Contains(t, resp["error"], "boom")
+}
+
+func TestWriteAllegroError_ReconnectRequiredIsClearAndDoesNotAskPassword(t *testing.T) {
+	rr := httptest.NewRecorder()
+	writeAllegroError(rr, "failed to sync orders from Allegro",
+		errors.Join(allegrosdk.ErrReconnectRequired, errors.New("allegro: proactive token refresh failed: allegro: HTTP 400")))
+
+	assert.Equal(t, http.StatusUnprocessableEntity, rr.Code, "must not return JWT-like 401")
+	var resp map[string]string
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
+	assert.Contains(t, strings.ToLower(resp["error"]), "reconnect allegro")
+	assert.NotContains(t, strings.ToLower(resp["error"]), "password")
 }
 
 func TestWriteAllegroError_APIError400EmptyBodyIncludesCause(t *testing.T) {

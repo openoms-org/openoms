@@ -193,7 +193,7 @@ func (w *OAuthRefresher) Run(ctx context.Context) error {
 		credsJSONB, _ := json.Marshal(encrypted)
 
 		if _, err := w.pool.Exec(ctx,
-			"UPDATE integrations SET credentials = $1::jsonb WHERE id = $2",
+			"UPDATE integrations SET credentials = $1::jsonb, updated_at = NOW() WHERE id = $2",
 			credsJSONB, ir.id,
 		); err != nil {
 			w.logger.Error("worker: oauth credential update failed",
@@ -236,15 +236,7 @@ func (w *OAuthRefresher) refreshAllegro(ctx context.Context, credJSON []byte, ex
 	}
 
 	newExpiry := time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second)
-	newCreds := allegroIntegration.Credentials{
-		ClientID:     creds.ClientID,
-		ClientSecret: creds.ClientSecret,
-		AccessToken:  tok.AccessToken,
-		RefreshToken: tok.RefreshToken,
-		TokenExpiry:  newExpiry.Format(time.RFC3339),
-		Sandbox:      creds.Sandbox,
-	}
-	return json.Marshal(newCreds) // #nosec G117 -- ClientSecret is a legitimate credential field
+	return allegroIntegration.RefreshedCredentialJSON(credJSON, tok.AccessToken, tok.RefreshToken, newExpiry)
 }
 
 func (w *OAuthRefresher) refreshOLX(ctx context.Context, credJSON []byte, expiry time.Time) ([]byte, error) {
