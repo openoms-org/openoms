@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -57,7 +58,13 @@ func (s *AllegroOrderInboundService) SyncOrders(ctx context.Context, tenantID uu
 		return nil, err
 	}
 
-	provider, err := allegroint.NewProvider(credJSON, nil)
+	provider, err := allegroint.NewProvider(credJSON, nil, allegroint.WithTokenRefreshPersist(
+		allegroint.PersistFn(credJSON, func(newJSON []byte) error {
+			persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+			defer cancel()
+			return s.integrationService.UpdateCredentialsByProvider(persistCtx, tenantID, "allegro", newJSON)
+		}),
+	))
 	if err != nil {
 		return nil, fmt.Errorf("allegro inbound: create provider: %w", err)
 	}

@@ -2,6 +2,7 @@ package allegro
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -181,12 +182,120 @@ func TestRefreshAccessTokenError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	apiErr, ok := err.(*APIError)
-	if !ok {
-		t.Fatalf("expected *APIError, got %T", err)
+	if !errors.Is(err, ErrReconnectRequired) {
+		t.Fatalf("expected ErrReconnectRequired, got %T: %v", err, err)
 	}
-	if apiErr.StatusCode != 401 {
-		t.Errorf("StatusCode = %d, want 401", apiErr.StatusCode)
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) || apiErr.StatusCode != 401 {
+		t.Errorf("wrapped StatusCode = %v, want 401", err)
+	}
+}
+
+func TestRefreshAccessToken_InvalidGrantFailsOnceWithReconnect(t *testing.T) {
+	var tokenCalls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		tokenCalls++
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"error":"invalid_grant","message":"invalid refresh token"}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient("cid", "csecret",
+		WithHTTPClient(srv.Client()),
+		WithTokens("old-at", "stale-rt", time.Now().Add(-time.Hour)),
+	)
+	c.authBaseURL = srv.URL
+	defer c.Close()
+
+	_, err := c.RefreshAccessToken(context.Background())
+	if err == nil {
+		t.Fatal("expected refresh 400 to fail")
+	}
+	if !errors.Is(err, ErrReconnectRequired) {
+		t.Fatalf("error = %v, want ErrReconnectRequired", err)
+	}
+	if !strings.Contains(strings.ToLower(err.Error()), "reconnect allegro") {
+		t.Fatalf("error %q must tell the operator to reconnect Allegro", err)
+	}
+	if strings.Contains(strings.ToLower(err.Error()), "password") {
+		t.Fatalf("error %q must not ask for a password", err)
+	}
+	if tokenCalls != 1 {
+		t.Fatalf("token endpoint calls = %d, want 1 (no retry loop)", tokenCalls)
+	}
+}
+
+func TestRefreshAccessToken_UnauthorizedFailsOnceWithReconnect(t *testing.T) {
+	var tokenCalls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		tokenCalls++
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(`{"message":"invalid refresh token"}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient("cid", "csecret", WithHTTPClient(srv.Client()), WithTokens("old-at", "stale-rt", time.Now()))
+	c.authBaseURL = srv.URL
+	defer c.Close()
+
+	_, err := c.RefreshAccessToken(context.Background())
+	if err == nil {
+		t.Fatal("expected refresh 401 to fail")
+	}
+	if !errors.Is(err, ErrReconnectRequired) {
+		t.Fatalf("error = %v, want ErrReconnectRequired", err)
+	}
+	if tokenCalls != 1 {
+		t.Fatalf("token endpoint calls = %d, want 1", tokenCalls)
+	}
+}
+
+func TestRefreshAccessToken_MissingRefreshTokenIsNotPersisted(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"access_token":"new-at","token_type":"bearer","expires_in":3600}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient("cid", "csecret",
+		WithHTTPClient(srv.Client()),
+		WithTokens("old-at", "old-rt", time.Now().Add(-time.Hour)),
+	)
+	c.authBaseURL = srv.URL
+	defer c.Close()
+
+	_, err := c.RefreshAccessToken(context.Background())
+	if err == nil {
+		t.Fatal("expected error when Allegro omits refresh_token")
+	}
+	if c.refreshToken != "old-rt" {
+		t.Fatalf("refreshToken = %q, must keep the previous token when the response is incomplete", c.refreshToken)
+	}
+}
+
+func TestRefreshAccessToken_PersistCallbackErrorFailsRefresh(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"access_token":"new-at","refresh_token":"new-rt","expires_in":3600}`))
+	}))
+	defer srv.Close()
+
+	c := NewClient("cid", "csecret",
+		WithHTTPClient(srv.Client()),
+		WithTokens("old-at", "old-rt", time.Now().Add(-time.Hour)),
+		WithOnTokenRefresh(func(_, _ string, _ time.Time) error {
+			return errors.New("db write failed")
+		}),
+	)
+	c.authBaseURL = srv.URL
+	defer c.Close()
+
+	_, err := c.RefreshAccessToken(context.Background())
+	if err == nil {
+		t.Fatal("expected persist failure to fail the refresh")
+	}
+	if !strings.Contains(err.Error(), "db write failed") {
+		t.Fatalf("error = %v, want persist cause", err)
 	}
 }
 
@@ -218,10 +327,11 @@ func TestRefreshAccessToken(t *testing.T) {
 	c := NewClient("cid", "csecret",
 		WithHTTPClient(srv.Client()),
 		WithTokens("old-at", "old-rt", time.Now().Add(-time.Hour)),
-		WithOnTokenRefresh(func(at, rt string, _ time.Time) {
+		WithOnTokenRefresh(func(at, rt string, _ time.Time) error {
 			callbackCalled = true
 			callbackAT = at
 			callbackRT = rt
+			return nil
 		}),
 	)
 	c.authBaseURL = srv.URL

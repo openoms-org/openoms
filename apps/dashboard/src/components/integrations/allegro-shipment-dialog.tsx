@@ -103,6 +103,7 @@ export function AllegroShipmentDialog({
     proposedDeliveryMethodId: suggested?.deliveryMethodId,
     checkoutMethodId,
     checkoutMethodName,
+    catalogServiceIds: deliveryServices.map((svc) => svc.id),
   });
   const proposedMethodId = methodDecision.ok ? methodDecision.deliveryMethodId : "";
   const salesCenterUrl = allegroSalesCenterCreateShipmentURL({

@@ -260,6 +260,24 @@ func TestCSRF_ExemptPaths_BypassValidation(t *testing.T) {
 	}
 }
 
+func TestCSRF_BearerAuthorizationSkipsCookieCheck(t *testing.T) {
+	handler := CSRF(false, "")(csrfOkHandler())
+	req := httptest.NewRequest("POST", "/v1/integrations/allegro/sync", nil)
+	req.Header.Set("Authorization", "Bearer oms_long-lived-token")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
+func TestCSRF_EmptyBearerStillRequiresCookie(t *testing.T) {
+	handler := CSRF(false, "")(csrfOkHandler())
+	req := httptest.NewRequest("POST", "/v1/integrations/allegro/sync", nil)
+	req.Header.Set("Authorization", "Bearer ")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusForbidden, rr.Code)
+}
+
 func TestCSRF_NonExemptPath_RequiresValidation(t *testing.T) {
 	handler := CSRF(false, "")(csrfOkHandler())
 

@@ -11,6 +11,7 @@ import (
 
 	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
 
+	allegroint "github.com/openoms-org/openoms/apps/api-server/internal/integration/allegro"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
@@ -66,29 +67,21 @@ func buildAllegroClient(r *http.Request, integrationService *service.Integration
 
 	opts := []allegrosdk.Option{
 		allegrosdk.WithTokens(creds.AccessToken, creds.RefreshToken, expiry),
-		allegrosdk.WithOnTokenRefresh(func(accessToken, refreshToken string, exp time.Time) {
-			// Persist refreshed tokens to the database even if the request context was canceled.
+		allegrosdk.WithOnTokenRefresh(func(accessToken, refreshToken string, exp time.Time) error {
+			// Persist refreshed tokens even if the request context was canceled.
 			persistCtx, cancel := allegroTokenRefreshContext(tokenRefreshBaseCtx)
 			defer cancel()
 
-			newCreds := allegroCredentials{
-				ClientID:     creds.ClientID,
-				ClientSecret: creds.ClientSecret,
-				AccessToken:  accessToken,
-				RefreshToken: refreshToken,
-				TokenExpiry:  exp.Format(time.RFC3339),
-				Sandbox:      creds.Sandbox,
-			}
-			newJSON, err := json.Marshal(newCreds) // #nosec G117
+			newJSON, err := allegroint.RefreshedCredentialJSON(credJSON, accessToken, refreshToken, exp)
 			if err != nil {
-				slog.Error("allegro: failed to marshal refreshed credentials", "error", err)
-				return
+				return err
 			}
 			if err := integrationService.UpdateCredentialsByProvider(persistCtx, tenantID, "allegro", newJSON); err != nil {
 				slog.Error("allegro: failed to persist refreshed tokens", "error", err, "tenant_id", tenantID)
-			} else {
-				slog.Info("allegro: refreshed tokens persisted", "tenant_id", tenantID)
+				return err
 			}
+			slog.Info("allegro: refreshed tokens persisted", "tenant_id", tenantID)
+			return nil
 		}),
 	}
 	if creds.Sandbox {

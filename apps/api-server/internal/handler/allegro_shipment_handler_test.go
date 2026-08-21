@@ -12,6 +12,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 )
 
 // --- CreateShipment ---
@@ -212,4 +214,21 @@ func TestAllegroShipmentHandler_GenerateProtocol_MissingShipmentIDsKey(t *testin
 	err := json.NewDecoder(rr.Body).Decode(&resp)
 	require.NoError(t, err)
 	assert.Equal(t, "At least one shipment ID is required", resp["error"])
+}
+
+func TestCheckoutWzAMethodFromOrder_ReadsMiniKurier24InPost(t *testing.T) {
+	name := "Allegro miniKurier24 InPost"
+	order := &model.Order{
+		DeliveryMethod: &name,
+		Metadata:       json.RawMessage(`{"delivery_method_id":"9081532b-5ad3-467d-80bc-9252982e9dd8","delivery_method_name":"Allegro miniKurier24 InPost"}`),
+	}
+	id, gotName := checkoutWzAMethodFromOrder(order)
+	assert.Equal(t, "9081532b-5ad3-467d-80bc-9252982e9dd8", id)
+	assert.Equal(t, "Allegro miniKurier24 InPost", gotName)
+}
+
+func TestCheckoutWzAMethodFromOrder_EmptyOrderStaysEmpty(t *testing.T) {
+	id, name := checkoutWzAMethodFromOrder(nil)
+	assert.Empty(t, id)
+	assert.Empty(t, name)
 }

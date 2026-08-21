@@ -18,15 +18,33 @@ type TokenValidator interface {
 	ValidateToken(tokenStr string) (*model.AuthClaims, error)
 }
 
+// APITokenAuthenticator resolves a hashed long-lived API token to the same
+// AuthClaims a session JWT would carry. Optional: JWTAuth works without it.
+type APITokenAuthenticator interface {
+	AuthenticateAPIToken(ctx context.Context, rawToken string) (*model.AuthClaims, error)
+}
+
 // JWTAuth validates the Authorization: Bearer <token> header and sets
 // claims, tenant ID, and user ID in the request context.
 // An optional TokenBlacklist can be provided to reject revoked tokens.
 func JWTAuth(validator TokenValidator, blacklists ...*TokenBlacklist) func(http.Handler) http.Handler {
-	var blacklist *TokenBlacklist
-	if len(blacklists) > 0 {
-		blacklist = blacklists[0]
-	}
+	return jwtAuth(validator, nil, firstBlacklist(blacklists))
+}
 
+// JWTAuthWithAPITokens is JWTAuth plus a hashed API-token fallback when the
+// Bearer value is not a valid access JWT. Same context keys and RLS tenant.
+func JWTAuthWithAPITokens(validator TokenValidator, apiTokens APITokenAuthenticator, blacklists ...*TokenBlacklist) func(http.Handler) http.Handler {
+	return jwtAuth(validator, apiTokens, firstBlacklist(blacklists))
+}
+
+func firstBlacklist(blacklists []*TokenBlacklist) *TokenBlacklist {
+	if len(blacklists) > 0 {
+		return blacklists[0]
+	}
+	return nil
+}
+
+func jwtAuth(validator TokenValidator, apiTokens APITokenAuthenticator, blacklist *TokenBlacklist) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
@@ -47,9 +65,18 @@ func JWTAuth(validator TokenValidator, blacklists ...*TokenBlacklist) func(http.
 			}
 
 			claims, err := validator.ValidateToken(tokenStr)
+			usedAPIToken := false
 			if err != nil {
-				writeAuthError(w, "invalid or expired token")
-				return
+				if apiTokens == nil {
+					writeAuthError(w, "invalid or expired token")
+					return
+				}
+				claims, err = apiTokens.AuthenticateAPIToken(r.Context(), tokenStr)
+				if err != nil || claims == nil {
+					writeAuthError(w, "invalid or expired token")
+					return
+				}
+				usedAPIToken = true
 			}
 
 			// Reject non-access tokens (e.g. refresh tokens)
@@ -65,9 +92,9 @@ func JWTAuth(validator TokenValidator, blacklists ...*TokenBlacklist) func(http.
 				return
 			}
 
-			// Check revocation only after token validation to avoid blacklist
-			// lookups for malformed or expired tokens.
-			if blacklist != nil {
+			// Check JWT revocation only after JWT validation. API tokens are
+			// revoked in the database, not the JWT blacklist.
+			if blacklist != nil && !usedAPIToken {
 				tokenHash := hashToken(tokenStr)
 				if blacklist.IsRevoked(tokenHash) {
 					writeAuthError(w, "token has been revoked")

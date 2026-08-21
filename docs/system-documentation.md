@@ -419,7 +419,7 @@ Pelne `tenants.settings` sa odczytywane tylko przez tenant-scoped sciezki repozy
 
 ```
 Request -> RequestID -> TrustedRealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS -> Logger -> Recoverer -> CORS
-    -> JWTAuth (validate JWT, then access-token blacklist) -> RequireRole -> RequirePermission
+    -> JWTAuth (JWT first, then hashed API token on /v1; blacklist JWT only) -> RequireRole -> RequirePermission
     -> RateLimit -> MaxBodySize -> MetricsAuth -> Handler
 ```
 
@@ -445,6 +445,16 @@ Request -> RequestID -> TrustedRealIP -> Prometheus -> SecurityHeaders -> CSRF -
 | POST | `/v1/auth/2fa/verify` | Weryfikacja kodu i wlaczenie 2FA |
 | POST | `/v1/auth/2fa/disable` | Wylaczenie 2FA |
 | GET | `/v1/auth/2fa/status` | Sprawdzenie statusu 2FA |
+
+#### Tokeny API (owner)
+
+| Metoda | Sciezka | Opis |
+|--------|---------|------|
+| GET | `/v1/api-tokens` | Lista wlasnych tokenow bez sekretow; tylko owner (403 dla innych rol) |
+| POST | `/v1/api-tokens` | Tworzenie tokena; tylko owner (403); surowy sekret zwracany raz, przy utworzeniu |
+| DELETE | `/v1/api-tokens/{id}` | Odwolanie tokena; tylko owner (403); dziala od nastepnego requestu |
+
+Token uwierzytelnia na `/v1` przez `Authorization: Bearer`, nie wygasa i nie dziala na `/uploads`, `/v1/auth/2fa`, `/v1/auth/ws-ticket` ani `/v1/platform`.
 
 #### Zamowienia
 
@@ -574,7 +584,7 @@ Request -> RequestID -> TrustedRealIP -> Prometheus -> SecurityHeaders -> CSRF -
 | PATCH | `/v1/integrations/{id}` | Aktualizacja |
 | DELETE | `/v1/integrations/{id}` | Usuniecie |
 | GET | `/v1/integrations/allegro/auth-url` | URL OAuth Allegro; state jest powiazany z tenantem, userem i providerem |
-| POST | `/v1/integrations/allegro/callback` | Callback OAuth Allegro; odrzuca state z innego tenanta/usera/providera; odswiezone tokeny SDK sa zapisywane przez bounded context odseparowany od anulowania requestu |
+| POST | `/v1/integrations/allegro/callback` | Callback OAuth Allegro; odrzuca state z innego tenanta/usera/providera; zapisuje access token i refresh token oraz aktywuje integracje przed zwroceniem sukcesu, a blad zapisu daje 5xx zamiast 200 |
 | POST | `/v1/integrations/amazon/setup` | Setup Amazon SP-API |
 | GET | `/v1/integrations/amazon/auth-url` | URL OAuth Amazon; state jest powiazany z tenantem, userem i providerem |
 | POST | `/v1/integrations/amazon/callback` | Callback OAuth Amazon; odrzuca state z innego tenanta/usera/providera |
@@ -598,7 +608,9 @@ Request -> RequestID -> TrustedRealIP -> Prometheus -> SecurityHeaders -> CSRF -
 | Metoda | Sciezka | Opis |
 |--------|---------|------|
 | GET | `/v1/integrations/allegro/delivery-services` | Uslugi dostawy |
-| POST | `/v1/integrations/allegro/shipments` | Tworzenie przesylki |
+| GET | `/v1/integrations/allegro/delivery-proposals/{oid}` | Oficjalne, wstepnie wypelnione body create-commands dla zamowienia |
+| POST | `/v1/integrations/allegro/shipments` | Tworzenie przesylki; jeden POST create-commands na request, brak idempotencji, wiec klient nie moze ponawiac; polling do 60 s; 409 gdy brak metody dostawy albo gdy `deliveryMethodId` nie jest metoda z propozycji |
+| POST | `/v1/integrations/allegro/orders/{oid}/wza-shipments/import` | Import juz utworzonej przesylki WzA; tylko odczyt, nigdy nie wysyla create-commands; 409 gdy w Allegro nie ma przesylki |
 | GET | `/v1/integrations/allegro/shipments/{sid}/label` | Pobranie etykiety |
 | DELETE | `/v1/integrations/allegro/shipments/{sid}` | Anulowanie |
 | POST | `/v1/integrations/allegro/pickup-proposals` | Propozycje odbioru |
@@ -1262,7 +1274,7 @@ Standalone maszyna stanow zamowien i przesylek:
 
 | SDK | Provider | Auth | Glowne operacje |
 |-----|----------|------|----------------|
-| allegro-go-sdk | Allegro.pl | OAuth 2.0 | Zamowienia, oferty, eventy, katalog; proaktywne i 401-triggered bledy odswiezania tokenu sa zwracane wywolujacemu, a terminalne bledy OAuth oznaczaja integracje jako wymagajaca ponownej autoryzacji |
+| allegro-go-sdk | Allegro.pl | OAuth 2.0 | Zamowienia, oferty, eventy, katalog; bledy odswiezania tokenu sa zwracane wywolujacemu; przy terminalnym bledzie OAuth workery oznaczaja integracje jako wymagajaca ponownej autoryzacji, a handlery HTTP zwracaja 422 bez zmiany statusu integracji |
 | amazon-sp-sdk | Amazon | LWA OAuth + AWS Signing | Zamowienia, inventory, pricing; terminalne bledy OAuth oznaczaja integracje jako wymagajaca ponownej autoryzacji |
 | woocommerce-go-sdk | WooCommerce | REST API | Zamowienia, produkty, webhooks; `on-hold` mapuje platnosc jako `pending` (nie `paid`); malformed monetary fields reject order import |
 | ebay-go-sdk | eBay | OAuth 2.0 | Zamowienia (OrderService), fulfillment + refundy (FulfillmentService), inventory CRUD + bulk (InventoryService), oferty lifecycle (OfferService), polityki konta (AccountService); malformed monetary fields reject order import; terminalne bledy OAuth oznaczaja integracje jako wymagajaca ponownej autoryzacji |
@@ -1327,6 +1339,7 @@ JWT_SECRET (env)
 |-----|-----------|--------|
 | Access Token | 1 godzina | Header `Authorization: Bearer ...` |
 | Refresh Token | 30 dni | Cookie httpOnly (sciezka /v1/auth) |
+| Token API (owner) | Do odwolania | Header `Authorization: Bearer oms_...` na `/v1` |
 
 **Claims JWT:**
 ```json
@@ -1718,11 +1731,11 @@ Migracja:    000040 UNIQUE index fulfillment_processes(tenant_id, order_id) (add
 |-----------|-----------|
 | SQL Injection | Parametryzowane zapytania (pgx driver) |
 | XSS | React auto-escape + sanityzacja inputow (strip tags) + CSP header. dangerouslySetInnerHTML usuniete. |
-| CSRF | Double-submit cookie (csrf_token cookie + X-CSRF-Token header, SameSite=Lax, Domain=.openoms.org) |
+| CSRF | Double-submit cookie (csrf_token cookie + X-CSRF-Token header, SameSite=Lax, Domain=.openoms.org). CSRF jest pomijany, gdy request niesie niepusty credential `Authorization: Bearer` (JWT lub token API), wiec klienci bez cookies dzialaja; sesje cookie nadal wymagaja naglowka. |
 | Clickjacking | X-Frame-Options: DENY + CSP frame-ancestors 'none' |
 | Tenant leakage | RLS + FORCE ROW LEVEL SECURITY |
 | Token theft | SHA-256 hash w blacklist, httpOnly cookies |
-| Token revocation | Redis-backed composite blacklist; poza developmentem Redis jest wymagany, a in-memory fallback jest tylko lokalny/explicit single-node |
+| Token revocation | Redis-backed composite blacklist; poza developmentem Redis jest wymagany, a in-memory fallback jest tylko lokalny/explicit single-node. Tokeny API sa odwolywane w bazie przez `revoked_at`, nie przez blacklist JWT; odwolanie dziala od nastepnego requestu. |
 | SSRF | noPrivateDialer na wszystkich polaczeniach wychodzacych (webhooks, automation, supplier feeds). IPv4 + IPv6 (w tym ::/128, ff00::/8). |
 | SSRF (WebSocket) | Walidacja Origin header + ticket-only auth (JWT w URL usuniety) |
 | Brute force | Rate limiting (10/min login, 5/min zmiana hasla, 60/min refresh, 30/min public). Atomowy Lua script (INCR+EXPIRE). Invalid login paths wykonuja dummy bcrypt compare, zeby ograniczyc timing oracle dla tenant/email/password. |

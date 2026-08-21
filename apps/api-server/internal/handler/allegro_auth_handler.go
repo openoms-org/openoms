@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -9,30 +10,65 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	allegrosdk "github.com/openoms-org/openoms/packages/allegro-go-sdk"
 
 	"github.com/openoms-org/openoms/apps/api-server/internal/config"
+	allegroint "github.com/openoms-org/openoms/apps/api-server/internal/integration/allegro"
 	"github.com/openoms-org/openoms/apps/api-server/internal/middleware"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
 	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
+type allegroOAuthStore interface {
+	GetDecryptedCredentialsByProvider(ctx context.Context, tenantID uuid.UUID, provider string) ([]byte, *model.Integration, error)
+	List(ctx context.Context, tenantID uuid.UUID) ([]model.Integration, error)
+	Update(ctx context.Context, tenantID, integrationID uuid.UUID, req model.UpdateIntegrationRequest, actorID uuid.UUID, ip string) (*model.Integration, error)
+	Create(ctx context.Context, tenantID uuid.UUID, req model.CreateIntegrationRequest, actorID uuid.UUID, ip string) (*model.Integration, error)
+}
+
+type allegroCodeExchanger func(ctx context.Context, clientID, clientSecret string, sandbox bool, redirectURI, code string) (*allegrosdk.TokenResponse, error)
+
 // AllegroAuthHandler handles the Allegro OAuth2 authorization flow.
 type AllegroAuthHandler struct {
 	cfg                *config.Config
-	integrationService *service.IntegrationService
+	integrationService allegroOAuthStore
 	encryptionKey      []byte
 	stateStore         OAuthStateStore
+	oauthStore         allegroOAuthStore
+	exchangeCode       allegroCodeExchanger
 }
 
 // NewAllegroAuthHandler creates a new AllegroAuthHandler with the given dependencies.
 func NewAllegroAuthHandler(cfg *config.Config, integrationService *service.IntegrationService, encryptionKey []byte, stateStore OAuthStateStore) *AllegroAuthHandler {
-	return &AllegroAuthHandler{
+	h := &AllegroAuthHandler{
 		cfg:                cfg,
 		integrationService: integrationService,
 		encryptionKey:      encryptionKey,
 		stateStore:         stateStore,
+		exchangeCode:       exchangeAllegroAuthorizationCode,
 	}
+	if integrationService != nil {
+		h.oauthStore = integrationService
+	}
+	return h
+}
+
+func (h *AllegroAuthHandler) store() allegroOAuthStore {
+	if h.oauthStore != nil {
+		return h.oauthStore
+	}
+	return h.integrationService
+}
+
+func exchangeAllegroAuthorizationCode(ctx context.Context, clientID, clientSecret string, sandbox bool, redirectURI, code string) (*allegrosdk.TokenResponse, error) {
+	opts := []allegrosdk.Option{allegrosdk.WithRedirectURI(redirectURI)}
+	if sandbox {
+		opts = append(opts, allegrosdk.WithSandbox())
+	}
+	client := allegrosdk.NewClient(clientID, clientSecret, opts...)
+	defer client.Close()
+	return client.ExchangeCode(ctx, code)
 }
 
 // redirectURI computes the OAuth redirect URI from the frontend URL.
@@ -47,7 +83,7 @@ func (h *AllegroAuthHandler) GetAuthURL(w http.ResponseWriter, r *http.Request) 
 	actorID := middleware.UserIDFromContext(r.Context())
 
 	// Read credentials from existing integration
-	credJSON, _, err := h.integrationService.GetDecryptedCredentialsByProvider(r.Context(), tenantID, "allegro")
+	credJSON, _, err := h.store().GetDecryptedCredentialsByProvider(r.Context(), tenantID, "allegro")
 	if err != nil {
 		slog.Error("allegro OAuth: failed to get credentials", "error", err)
 		writeError(w, http.StatusBadRequest, "Najpierw zapisz dane integracji Allegro (Client ID i Client Secret)")
@@ -143,30 +179,20 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	opts := []allegrosdk.Option{allegrosdk.WithRedirectURI(h.redirectURI())}
-	if oauthState.Sandbox {
-		opts = append(opts, allegrosdk.WithSandbox())
+	exchange := h.exchangeCode
+	if exchange == nil {
+		exchange = exchangeAllegroAuthorizationCode
 	}
-	client := allegrosdk.NewClient(oauthState.ClientID, oauthState.ClientSecret, opts...)
-	defer client.Close()
-
-	tok, err := client.ExchangeCode(r.Context(), body.Code)
+	tok, err := exchange(r.Context(), oauthState.ClientID, oauthState.ClientSecret, oauthState.Sandbox, h.redirectURI(), body.Code)
 	if err != nil {
 		writeError(w, http.StatusUnprocessableEntity, "failed to exchange authorization code")
 		return
 	}
 
 	tokenExpiry := time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second)
-
-	credentials := map[string]any{
-		"client_id":     oauthState.ClientID,
-		"client_secret": oauthState.ClientSecret,
-		"access_token":  tok.AccessToken,
-		"refresh_token": tok.RefreshToken,
-		"token_expiry":  tokenExpiry.Format(time.RFC3339),
-		"sandbox":       oauthState.Sandbox,
-	}
-	credJSON, err := json.Marshal(credentials)
+	credJSON, err := allegroint.ReconnectCredentialJSON(
+		oauthState.ClientID, oauthState.ClientSecret, tok.AccessToken, tok.RefreshToken, tokenExpiry, oauthState.Sandbox,
+	)
 	if err != nil {
 		writeServerError(w, "failed to encode credentials", err)
 		return
@@ -176,8 +202,9 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 	actorID := middleware.UserIDFromContext(r.Context())
 	ip := clientIP(r)
 
-	// Update existing allegro integration with OAuth tokens
-	integrations, listErr := h.integrationService.List(r.Context(), tenantID)
+	// Persist new tokens before returning success. Do not report reconnect done
+	// until this write commits.
+	integrations, listErr := h.store().List(r.Context(), tenantID)
 	if listErr != nil {
 		writeServerError(w, "failed to find integration", listErr)
 		return
@@ -190,7 +217,7 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 				Credentials: &rawCreds,
 				Status:      &activeStatus,
 			}
-			updated, updateErr := h.integrationService.Update(r.Context(), tenantID, integ.ID, updateReq, actorID, ip)
+			updated, updateErr := h.store().Update(r.Context(), tenantID, integ.ID, updateReq, actorID, ip)
 			if updateErr != nil {
 				writeServerError(w, "failed to update integration", updateErr)
 				return
@@ -207,7 +234,7 @@ func (h *AllegroAuthHandler) HandleCallback(w http.ResponseWriter, r *http.Reque
 		Label:       &label,
 		Credentials: credJSON,
 	}
-	result, err := h.integrationService.Create(r.Context(), tenantID, req, actorID, ip)
+	result, err := h.store().Create(r.Context(), tenantID, req, actorID, ip)
 	if err != nil {
 		if errors.Is(err, service.ErrDuplicateProvider) {
 			writeError(w, http.StatusConflict, "allegro integration already exists")

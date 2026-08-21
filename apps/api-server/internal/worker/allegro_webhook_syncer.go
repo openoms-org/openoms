@@ -231,6 +231,7 @@ func (s *AllegroWebhookSyncer) tryImportOrder(ctx context.Context, ti TenantInte
 		)
 		return false
 	}
+	attachAllegroTokenPersist(ctx, provider, s.pool, s.encryptionKey, ti.IntegrationID, credJSON)
 
 	// Fetch the order from Allegro
 	mo, err := provider.GetOrder(ctx, allegroOrderID)
@@ -389,6 +390,7 @@ func (s *AllegroWebhookSyncer) tryUpdateOrderStatus(ctx context.Context, ti Tena
 		)
 		return true
 	}
+	attachAllegroTokenPersist(ctx, provider, s.pool, s.encryptionKey, ti.IntegrationID, credJSON)
 
 	// Fetch current order status from Allegro
 	mo, err := provider.GetOrder(ctx, allegroOrderID)
