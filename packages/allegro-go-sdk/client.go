@@ -40,7 +40,7 @@ type Client struct {
 	accessToken    string
 	refreshToken   string
 	tokenExpiry    time.Time
-	onTokenRefresh func(accessToken, refreshToken string, expiry time.Time)
+	onTokenRefresh func(accessToken, refreshToken string, expiry time.Time) error
 	rateLimiter    *rateLimiter
 	retryDelay     func(attempt int) time.Duration
 
@@ -187,9 +187,24 @@ func WithTokens(accessToken, refreshToken string, expiry time.Time) Option {
 }
 
 // WithOnTokenRefresh registers a callback invoked when tokens are refreshed.
-func WithOnTokenRefresh(fn func(string, string, time.Time)) Option {
+// A non-nil error fails the refresh so callers do not continue with unpersisted tokens.
+func WithOnTokenRefresh(fn func(string, string, time.Time) error) Option {
 	return func(c *Client) {
 		c.onTokenRefresh = fn
+	}
+}
+
+// SetOnTokenRefresh replaces the token-refresh persist callback after construction.
+func (c *Client) SetOnTokenRefresh(fn func(string, string, time.Time) error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.onTokenRefresh = fn
+}
+
+// WithAuthBaseURL overrides the OAuth token endpoint base URL.
+func WithAuthBaseURL(url string) Option {
+	return func(c *Client) {
+		c.authBaseURL = url
 	}
 }
 

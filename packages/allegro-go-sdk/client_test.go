@@ -179,12 +179,12 @@ func TestDoReturnsRefreshErrorAfterUnauthorized(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected refresh error, got nil")
 	}
-	var apiErr *APIError
-	if !errors.As(err, &apiErr) {
-		t.Fatalf("expected APIError refresh failure, got %T: %v", err, err)
+	if !errors.Is(err, ErrReconnectRequired) {
+		t.Fatalf("expected ErrReconnectRequired, got %T: %v", err, err)
 	}
-	if apiErr.StatusCode != http.StatusBadRequest {
-		t.Errorf("StatusCode = %d, want refresh 400", apiErr.StatusCode)
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) || apiErr.StatusCode != http.StatusBadRequest {
+		t.Errorf("wrapped StatusCode = %v, want refresh 400", err)
 	}
 	if got := tokenCalls.Load(); got != 1 {
 		t.Errorf("token refresh calls = %d, want 1", got)

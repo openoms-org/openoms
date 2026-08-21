@@ -42,30 +42,77 @@ type Provider struct {
 	logger *slog.Logger
 }
 
+type providerOptions struct {
+	sdkOpts   []allegrosdk.Option
+	onPersist TokenRefreshPersist
+}
+
+// ProviderOption configures NewProvider.
+type ProviderOption func(*providerOptions)
+
+// WithSDKOptions appends Allegro SDK options. Applied last so tests can override URLs.
+func WithSDKOptions(opts ...allegrosdk.Option) ProviderOption {
+	return func(o *providerOptions) {
+		o.sdkOpts = append(o.sdkOpts, opts...)
+	}
+}
+
+// WithTokenRefreshPersist registers a callback that must persist both new tokens.
+func WithTokenRefreshPersist(fn TokenRefreshPersist) ProviderOption {
+	return func(o *providerOptions) {
+		o.onPersist = fn
+	}
+}
+
 // NewProvider creates an Allegro MarketplaceProvider from encrypted credentials.
-func NewProvider(credentials json.RawMessage, _ json.RawMessage) (*Provider, error) {
+func NewProvider(credentials json.RawMessage, _ json.RawMessage, opts ...ProviderOption) (*Provider, error) {
 	var creds Credentials
 	if err := json.Unmarshal(credentials, &creds); err != nil {
 		return nil, fmt.Errorf("allegro: parse credentials: %w", err)
 	}
 
-	var opts []allegrosdk.Option
-
-	expiry, _ := time.Parse(time.RFC3339, creds.TokenExpiry)
-	opts = append(opts, allegrosdk.WithTokens(creds.AccessToken, creds.RefreshToken, expiry))
-
-	if creds.Sandbox {
-		opts = append(opts, allegrosdk.WithSandbox())
+	var cfg providerOptions
+	for _, opt := range opts {
+		opt(&cfg)
 	}
 
-	opts = append(opts, allegrosdk.WithHTTPClient(netutil.SafeHTTPClient(30*time.Second)))
+	expiry, _ := time.Parse(time.RFC3339, creds.TokenExpiry)
+	sdkOpts := []allegrosdk.Option{
+		allegrosdk.WithTokens(creds.AccessToken, creds.RefreshToken, expiry),
+		allegrosdk.WithHTTPClient(netutil.SafeHTTPClient(30 * time.Second)),
+	}
+	if creds.Sandbox {
+		sdkOpts = append(sdkOpts, allegrosdk.WithSandbox())
+	}
+	if cfg.onPersist != nil {
+		sdkOpts = append(sdkOpts, allegrosdk.WithOnTokenRefresh(cfg.onPersist))
+	}
+	sdkOpts = append(sdkOpts, cfg.sdkOpts...)
 
-	client := allegrosdk.NewClient(creds.ClientID, creds.ClientSecret, opts...)
+	client := allegrosdk.NewClient(creds.ClientID, creds.ClientSecret, sdkOpts...)
 
 	return &Provider{
 		client: client,
 		logger: slog.Default().With("provider", "allegro"),
 	}, nil
+}
+
+// SetOnTokenRefresh attaches persist-on-refresh after the provider is constructed.
+func (p *Provider) SetOnTokenRefresh(fn TokenRefreshPersist) {
+	if p == nil || p.client == nil {
+		return
+	}
+	p.client.SetOnTokenRefresh(fn)
+}
+
+// AttachTokenRefreshPersist wires persist-on-refresh when provider is Allegro.
+func AttachTokenRefreshPersist(provider any, fn TokenRefreshPersist) {
+	if fn == nil {
+		return
+	}
+	if p, ok := provider.(*Provider); ok {
+		p.SetOnTokenRefresh(fn)
+	}
 }
 
 // ProviderName returns the marketplace provider identifier.

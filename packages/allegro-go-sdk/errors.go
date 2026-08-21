@@ -9,6 +9,10 @@ import (
 // ErrUnauthorized is returned when the API responds with 401 Unauthorized.
 var ErrUnauthorized = errors.New("allegro: unauthorized")
 
+// ErrReconnectRequired is returned when a token refresh is rejected (400/401).
+// The stored refresh token is dead; the seller must reconnect Allegro.
+var ErrReconnectRequired = errors.New("reconnect Allegro in OMS settings")
+
 // ErrForbidden is returned when the API responds with 403 Forbidden.
 var ErrForbidden = errors.New("allegro: forbidden")
 

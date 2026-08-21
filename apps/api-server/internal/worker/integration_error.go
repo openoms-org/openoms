@@ -23,6 +23,7 @@ func isTerminalOAuthCredentialError(provider string, err error) bool {
 	case "allegro":
 		return errors.Is(err, allegrosdk.ErrUnauthorized) ||
 			errors.Is(err, allegrosdk.ErrForbidden) ||
+			errors.Is(err, allegrosdk.ErrReconnectRequired) ||
 			hasTerminalOAuthErrorText(err)
 	case "amazon":
 		var apiErr *amazonsdk.APIError
