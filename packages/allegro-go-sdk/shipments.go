@@ -11,30 +11,109 @@ import (
 )
 
 // ErrWzANoProposalMethod is returned when GET delivery-proposals has no
-// suggestedInput.deliveryMethodId. Allegro will not print that checkout via WzA;
-// guessing a row from GET delivery-services is rejected.
+// suggestedInput.deliveryMethodId and the checkout method is not a usable WzA
+// method. Guessing a row from GET delivery-services is rejected.
 var ErrWzANoProposalMethod = errors.New("wysyłam z Allegro has no delivery method for this checkout")
 
 // ErrWzAMethodMismatch is returned when create-commands deliveryMethodId is not
-// the id Allegro put on suggestedInput.
+// the id Allegro put on suggestedInput or the mapped checkout method.
 var ErrWzAMethodMismatch = errors.New("deliveryMethodId must match delivery-proposals suggestedInput.deliveryMethodId")
 
 // ErrWzANoExistingShipment is returned when GET /order/checkout-forms/{id}/shipments
 // has no resolvable waybill or WzA UUID. Import must fail closed and must not create.
 var ErrWzANoExistingShipment = errors.New("wysyłam z Allegro has no existing shipment for this checkout")
 
-// ValidateWzACreateMethod refuses create-commands unless Allegro proposed the
-// exact deliveryMethodId. An empty proposal must not fall back to the seller catalog.
-func ValidateWzACreateMethod(proposedDeliveryMethodID, requestedDeliveryMethodID string) error {
-	proposed := strings.TrimSpace(proposedDeliveryMethodID)
-	requested := strings.TrimSpace(requestedDeliveryMethodID)
-	if proposed == "" {
+// Official WzA delivery methods published by Allegro (Nov 2025 InPost WzA notice).
+// Checkout delivery.method.id 9081532b is Allegro miniKurier24 InPost.
+const (
+	WzAMiniKurier24InPostID   = "9081532b-5ad3-467d-80bc-9252982e9dd8"
+	WzAMiniKurier24InPostName = "Allegro miniKurier24 InPost"
+)
+
+var officialWzADeliveryMethods = map[string]string{
+	WzAMiniKurier24InPostID: WzAMiniKurier24InPostName,
+}
+
+// WzACreateMethodInput is the create-commands method check.
+// CatalogFallbackID is accepted only so callers can prove it is ignored.
+type WzACreateMethodInput struct {
+	ProposedDeliveryMethodID  string
+	RequestedDeliveryMethodID string
+	CheckoutMethodID          string
+	CheckoutMethodName        string
+	CatalogServiceIDs         []string
+	CatalogFallbackID         string
+}
+
+// OfficialWzADeliveryMethodName returns the official WzA name for a checkout method id.
+func OfficialWzADeliveryMethodName(id string) (string, bool) {
+	name, ok := officialWzADeliveryMethods[strings.TrimSpace(id)]
+	return name, ok
+}
+
+// OfficialWzADeliveryMethodID returns the official WzA id for an exact checkout method name.
+func OfficialWzADeliveryMethodID(name string) (string, bool) {
+	want := strings.TrimSpace(name)
+	if want == "" {
+		return "", false
+	}
+	for id, officialName := range officialWzADeliveryMethods {
+		if officialName == want {
+			return id, true
+		}
+	}
+	return "", false
+}
+
+// ResolveWzACreateMethod names the WzA deliveryMethodId for create-commands.
+// Order: suggestedInput.deliveryMethodId, official checkout id/name, then the
+// checkout id only if GET delivery-services lists that exact id. A different
+// catalog row is never used.
+func ResolveWzACreateMethod(in WzACreateMethodInput) (string, error) {
+	if proposed := strings.TrimSpace(in.ProposedDeliveryMethodID); proposed != "" {
+		return proposed, nil
+	}
+	checkoutID := strings.TrimSpace(in.CheckoutMethodID)
+	if _, ok := OfficialWzADeliveryMethodName(checkoutID); ok {
+		return checkoutID, nil
+	}
+	if id, ok := OfficialWzADeliveryMethodID(in.CheckoutMethodName); ok {
+		return id, nil
+	}
+	if checkoutID != "" {
+		for _, catalogID := range in.CatalogServiceIDs {
+			if strings.TrimSpace(catalogID) == checkoutID {
+				return checkoutID, nil
+			}
+		}
+	}
+	return "", ErrWzANoProposalMethod
+}
+
+// ValidateWzACreateCommand refuses create-commands unless the requested id is
+// the resolved WzA method. Empty proposal plus a catalog substitute still fails.
+func ValidateWzACreateCommand(in WzACreateMethodInput) error {
+	allowed, err := ResolveWzACreateMethod(in)
+	if err != nil {
+		return err
+	}
+	requested := strings.TrimSpace(in.RequestedDeliveryMethodID)
+	if requested == "" {
 		return ErrWzANoProposalMethod
 	}
-	if requested != proposed {
+	if requested != allowed {
 		return ErrWzAMethodMismatch
 	}
 	return nil
+}
+
+// ValidateWzACreateMethod refuses create-commands unless Allegro proposed the
+// exact deliveryMethodId. An empty proposal must not fall back to the seller catalog.
+func ValidateWzACreateMethod(proposedDeliveryMethodID, requestedDeliveryMethodID string) error {
+	return ValidateWzACreateCommand(WzACreateMethodInput{
+		ProposedDeliveryMethodID:  proposedDeliveryMethodID,
+		RequestedDeliveryMethodID: requestedDeliveryMethodID,
+	})
 }
 
 // UnmarshalJSON accepts Allegro's official DeliveryServicesDto.services key
