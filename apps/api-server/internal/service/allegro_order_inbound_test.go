@@ -47,7 +47,7 @@ func sampleMarketplaceCheckoutForm() integration.MarketplaceOrder {
 			},
 		},
 		RawData: map[string]any{
-			"delivery_method_id":   "c3066682-97a3-42fe-9eb5-3beeccab840c",
+			"delivery_method_id":   "9081532b-5ad3-467d-80bc-9252982e9dd8",
 			"delivery_method_name": "Allegro miniKurier24 InPost",
 			"pickup_point_id":      "WAW01A",
 		},
@@ -91,7 +91,7 @@ func TestToOMSOrder_MapsCheckoutFormFields(t *testing.T) {
 	var metadata map[string]any
 	require.NoError(t, json.Unmarshal(order.Metadata, &metadata))
 	assert.Equal(t, "cf-7781994292", metadata["external_id"])
-	assert.Equal(t, "c3066682-97a3-42fe-9eb5-3beeccab840c", metadata["delivery_method_id"])
+	assert.Equal(t, "9081532b-5ad3-467d-80bc-9252982e9dd8", metadata["delivery_method_id"])
 	assert.Equal(t, "Allegro miniKurier24 InPost", metadata["delivery_method_name"])
 }
 

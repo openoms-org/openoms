@@ -98,6 +98,8 @@ func TestIsTerminalOAuthCredentialError(t *testing.T) {
 
 	assert.True(t, isTerminalOAuthCredentialError("allegro", allegrosdk.ErrUnauthorized))
 	assert.True(t, isTerminalOAuthCredentialError("allegro", allegrosdk.ErrForbidden))
+	assert.True(t, isTerminalOAuthCredentialError("allegro",
+		fmt.Errorf("allegro: proactive token refresh failed: %w", allegrosdk.ErrReconnectRequired)))
 	assert.True(t, isTerminalOAuthCredentialError("amazon",
 		errors.New(`amazon: token request failed (HTTP 400): {"error":"invalid_grant"}`)))
 	assert.True(t, isTerminalOAuthCredentialError("amazon",

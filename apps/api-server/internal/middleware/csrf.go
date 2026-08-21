@@ -15,9 +15,12 @@ import (
 func CSRF(secure bool, cookieDomain string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Exempt paths
+			// Exempt paths, and Bearer credentials (JWT or API token). CSRF
+			// protects cookie sessions; a custom Authorization header is not
+			// sent by browser form posts, so cookie-less Bearer clients
+			// (curl / scripts) must not be blocked.
 			path := r.URL.Path
-			if isCSRFExempt(path) {
+			if isCSRFExempt(path) || hasBearerAuthorization(r) {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -45,6 +48,14 @@ func CSRF(secure bool, cookieDomain string) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+func hasBearerAuthorization(r *http.Request) bool {
+	auth := r.Header.Get("Authorization")
+	if !strings.HasPrefix(auth, "Bearer ") {
+		return false
+	}
+	return strings.TrimSpace(strings.TrimPrefix(auth, "Bearer ")) != ""
 }
 
 func isCSRFExempt(path string) bool {

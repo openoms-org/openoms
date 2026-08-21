@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -226,7 +227,13 @@ func (s *AllegroSyncService) buildProvider(ctx context.Context, tenantID uuid.UU
 	if err != nil {
 		return nil, err
 	}
-	provider, err := allegroIntegration.NewProvider(json.RawMessage(credJSON), nil)
+	provider, err := allegroIntegration.NewProvider(json.RawMessage(credJSON), nil, allegroIntegration.WithTokenRefreshPersist(
+		allegroIntegration.PersistFn(credJSON, func(newJSON []byte) error {
+			persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+			defer cancel()
+			return s.integrationService.UpdateCredentialsByProvider(persistCtx, tenantID, "allegro", newJSON)
+		}),
+	))
 	if err != nil {
 		return nil, err
 	}

@@ -114,6 +114,20 @@ func TestBillingSyncTenantPlanMigrationTargetsSubscriptionStatus(t *testing.T) {
 	require.NotContains(t, down, "jsonb_set(")
 }
 
+func TestAPITokenMigrationGrantsAuthFunction(t *testing.T) {
+	up := normalizedSQL(readMigrationSQL(t, "000050_api_tokens.up.sql"))
+
+	require.Contains(t, up, "create table public.api_tokens")
+	require.Contains(t, up, "token_hash")
+	require.Contains(t, up, "force row level security")
+	require.Contains(t, up, "current_setting('app.current_tenant_id'::text, true)")
+	require.Contains(t, up, "create function public.find_api_token_for_auth(p_token_hash text)")
+	require.Contains(t, up, "security definer")
+	require.Contains(t, up, "revoke execute on function public.find_api_token_for_auth(text) from public")
+	require.Contains(t, up, "grant execute on function public.find_api_token_for_auth(text) to openoms_app")
+	require.Contains(t, up, "grant execute on function public.find_api_token_for_auth(text) to openoms")
+}
+
 func TestGetTenantPlanMigrationRedactsSettings(t *testing.T) {
 	up := normalizedSQL(readMigrationSQL(t, "000029_redact_get_tenant_plan_settings.up.sql"))
 	down := normalizedSQL(readMigrationSQL(t, "000029_redact_get_tenant_plan_settings.down.sql"))
@@ -204,7 +218,8 @@ func readMigrationSQL(t *testing.T, file string) string {
 		"000030_billing_sync_tenant_plan_targeted_key.down.sql",
 		"000024_fix_late_rls_missing_ok.up.sql",
 		"000026_billing_checkout_session_refs.up.sql",
-		"000028_self_hosted_app_role_grants.up.sql":
+		"000028_self_hosted_app_role_grants.up.sql",
+		"000050_api_tokens.up.sql":
 	default:
 		t.Fatalf("unexpected migration file %q", file)
 	}

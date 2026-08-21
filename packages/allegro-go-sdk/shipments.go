@@ -11,30 +11,109 @@ import (
 )
 
 // ErrWzANoProposalMethod is returned when GET delivery-proposals has no
-// suggestedInput.deliveryMethodId. Allegro will not print that checkout via WzA;
-// guessing a row from GET delivery-services is rejected.
+// suggestedInput.deliveryMethodId and the checkout method is not a usable WzA
+// method. Guessing a row from GET delivery-services is rejected.
 var ErrWzANoProposalMethod = errors.New("wysyłam z Allegro has no delivery method for this checkout")
 
 // ErrWzAMethodMismatch is returned when create-commands deliveryMethodId is not
-// the id Allegro put on suggestedInput.
+// the id Allegro put on suggestedInput or the mapped checkout method.
 var ErrWzAMethodMismatch = errors.New("deliveryMethodId must match delivery-proposals suggestedInput.deliveryMethodId")
 
 // ErrWzANoExistingShipment is returned when GET /order/checkout-forms/{id}/shipments
 // has no resolvable waybill or WzA UUID. Import must fail closed and must not create.
 var ErrWzANoExistingShipment = errors.New("wysyłam z Allegro has no existing shipment for this checkout")
 
-// ValidateWzACreateMethod refuses create-commands unless Allegro proposed the
-// exact deliveryMethodId. An empty proposal must not fall back to the seller catalog.
-func ValidateWzACreateMethod(proposedDeliveryMethodID, requestedDeliveryMethodID string) error {
-	proposed := strings.TrimSpace(proposedDeliveryMethodID)
-	requested := strings.TrimSpace(requestedDeliveryMethodID)
-	if proposed == "" {
+// Official WzA delivery methods published by Allegro (Nov 2025 InPost WzA notice).
+// Checkout delivery.method.id 9081532b is Allegro miniKurier24 InPost.
+const (
+	WzAMiniKurier24InPostID   = "9081532b-5ad3-467d-80bc-9252982e9dd8"
+	WzAMiniKurier24InPostName = "Allegro miniKurier24 InPost"
+)
+
+var officialWzADeliveryMethods = map[string]string{
+	WzAMiniKurier24InPostID: WzAMiniKurier24InPostName,
+}
+
+// WzACreateMethodInput is the create-commands method check.
+// CatalogFallbackID is accepted only so callers can prove it is ignored.
+type WzACreateMethodInput struct {
+	ProposedDeliveryMethodID  string
+	RequestedDeliveryMethodID string
+	CheckoutMethodID          string
+	CheckoutMethodName        string
+	CatalogServiceIDs         []string
+	CatalogFallbackID         string
+}
+
+// OfficialWzADeliveryMethodName returns the official WzA name for a checkout method id.
+func OfficialWzADeliveryMethodName(id string) (string, bool) {
+	name, ok := officialWzADeliveryMethods[strings.TrimSpace(id)]
+	return name, ok
+}
+
+// OfficialWzADeliveryMethodID returns the official WzA id for an exact checkout method name.
+func OfficialWzADeliveryMethodID(name string) (string, bool) {
+	want := strings.TrimSpace(name)
+	if want == "" {
+		return "", false
+	}
+	for id, officialName := range officialWzADeliveryMethods {
+		if officialName == want {
+			return id, true
+		}
+	}
+	return "", false
+}
+
+// ResolveWzACreateMethod names the WzA deliveryMethodId for create-commands.
+// Order: suggestedInput.deliveryMethodId, official checkout id/name, then the
+// checkout id only if GET delivery-services lists that exact id. A different
+// catalog row is never used.
+func ResolveWzACreateMethod(in WzACreateMethodInput) (string, error) {
+	if proposed := strings.TrimSpace(in.ProposedDeliveryMethodID); proposed != "" {
+		return proposed, nil
+	}
+	checkoutID := strings.TrimSpace(in.CheckoutMethodID)
+	if _, ok := OfficialWzADeliveryMethodName(checkoutID); ok {
+		return checkoutID, nil
+	}
+	if id, ok := OfficialWzADeliveryMethodID(in.CheckoutMethodName); ok {
+		return id, nil
+	}
+	if checkoutID != "" {
+		for _, catalogID := range in.CatalogServiceIDs {
+			if strings.TrimSpace(catalogID) == checkoutID {
+				return checkoutID, nil
+			}
+		}
+	}
+	return "", ErrWzANoProposalMethod
+}
+
+// ValidateWzACreateCommand refuses create-commands unless the requested id is
+// the resolved WzA method. Empty proposal plus a catalog substitute still fails.
+func ValidateWzACreateCommand(in WzACreateMethodInput) error {
+	allowed, err := ResolveWzACreateMethod(in)
+	if err != nil {
+		return err
+	}
+	requested := strings.TrimSpace(in.RequestedDeliveryMethodID)
+	if requested == "" {
 		return ErrWzANoProposalMethod
 	}
-	if requested != proposed {
+	if requested != allowed {
 		return ErrWzAMethodMismatch
 	}
 	return nil
+}
+
+// ValidateWzACreateMethod refuses create-commands unless Allegro proposed the
+// exact deliveryMethodId. An empty proposal must not fall back to the seller catalog.
+func ValidateWzACreateMethod(proposedDeliveryMethodID, requestedDeliveryMethodID string) error {
+	return ValidateWzACreateCommand(WzACreateMethodInput{
+		ProposedDeliveryMethodID:  proposedDeliveryMethodID,
+		RequestedDeliveryMethodID: requestedDeliveryMethodID,
+	})
 }
 
 // UnmarshalJSON accepts Allegro's official DeliveryServicesDto.services key
@@ -177,9 +256,12 @@ func (d *Dimension) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-const (
-	createCommandPollAttempts = 20
-	createCommandPollInterval = 200 * time.Millisecond
+// Production poll budget for GET create-commands/{commandId}.
+// Allegro sandbox door/InPost can stay IN_PROGRESS well past the old
+// 20×200ms (~4s) window; 60s stays under typical proxy idle limits.
+var (
+	createCommandPollTimeout  = 60 * time.Second
+	createCommandPollInterval = 500 * time.Millisecond
 )
 
 // ListDeliveryServices retrieves available delivery services for shipment management.
@@ -222,19 +304,13 @@ func (s *ShipmentManagementService) CreateShipment(ctx context.Context, cmd Crea
 
 func (s *ShipmentManagementService) waitForCreateCommand(ctx context.Context, commandID string) (*CreateShipmentResponse, error) {
 	path := fmt.Sprintf("/shipment-management/shipments/create-commands/%s", commandID)
+	deadline := time.Now().Add(createCommandPollTimeout)
 	var last ShipmentCommandStatus
-	for attempt := range createCommandPollAttempts {
-		if attempt > 0 {
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			case <-time.After(createCommandPollInterval):
-			}
-		}
+	for {
 		if err := s.client.do(ctx, "GET", path, nil, &last); err != nil {
 			return nil, err
 		}
-		switch strings.ToUpper(last.Status) {
+		switch strings.ToUpper(strings.TrimSpace(last.Status)) {
 		case "SUCCESS":
 			return &CreateShipmentResponse{
 				CommandID:  last.CommandID,
@@ -242,15 +318,7 @@ func (s *ShipmentManagementService) waitForCreateCommand(ctx context.Context, co
 				Status:     last.Status,
 			}, nil
 		case "ERROR", "ERROR_LIMIT_EXCEEDED", "CANCELED", "CANCELLED":
-			msg := last.Status
-			if len(last.Errors) > 0 {
-				if last.Errors[0].UserMessage != "" {
-					msg = last.Errors[0].UserMessage
-				} else if last.Errors[0].Message != "" {
-					msg = last.Errors[0].Message
-				}
-			}
-			return nil, fmt.Errorf("allegro: create-commands %s: %s", last.Status, msg)
+			return nil, createCommandStatusError(commandID, last)
 		}
 		if last.ShipmentID != "" {
 			return &CreateShipmentResponse{
@@ -259,8 +327,45 @@ func (s *ShipmentManagementService) waitForCreateCommand(ctx context.Context, co
 				Status:     last.Status,
 			}, nil
 		}
+		wait := createCommandPollInterval
+		if remaining := time.Until(deadline); remaining <= 0 {
+			return nil, createCommandTimeoutError(commandID, last.Status)
+		} else if wait > remaining {
+			wait = remaining
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(wait):
+		}
 	}
-	return nil, fmt.Errorf("allegro: create-commands %s timed out waiting for shipmentId", commandID)
+}
+
+func createCommandStatusError(commandID string, last ShipmentCommandStatus) error {
+	detail := last.Status
+	if len(last.Errors) > 0 {
+		e := last.Errors[0]
+		msg := e.UserMessage
+		if msg == "" {
+			msg = e.Message
+		}
+		switch {
+		case e.Code != "" && msg != "":
+			detail = e.Code + ": " + msg
+		case e.Code != "":
+			detail = e.Code
+		case msg != "":
+			detail = msg
+		}
+	}
+	return fmt.Errorf("allegro: create-commands %s %s: %s", commandID, last.Status, detail)
+}
+
+func createCommandTimeoutError(commandID, status string) error {
+	if strings.TrimSpace(status) == "" {
+		status = "unknown"
+	}
+	return fmt.Errorf("allegro: create-commands %s timed out waiting for shipmentId (last status %s)", commandID, status)
 }
 
 // GetShipment retrieves a managed shipment by ID.
