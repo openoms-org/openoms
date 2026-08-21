@@ -306,6 +306,14 @@ func run() error {
 	authService := service.NewAuthService(userRepo, tenantRepo, auditRepo, tokenSvc, passwordSvc, pool, encryptionKey)
 	authService.SetRoleRepo(roleRepo)
 
+	apiTokenRepo := repository.NewAPITokenRepository(pool)
+	apiTokenService := service.NewAPITokenService(
+		apiTokenRepo,
+		repository.TenantUserLookup{Pool: pool, Users: userRepo},
+		repository.TenantRoleLookup{Pool: pool, Roles: roleRepo},
+	)
+	apiTokenHandler := handler.NewAPITokenHandler(apiTokenService)
+
 	// Login lockout (per-account brute-force protection)
 	if redisClient != nil {
 		lockoutStore := service.NewRedisLoginLockoutStore(redisClient)
@@ -1122,6 +1130,8 @@ func run() error {
 		Fulfillment:                fulfillmentHandler,
 		Operations:                 operationsHandler,
 		ExternalWorkflowCallback:   externalWorkflowCallbackHandler,
+		APIToken:                   apiTokenHandler,
+		APITokenAuth:               apiTokenService,
 	})
 
 	// Start background workers (use workerPool for cross-tenant queries).

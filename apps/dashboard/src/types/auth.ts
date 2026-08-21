@@ -45,6 +45,17 @@ export interface TwoFAStatusResponse {
   verified_at?: string;
 }
 
+export interface APIToken {
+  id: string;
+  name: string;
+  created_at: string;
+  last_used_at?: string | null;
+}
+
+export interface CreatedAPIToken extends APIToken {
+  token: string;
+}
+
 export interface CreateUserRequest {
   email: string;
   name: string;
