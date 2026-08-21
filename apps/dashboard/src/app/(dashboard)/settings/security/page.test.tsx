@@ -12,6 +12,9 @@ const apiClientMock = vi.fn(async (url: string, _init?: unknown) => {
   if (url === "/v1/auth/2fa/status") {
     return { enabled: false };
   }
+  if (url === "/v1/api-tokens") {
+    return [];
+  }
   return {};
 });
 
@@ -113,5 +116,22 @@ describe("SecuritySettingsPage password change", () => {
         onError: expect.any(Function),
       }),
     );
+  });
+
+  it("shows API token create controls for an owner", async () => {
+    renderSecurityPage();
+    expect(await screen.findByText("apiTokensTitle")).toBeInTheDocument();
+    expect(screen.getByLabelText("apiTokensName")).toBeInTheDocument();
+  });
+
+  it("hides API token controls for a non-owner", async () => {
+    useAuthStore.getState().setAuth(
+      "token",
+      { ...user, role: "admin" },
+      tenant,
+    );
+    renderSecurityPage();
+    await screen.findByText("passwordTitle");
+    expect(screen.queryByText("apiTokensTitle")).not.toBeInTheDocument();
   });
 });

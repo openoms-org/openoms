@@ -126,6 +126,8 @@ type RouterDeps struct { //nolint:revive
 	Fulfillment                *handler.FulfillmentHandler
 	Operations                 *handler.OperationsHandler
 	ExternalWorkflowCallback   *handler.ExternalWorkflowCallbackHandler
+	APIToken                   *handler.APITokenHandler
+	APITokenAuth               middleware.APITokenAuthenticator
 }
 
 // New constructs the chi router with all routes registered.
@@ -379,9 +381,9 @@ func New(deps RouterDeps) *chi.Mux {
 		})
 	}
 
-	// Authenticated routes — JWT required
+	// Authenticated routes — JWT or hashed owner API token
 	r.Route("/v1", func(r chi.Router) {
-		r.Use(middleware.JWTAuth(deps.TokenSvc, deps.TokenBlacklist))
+		r.Use(v1BearerAuth(deps))
 		if sentry.CurrentHub().Client() != nil {
 			r.Use(middleware.SentryContext)
 		}
@@ -489,6 +491,15 @@ func New(deps RouterDeps) *chi.Mux {
 				r.Get("/", deps.SyncJob.List)
 				r.Get("/{id}", deps.SyncJob.Get)
 			})
+
+			// Owner API tokens — create/list/revoke. Owner check is in the handler.
+			if deps.APIToken != nil {
+				r.Route("/api-tokens", func(r chi.Router) {
+					r.Get("/", deps.APIToken.List)
+					r.Post("/", deps.APIToken.Create)
+					r.Delete("/{id}", deps.APIToken.Revoke)
+				})
+			}
 
 			// Any authenticated user
 			r.Get("/users/me", deps.User.Me)
@@ -1356,4 +1367,11 @@ func registerDocsRoutes(r chi.Router, docs *handler.DocsHandler, cfg *config.Con
 	}
 	r.Get("/v1/openapi.yaml", docs.ServeSpec)
 	r.Get("/v1/docs", docs.ServeSwaggerUI)
+}
+
+func v1BearerAuth(deps RouterDeps) func(http.Handler) http.Handler {
+	if deps.APITokenAuth != nil {
+		return middleware.JWTAuthWithAPITokens(deps.TokenSvc, deps.APITokenAuth, deps.TokenBlacklist)
+	}
+	return middleware.JWTAuth(deps.TokenSvc, deps.TokenBlacklist)
 }
