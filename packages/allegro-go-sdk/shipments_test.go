@@ -241,6 +241,71 @@ func TestDeliveryProposals_EmptyMethodStaysEmpty(t *testing.T) {
 	}
 }
 
+func TestOfficialWzADeliveryMethod_MapsMiniKurier24InPost(t *testing.T) {
+	const id = "9081532b-5ad3-467d-80bc-9252982e9dd8"
+	name, ok := OfficialWzADeliveryMethodName(id)
+	if !ok {
+		t.Fatal("expected official WzA mapping for Allegro miniKurier24 InPost")
+	}
+	if name != "Allegro miniKurier24 InPost" {
+		t.Errorf("name = %q, want Allegro miniKurier24 InPost", name)
+	}
+	gotID, ok := OfficialWzADeliveryMethodID("Allegro miniKurier24 InPost")
+	if !ok {
+		t.Fatal("expected official WzA id from checkout method name")
+	}
+	if gotID != id {
+		t.Errorf("id = %q, want %s", gotID, id)
+	}
+	if _, mapped := OfficialWzADeliveryMethodID("Kurier One WEDO"); mapped {
+		t.Fatal("must not map a catalog substitute name")
+	}
+	if _, mapped := OfficialWzADeliveryMethodName("c3066682-97a3-42fe-9eb5-3beeccab840c"); mapped {
+		t.Fatal("docs sample DPD id is not miniKurier24 InPost")
+	}
+}
+
+func TestResolveWzACreateMethod_NamesOfficialMiniKurier24WhenProposalsEmpty(t *testing.T) {
+	const miniKurier = "9081532b-5ad3-467d-80bc-9252982e9dd8"
+	id, err := ResolveWzACreateMethod(WzACreateMethodInput{
+		CheckoutMethodID:   miniKurier,
+		CheckoutMethodName: "Allegro miniKurier24 InPost",
+	})
+	if err != nil {
+		t.Fatalf("resolve official checkout method: %v", err)
+	}
+	if id != miniKurier {
+		t.Errorf("id = %q, want official miniKurier24 InPost", id)
+	}
+
+	id, err = ResolveWzACreateMethod(WzACreateMethodInput{
+		CheckoutMethodName: "Allegro miniKurier24 InPost",
+	})
+	if err != nil {
+		t.Fatalf("resolve by official name: %v", err)
+	}
+	if id != miniKurier {
+		t.Errorf("id = %q, want official miniKurier24 InPost from name", id)
+	}
+}
+
+func TestResolveWzACreateMethod_UsesCatalogRowOnlyWhenItIsTheCheckoutMethod(t *testing.T) {
+	const miniKurier = "9081532b-5ad3-467d-80bc-9252982e9dd8"
+	id, err := ResolveWzACreateMethod(WzACreateMethodInput{
+		CheckoutMethodID: miniKurier,
+		CatalogServiceIDs: []string{
+			"allegro-kurier-one-wedo",
+			miniKurier,
+		},
+	})
+	if err != nil {
+		t.Fatalf("checkout id on delivery-services: %v", err)
+	}
+	if id != miniKurier {
+		t.Errorf("id = %q, want checkout method listed by delivery-services", id)
+	}
+}
+
 func TestValidateWzACreateMethod_EmptyProposalRefusesCatalogFallback(t *testing.T) {
 	const kurierOneWEDO = "allegro-kurier-one-wedo"
 	err := ValidateWzACreateMethod("", kurierOneWEDO)
@@ -249,6 +314,34 @@ func TestValidateWzACreateMethod_EmptyProposalRefusesCatalogFallback(t *testing.
 	}
 	if err != ErrWzANoProposalMethod {
 		t.Errorf("err = %v, want ErrWzANoProposalMethod", err)
+	}
+
+	err = ValidateWzACreateCommand(WzACreateMethodInput{
+		RequestedDeliveryMethodID: kurierOneWEDO,
+		CheckoutMethodID:          "9081532b-5ad3-467d-80bc-9252982e9dd8",
+		CheckoutMethodName:        "Allegro miniKurier24 InPost",
+		CatalogFallbackID:         kurierOneWEDO,
+	})
+	if err != ErrWzAMethodMismatch {
+		t.Errorf("catalog substitute err = %v, want ErrWzAMethodMismatch", err)
+	}
+}
+
+func TestValidateWzACreateCommand_AcceptsOfficialMiniKurier24WhenProposalsEmpty(t *testing.T) {
+	const miniKurier = "9081532b-5ad3-467d-80bc-9252982e9dd8"
+	err := ValidateWzACreateCommand(WzACreateMethodInput{
+		RequestedDeliveryMethodID: miniKurier,
+		CheckoutMethodID:          miniKurier,
+		CheckoutMethodName:        "Allegro miniKurier24 InPost",
+	})
+	if err != nil {
+		t.Fatalf("official miniKurier24 create: %v", err)
+	}
+	err = ValidateWzACreateCommand(WzACreateMethodInput{
+		RequestedDeliveryMethodID: miniKurier,
+	})
+	if err != ErrWzANoProposalMethod {
+		t.Errorf("no checkout and no proposal err = %v, want ErrWzANoProposalMethod", err)
 	}
 }
 

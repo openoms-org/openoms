@@ -386,6 +386,12 @@ func TestGetDeliveryProposals_EmptyMethodRefusesCatalogFallback(t *testing.T) {
 	require.NotNil(t, proposals)
 	assert.Empty(t, proposals.SuggestedInput.DeliveryMethodID)
 	assert.ErrorIs(t, allegrosdk.ValidateWzACreateMethod(proposals.SuggestedInput.DeliveryMethodID, "kurier-one-wedo"), allegrosdk.ErrWzANoProposalMethod)
+	assert.NoError(t, allegrosdk.ValidateWzACreateCommand(allegrosdk.WzACreateMethodInput{
+		ProposedDeliveryMethodID:  proposals.SuggestedInput.DeliveryMethodID,
+		RequestedDeliveryMethodID: "9081532b-5ad3-467d-80bc-9252982e9dd8",
+		CheckoutMethodID:          "9081532b-5ad3-467d-80bc-9252982e9dd8",
+		CheckoutMethodName:        "Allegro miniKurier24 InPost",
+	}))
 }
 
 func TestFindExistingWzA_ReadsCheckoutShipmentsAndNeverCreates(t *testing.T) {
