@@ -138,7 +138,7 @@ func (p *MarketplaceOrderPoller) Run(ctx context.Context) error {
 			continue
 		}
 		if p.providerName == "allegro" {
-			attachAllegroTokenPersist(provider, ctx, p.pool, p.encryptionKey, ti.IntegrationID, credJSON)
+			attachAllegroTokenPersist(ctx, provider, p.pool, p.encryptionKey, ti.IntegrationID, credJSON)
 		}
 		cursor := ""
 		if ti.SyncCursor != nil {

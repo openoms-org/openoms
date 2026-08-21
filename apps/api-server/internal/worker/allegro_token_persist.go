@@ -12,7 +12,7 @@ import (
 	allegroint "github.com/openoms-org/openoms/apps/api-server/internal/integration/allegro"
 )
 
-func attachAllegroTokenPersist(provider any, ctx context.Context, pool *pgxpool.Pool, encryptionKey []byte, integrationID uuid.UUID, existing []byte) {
+func attachAllegroTokenPersist(ctx context.Context, provider any, pool *pgxpool.Pool, encryptionKey []byte, integrationID uuid.UUID, existing []byte) {
 	if pool == nil || len(encryptionKey) == 0 || len(existing) == 0 {
 		return
 	}
