@@ -26,7 +26,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import QRCode from "qrcode";
-import type { TwoFASetupResponse, TwoFAStatusResponse } from "@/types/api";
+import type {
+  APIToken,
+  CreatedAPIToken,
+  TwoFASetupResponse,
+  TwoFAStatusResponse,
+} from "@/types/api";
 import { useTranslations } from "next-intl";
 import { LanguageSelector } from "@/components/language-selector";
 import { useChangePassword } from "@/hooks/use-users";
@@ -66,6 +71,7 @@ export default function SecuritySettingsPage() {
   const tc = useTranslations("common");
   const queryClient = useQueryClient();
   const username = useAuthStore((state) => state.user?.email ?? "");
+  const isOwner = useAuthStore((state) => state.user?.role === "owner");
   const [showSetupDialog, setShowSetupDialog] = useState(false);
   const [showDisableDialog, setShowDisableDialog] = useState(false);
   const [setupData, setSetupData] = useState<TwoFASetupResponse | null>(null);
@@ -359,6 +365,8 @@ export default function SecuritySettingsPage() {
         </CardContent>
       </Card>
 
+      {isOwner ? <APITokensCard /> : null}
+
       {/* Language */}
       <Card>
         <CardHeader>
@@ -536,5 +544,148 @@ export default function SecuritySettingsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function APITokensCard() {
+  const ts = useTranslations("settings.security");
+  const queryClient = useQueryClient();
+  const [name, setName] = useState("");
+  const [createdToken, setCreatedToken] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const { data: tokens, isLoading } = useQuery({
+    queryKey: ["api-tokens"],
+    queryFn: () => apiClient<APIToken[]>("/v1/api-tokens"),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (tokenName: string) =>
+      apiClient<CreatedAPIToken>("/v1/api-tokens", {
+        method: "POST",
+        body: JSON.stringify({ name: tokenName }),
+      }),
+    onSuccess: (data) => {
+      setCreatedToken(data.token);
+      setName("");
+      toast.success(ts("apiTokensCreatedToast"));
+      queryClient.invalidateQueries({ queryKey: ["api-tokens"] });
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error));
+    },
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: (id: string) =>
+      apiClient(`/v1/api-tokens/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      toast.success(ts("apiTokensRevoked"));
+      queryClient.invalidateQueries({ queryKey: ["api-tokens"] });
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error));
+    },
+  });
+
+  const copyCreated = async () => {
+    if (!createdToken) return;
+    await navigator.clipboard.writeText(createdToken);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <KeyRound className="h-5 w-5" />
+          {ts("apiTokensTitle")}
+        </CardTitle>
+        <CardDescription>{ts("apiTokensDescription")}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <form
+          className="flex flex-col gap-3 sm:flex-row sm:items-end"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (name.trim()) {
+              createMutation.mutate(name.trim());
+            }
+          }}
+        >
+          <div className="space-y-2 flex-1">
+            <Label htmlFor="api-token-name">{ts("apiTokensName")}</Label>
+            <Input
+              id="api-token-name"
+              value={name}
+              placeholder={ts("apiTokensNamePlaceholder")}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <Button type="submit" disabled={!name.trim() || createMutation.isPending}>
+            {createMutation.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
+            {ts("apiTokensCreate")}
+          </Button>
+        </form>
+
+        {createdToken ? (
+          <div className="space-y-2 rounded-lg border bg-muted/50 p-4">
+            <p className="text-sm font-medium">{ts("apiTokensCreatedOnce")}</p>
+            <div className="flex gap-2">
+              <Input readOnly value={createdToken} className="font-mono text-sm" />
+              <Button type="button" variant="outline" size="icon" onClick={copyCreated}>
+                {copied ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {isLoading ? (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : !tokens || tokens.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{ts("apiTokensEmpty")}</p>
+        ) : (
+          <div className="space-y-2">
+            {tokens.map((token) => (
+              <div
+                key={token.id}
+                className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">{token.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {ts("apiTokensCreated")}{" "}
+                    {new Date(token.created_at).toLocaleString()}
+                    {" · "}
+                    {ts("apiTokensLastUsed")}{" "}
+                    {token.last_used_at
+                      ? new Date(token.last_used_at).toLocaleString()
+                      : ts("apiTokensNeverUsed")}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  disabled={revokeMutation.isPending}
+                  onClick={() => revokeMutation.mutate(token.id)}
+                >
+                  {ts("apiTokensRevoke")}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

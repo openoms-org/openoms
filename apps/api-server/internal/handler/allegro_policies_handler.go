@@ -418,6 +418,10 @@ func allegroErrorMessage(fallback string, err error) string {
 // intercepts 502 responses and replaces them with its own error page,
 // stripping CORS headers and breaking cross-origin browser requests.
 func writeAllegroError(w http.ResponseWriter, fallback string, err error) {
+	if errors.Is(err, allegrosdk.ErrReconnectRequired) {
+		writeError(w, http.StatusUnprocessableEntity, "Allegro authorization expired. Reconnect Allegro in OMS settings.")
+		return
+	}
 	var apiErr *allegrosdk.APIError
 	if errors.As(err, &apiErr) {
 		status := http.StatusUnprocessableEntity // 422 — not intercepted by Cloudflare

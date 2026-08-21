@@ -153,14 +153,37 @@ func (h *AllegroShipmentHandler) CreateShipment(w http.ResponseWriter, r *http.R
 	}
 	defer provider.Close()
 
-	if checkoutFormID := h.resolveCheckoutFormID(r.Context(), tenantID, req.OrderID); checkoutFormID != "" {
+	omsOrder := h.loadOMSOrder(r.Context(), tenantID, req.OrderID)
+	checkoutFormID := ""
+	if omsOrder != nil && omsOrder.ExternalID != nil {
+		checkoutFormID = strings.TrimSpace(*omsOrder.ExternalID)
+	}
+	if checkoutFormID == "" {
+		checkoutFormID = h.resolveCheckoutFormID(r.Context(), tenantID, req.OrderID)
+	}
+	if checkoutFormID != "" {
 		proposals, propErr := provider.GetDeliveryProposals(r.Context(), checkoutFormID)
 		if propErr != nil {
 			slog.Error("allegro shipment: failed to get delivery proposals before create", "error", propErr)
 			writeAllegroError(w, "Failed to fetch delivery proposals from Allegro", propErr)
 			return
 		}
-		if valErr := allegrosdk.ValidateWzACreateMethod(proposals.SuggestedInput.DeliveryMethodID, req.Input.DeliveryMethodID); valErr != nil {
+		checkoutID, checkoutName := checkoutWzAMethodFromOrder(omsOrder)
+		var catalogIDs []string
+		if services, listErr := provider.ListDeliveryServices(r.Context()); listErr != nil {
+			slog.Warn("allegro shipment: delivery-services unavailable for WzA method check", "error", listErr)
+		} else {
+			for _, svc := range services {
+				catalogIDs = append(catalogIDs, svc.ID)
+			}
+		}
+		if valErr := allegrosdk.ValidateWzACreateCommand(allegrosdk.WzACreateMethodInput{
+			ProposedDeliveryMethodID:  proposals.SuggestedInput.DeliveryMethodID,
+			RequestedDeliveryMethodID: req.Input.DeliveryMethodID,
+			CheckoutMethodID:          checkoutID,
+			CheckoutMethodName:        checkoutName,
+			CatalogServiceIDs:         catalogIDs,
+		}); valErr != nil {
 			writeError(w, http.StatusConflict, valErr.Error())
 			return
 		}
@@ -211,6 +234,50 @@ func (h *AllegroShipmentHandler) resolveCheckoutFormID(ctx context.Context, tena
 		}
 	}
 	return id
+}
+
+func (h *AllegroShipmentHandler) loadOMSOrder(ctx context.Context, tenantID uuid.UUID, orderIDStr *string) *model.Order {
+	if orderIDStr == nil || h.pool == nil || h.orderRepo == nil {
+		return nil
+	}
+	id := strings.TrimSpace(*orderIDStr)
+	parsed, err := uuid.Parse(id)
+	if err != nil {
+		return nil
+	}
+	var found *model.Order
+	_ = database.WithTenant(ctx, h.pool, tenantID, func(tx pgx.Tx) error {
+		order, findErr := h.orderRepo.FindByID(ctx, tx, parsed)
+		if findErr != nil {
+			return findErr
+		}
+		found = order
+		return nil
+	})
+	return found
+}
+
+func checkoutWzAMethodFromOrder(order *model.Order) (id, name string) {
+	if order == nil {
+		return "", ""
+	}
+	if order.DeliveryMethod != nil {
+		name = strings.TrimSpace(*order.DeliveryMethod)
+	}
+	if len(order.Metadata) == 0 {
+		return "", name
+	}
+	var metadata map[string]any
+	if err := json.Unmarshal(order.Metadata, &metadata); err != nil {
+		return "", name
+	}
+	if v, ok := metadata["delivery_method_id"].(string); ok {
+		id = strings.TrimSpace(v)
+	}
+	if v, ok := metadata["delivery_method_name"].(string); ok && strings.TrimSpace(v) != "" {
+		name = strings.TrimSpace(v)
+	}
+	return id, name
 }
 
 // linkAllegroShipment creates an OpenOMS shipment record linked to the Allegro-managed shipment.
