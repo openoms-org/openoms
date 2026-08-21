@@ -27,6 +27,8 @@ tags:
     description: Authentication and registration
   - name: Users
     description: User management
+  - name: API tokens
+    description: Long-lived API tokens managed by the organization owner
   - name: Orders
     description: Order CRUD and status management
   - name: Shipments
@@ -74,7 +76,14 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT access token obtained from /v1/auth/login or /v1/auth/register
+      description: |
+        A /v1 request authenticates with either a JWT access token from
+        /v1/auth/login or /v1/auth/register, or a long-lived owner API token
+        from POST /v1/api-tokens, prefixed oms_. The JWT is tried first and
+        the API token second. CSRF is skipped whenever an
+        "Authorization: Bearer" credential is present. API tokens are
+        rejected on /uploads, /v1/auth/2fa/*, /v1/auth/ws-ticket, and
+        /v1/platform/*.
 
   schemas:
     Error:
@@ -2495,6 +2504,114 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  # ===== API tokens (owner only) =====
+  /v1/api-tokens:
+    get:
+      tags: [API tokens]
+      summary: List the caller's API tokens (owner only)
+      operationId: listAPITokens
+      responses:
+        '200':
+          description: API tokens created by the caller; the raw token value is omitted
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    created_at:
+                      type: string
+                      format: date-time
+                    last_used_at:
+                      type: string
+                      format: date-time
+        '403':
+          description: Caller is not an organization owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      tags: [API tokens]
+      summary: Create an API token (owner only)
+      operationId: createAPIToken
+      description: |
+        The `token` field of the 201 response holds the raw token value. The
+        value is shown once and cannot be retrieved later. The token has no
+        expiry and stays valid until revoked. It authenticates as the creating
+        owner, so route permission checks still apply.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  maxLength: 200
+      responses:
+        '201':
+          description: API token created; the raw secret appears only in this response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+                  last_used_at:
+                    type: string
+                    format: date-time
+                  token:
+                    type: string
+        '400':
+          description: Name is missing or longer than 200 characters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Caller is not an organization owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/api-tokens/{id}:
+    delete:
+      tags: [API tokens]
+      summary: Revoke an API token (owner only)
+      operationId: revokeAPIToken
+      parameters:
+        - $ref: '#/components/parameters/idParam'
+      responses:
+        '204':
+          description: Token revoked; revocation applies to the next request
+        '403':
+          description: Caller is not an organization owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Token not found or already revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   # ===== Lookup endpoints (any auth) =====
   /v1/order-statuses:
     get:
@@ -3895,6 +4012,139 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Integration'
+
+  # ===== Allegro shipment management ("Wysyłam z Allegro") =====
+  /v1/integrations/allegro/delivery-proposals/{orderId}:
+    get:
+      tags: [Integrations]
+      summary: Get Allegro delivery proposals for an order (admin only)
+      operationId: getAllegroDeliveryProposals
+      description: |
+        Returns Allegro's official prefilled create-commands body for the
+        order's checkout form. When the response carries a
+        `suggestedInput.deliveryMethodId`, that id is the only delivery method
+        shipment creation accepts. When it is empty, creation accepts only the
+        checkout method, under the rules in the create description.
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Prefilled create-commands body for the checkout form
+
+  /v1/integrations/allegro/shipments:
+    post:
+      tags: [Integrations]
+      summary: Create a WzA shipment via Allegro create-commands (admin only)
+      operationId: createAllegroWzAShipment
+      description: |
+        Issues exactly one POST to Allegro's
+        /shipment-management/shipments/create-commands per request. There is
+        no idempotency key and no check for an existing shipment, so the
+        caller must not retry. The `commandId` in the body is not a transport
+        idempotency key; the Allegro HTTP client replays the same POST body on
+        429, 502, 503, and 504, up to three further attempts. After the POST
+        the server polls the create command for up to 60 seconds at 500 ms
+        intervals. A command that finishes in an error status and a poll that
+        runs out of time both return 422, with different messages.
+
+        Delivery method resolution, in order: the
+        `suggestedInput.deliveryMethodId` from delivery-proposals; the
+        checkout method id when it is the official WzA id
+        `9081532b-5ad3-467d-80bc-9252982e9dd8` (`Allegro miniKurier24
+        InPost`); the official id when the checkout method name matches the
+        official name; the checkout id only when delivery-services lists that
+        exact id. A different catalog row is never substituted. When none of
+        those apply, the request fails with 409 and the message "wysyłam z
+        Allegro has no delivery method for this checkout". A requested
+        `deliveryMethodId` that differs from the resolved one fails with 409
+        and "deliveryMethodId must match delivery-proposals
+        suggestedInput.deliveryMethodId". The method check is skipped when
+        the body carries no resolvable `order_id`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                commandId:
+                  type: string
+                order_id:
+                  type: string
+                  description: Optional; the delivery method check needs it to resolve the checkout form
+                input:
+                  type: object
+                  description: The delivery-proposals `suggestedInput`, with `deliveryMethodId` and `packages`
+      responses:
+        '201':
+          description: Shipment created
+        '409':
+          description: No delivery method for the checkout, or the requested `deliveryMethodId` differs from the resolved one
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Create command finished in an error status, or the poll ran out of time
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /v1/integrations/allegro/orders/{orderId}/wza-shipments/import:
+    post:
+      tags: [Integrations]
+      summary: Import an existing WzA shipment from Allegro (admin only)
+      operationId: importAllegroWzAShipment
+      description: |
+        Imports a WzA shipment that already exists on Allegro. It never posts
+        create-commands. It reads the checkout form shipments and, when the
+        shipment id is a WzA UUID, hydrates it from shipment management. When
+        a shipment is found, it writes an OpenOMS shipment row and may fetch
+        the label PDF. Already imported rows are skipped, so a repeat call
+        does not duplicate them. When Allegro has no shipment for the
+        checkout, the request fails with 409 and the message "wysyłam z
+        Allegro has no existing shipment for this checkout".
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Imported shipments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  shipments:
+                    type: array
+                    items:
+                      type: object
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Allegro has no existing WzA shipment for the checkout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /v1/integrations/amazon/setup:
     post:
