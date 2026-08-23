@@ -356,6 +356,8 @@ describe("provider readiness", () => {
     expect(providers).toContain("olx");
     expect(providers).toContain("erli");
     expect(providers).not.toContain("empik");
+    expect(providers).not.toContain("kaufland");
+    expect(providers).not.toContain("mirakl");
     expect(providers).not.toContain("shopify");
     expect(providers).not.toContain("prestashop");
     expect(providers).not.toContain("shoper");

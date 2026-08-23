@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"net"
+	"os"
 	"testing"
 	"time"
 
@@ -76,6 +77,15 @@ func TestConnectRedisUnavailableFallsBackInDevelopment(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Nil(t, client)
+}
+
+func TestMainDoesNotRegisterKauflandOrMiraklOrderPollers(t *testing.T) {
+	src, err := os.ReadFile("main.go")
+	require.NoError(t, err)
+	text := string(src)
+	for _, ctor := range []string{"NewKauflandOrderPoller", "NewMiraklOrderPoller", "NewEmpikOrderPoller"} {
+		assert.NotContains(t, text, ctor, "%s would make a half-built SDK look like a live order channel", ctor)
+	}
 }
 
 func unusedLocalAddress(t *testing.T) string {
