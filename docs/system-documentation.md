@@ -402,7 +402,7 @@ Lista powyzej to **podzbior rdzeniowy**. Pelny schemat (89 tabel, 50 wersji migr
 - platform: `platform_admins`, `platform_audit_log`
 - pozostale: `loyalty_transactions`, `supplier_availability`, `supplier_availability_policy`, `external_workflow_tokens`, `message_templates`, `marketplace_category_mappings`
 
-**Stan magazynowy:** `products.stock_quantity` jest polem legacy — nie jest zmniejszane przy wysylce. Kanoniczny stan to `warehouse_stock.quantity - reserved`. `Product.AvailableStock` jest wyliczane (`AvailableStockBatch`); 0 na surowym `List` bez populate oznacza "nie pobrano", nie "brak towaru". Rezerwacja/wysylka/anulowanie dotycza wierszy z `variant_id IS NULL`.
+**Stan magazynowy:** `products.stock_quantity` jest polem legacy — nie jest zmniejszane przy wysylce. Kanoniczny stan to `warehouse_stock.quantity - reserved`. `Product.AvailableStock` jest wyliczane (`AvailableStockBatch`); 0 na surowym `List` bez populate oznacza "nie pobrano", nie "brak towaru". Rezerwacja/wysylka/anulowanie/zwrot adresuja wiersz `warehouse_stock` po kluczu glownym (`id`) — czyli te same wiersze, ktore `AvailableStockBatch` sumuje, wliczajac wiersze wariantow. Pozycje zamowienia nie nosza `variant_id`, wiec pozycja schodzi z wierszy produktu w kolejnosci zwracanej przez repozytorium.
 
 ### Funkcje SECURITY DEFINER (bypass RLS)
 
@@ -566,6 +566,16 @@ Token uwierzytelnia na `/v1` przez `Authorization: Bearer`, nie wygasa i nie dzi
 | POST | `/v1/returns/{id}/status` | Zmiana statusu |
 | GET | `/v1/returns/{id}/print` | Wydruk |
 
+Graf statusow zwrotu: `requested` -> `approved`/`rejected`/`cancelled`, `approved` -> `received`/`cancelled`, `received` -> `refunded`/`cancelled`.
+
+**Polityka przyjecia towaru na stan (restock).** Wejscie w skonfigurowany status zwrotu dopisuje pozycje zwrotu z powrotem do `warehouse_stock.quantity`. Konfiguracja w `tenants.settings.returns`:
+
+| Klucz | Wartosci | Domyslnie |
+|-------|----------|-----------|
+| `restock_on` | status zwrotu (`received`, `refunded`, ...) albo `off`/`none`/`never`/`disabled` | `received` — moment, w ktorym magazyn potwierdza, ze towar fizycznie wrocil |
+
+Restockowane sa **wylacznie** pozycje z `returns.items` — z samego zamowienia nie wynika, co faktycznie wrocilo, wiec zwrot bez pozycji nie zmienia stanu. Pozycje bundle sa rozwijane na komponenty. Graf statusow zwrotu jest acykliczny, wiec skonfigurowany status wchodzi najwyzej raz na zwrot i zwrot restockuje najwyzej raz. Produkt bez wiersza `warehouse_stock` jest pomijany (nie ma gdzie dopisac; magazyn nie jest zgadywany).
+
 #### Publiczne zwroty (rate limit 30/min, bez auth)
 
 | Metoda | Sciezka | Opis |
@@ -573,6 +583,8 @@ Token uwierzytelnia na `/v1` przez `Authorization: Bearer`, nie wygasa i nie dzi
 | POST | `/v1/public/returns` | Zgloszenie zwrotu (klient) |
 | GET | `/v1/public/returns/{token}` | Status zwrotu (klient) |
 | GET | `/v1/public/returns/{token}/status` | Krotki status |
+
+`POST /v1/public/returns` weryfikuje email wzgledem zamowienia przez `find_order_tenant_id` (SECURITY DEFINER), a nastepnie tworzy zwrot przez `ReturnService.CreatePublic` — ten sam tor co endpoint operatora, wiec zgloszenie klienta ma audyt, webhook `return.created` i event automatyzacji.
 
 #### Klienci
 
@@ -1860,7 +1872,19 @@ Uzytkownik                Dashboard              API Server              DB
 
 Zywy graf statusow zamowienia to `tenants.settings.order_statuses` albo `DefaultOrderStatusConfig()`. Pakiet `order-engine` jest uzywany przez **shipmenty**; `OrderService` go nie importuje.
 
-`OrderService.TransitionStatus` po commicie odpala: email, webhook + WebSocket, auto-fakture, SMS, automatyzacje, sync fulfillment Allegro, stock przy pierwszym `shipped`, zwolnienie rezerwacji przy `cancelled`, lojalnosc przy `completed`. `ShipmentService` moze zapisac status zamowienia bezposrednio przez `orderRepo.UpdateStatus` i **pominac** te efekty uboczne. `Duplicate` nie rezerwuje stocku. Publiczny `POST /v1/public/returns` omija `ReturnService.Create` (brak audytu/webhooka/automatyzacji). Zwrot `refunded` ustawia tylko `payment_status`, nie status zamowienia.
+Efekty uboczne zmiany statusu zamowienia ma **jednego wlasciciela**: `OrderService.applyStatusChangeSideEffects`. Po commicie odpala: email, webhook `order.status_changed` + WebSocket, auto-fakture, SMS, automatyzacje, sync fulfillment Allegro, zejscie stocku przy pierwszym `shipped`, zwolnienie rezerwacji przy `cancelled`, lojalnosc przy `completed`. Wszystkie sciezki, ktore ruszaja status, przechodza przez ten helper:
+
+| Sciezka | Uwagi |
+|---------|-------|
+| `TransitionStatus` | Graf statusow tenanta (chyba ze `Force`) |
+| `BulkTransitionStatus` | Ten sam zestaw efektow co pojedyncza zmiana (wczesniej pomijal auto-fakture i event automatyzacji) |
+| `ShipmentService.TransitionStatus` | Kurier zglasza `picked_up` / `in_transit` / `delivered`. Zapis statusu zamowienia zostaje w transakcji przesylki (blad zapisu cofa tez zmiane statusu przesylki), audyt `order.status_changed` z `shipment_id`, efekty po commicie |
+
+Rezerwacja stocku dzieje sie **w tej samej transakcji** co insert zamowienia — w `Create` i w `Duplicate`. Nieudana rezerwacja cofa zamowienie. Rezerwacja jest przycinana do dostepnosci wiersza, wiec przyjecie zamowienia ponad stan sie nie zmienia.
+
+Publiczny `POST /v1/public/returns` idzie przez `ReturnService.CreatePublic` — ten sam tor co endpoint operatora, wiec zwrot klienta ma audyt (`source: public_form`), webhook `return.created` i event automatyzacji.
+
+Zwrot `refunded` ustawia `payment_status` zamowienia, nie jego status.
 
 ### Flow 3: Webhook dispatch
 
@@ -1901,7 +1925,7 @@ AutomationEngine.ProcessEvent() [async]
     |     |    tags contains "bulk"? ok
     |     |
     |     +- Jesli wszystkie spelnione:
-    |     |    +- set_status -> "confirmed"  (Force: true; moze pominac graf)
+    |     |    +- set_status -> "confirmed"  (graf tenanta; Force tylko z params.force)
     |     |    +- send_email -> sales@company.com
     |     |    +- add_tag -> "auto-confirmed"
     |     |    +- delay(30m) -> kolejna akcja  <- OPOZNIENIE!
@@ -2256,6 +2280,8 @@ Workery to **tickery w procesie API** (ten sam obraz `openoms-api`, flaga `WORKE
 | `product.created` / `product.updated` | Katalog |
 | `product.stock_restored` / `product.out_of_stock` | Stan magazynowy |
 
+`product.created` / `product.updated` niosa zarowno `available_stock` (kanoniczny stan — `AvailableStockBatch`), jak i `stock_quantity` (surowa kolumna legacy). Warunki regul powinny czytac `available_stock`: `products.stock_quantity` nie jest zmniejszane przy wysylce, wiec dla produktu prowadzonego magazynowo jest nieaktualne. `product.stock_restored` / `product.out_of_stock` odpalaja sie z przejscia kanonicznej dostepnosci przez zero — edycja kolumny legacy dla produktu prowadzonego magazynowo nie zmienia dostepnosci i nie odpala niczego.
+
 ### Warunki (conditions)
 
 ```json
@@ -2273,7 +2299,7 @@ Operatory: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `not_contains`, `i
 
 | Typ akcji | Opis |
 |-----------|------|
-| `set_status` | Zmiana statusu zamowienia (`Force: true` — moze pominac graf). Alias w UI: `transition_status` |
+| `set_status` | Zmiana statusu zamowienia. Domyslnie **respektuje graf statusow tenanta**; pominiecie grafu wymaga jawnego `params.force = true`. Niedozwolona krawedz = blad reguly w `automation_rule_logs`. Alias w UI: `transition_status` |
 | `send_email` | Wyslanie emaila |
 | `add_tag` | Dodanie tagu |
 | `create_invoice` | Utworzenie faktury |
@@ -2286,6 +2312,8 @@ Operatory: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `not_contains`, `i
 ### Routing akcji zmieniających stan przez orchestrator (OPE-421, opcjonalne)
 
 Gdy `AUTOMATION_ORCHESTRATION_ENABLED=true`, akcja `set_status` (`transition_status` dla zamówień) nie woła bezpośrednio `TransitionStatus`, lecz **enqueue'uje** event `automation.set_status` do orchestration outboxa (sekcja 8). Transition wykonuje idempotentnie `AutomationStatusTransitionHandler` (no-op gdy zamówienie już w target statusie → zrywa burzę efektów ubocznych i rekurencję `order.status_changed`); permanentny fail → blocker `automation_action_failed` widoczny w ops dashboardzie. Domyślnie OFF → akcja działa bezpośrednio jak dotąd. Pozostałe typy akcji są niezmienione.
+
+Opt-in `params.force` jedzie w payloadzie eventu, więc tor asynchroniczny stosuje tę samą semantykę co bezpośredni: graf tenanta obowiązuje, chyba że reguła jawnie poprosiła o jego pominięcie. Komendy zwrotne z zewnętrznego workflow engine (`ExternalWorkflowCommandHandler`, `set_status`) **nigdy** nie pomijają grafu — zewnętrzny system nie ma jak się z niego wypisać.
 
 ### Opoznione akcje (delayed actions)
 
