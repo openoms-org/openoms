@@ -11,15 +11,22 @@ import (
 
 // Product represents a product in the catalogue.
 type Product struct {
-	ID                   uuid.UUID       `json:"id"`
-	TenantID             uuid.UUID       `json:"tenant_id"`
-	ExternalID           *string         `json:"external_id,omitempty"`
-	Source               string          `json:"source"`
-	Name                 string          `json:"name"`
-	SKU                  *string         `json:"sku,omitempty"`
-	EAN                  *string         `json:"ean,omitempty"`
-	Price                float64         `json:"price"`
-	StockQuantity        int             `json:"stock_quantity"`
+	ID         uuid.UUID `json:"id"`
+	TenantID   uuid.UUID `json:"tenant_id"`
+	ExternalID *string   `json:"external_id,omitempty"`
+	Source     string    `json:"source"`
+	Name       string    `json:"name"`
+	SKU        *string   `json:"sku,omitempty"`
+	EAN        *string   `json:"ean,omitempty"`
+	Price      float64   `json:"price"`
+	// StockQuantity mirrors the legacy products.stock_quantity column. It is
+	// write-only in practice: nothing decrements it on shipment, so it is whatever
+	// was last entered by hand or by an import. Never read it as available stock.
+	StockQuantity int `json:"stock_quantity"`
+	// AvailableStock is the canonical figure, warehouse_stock.quantity - reserved,
+	// summed over every row of the product (ProductRepository.AvailableStockBatch).
+	// It is computed, not stored: on a raw List that does not populate it, 0 means
+	// "not fetched" rather than "out of stock".
 	AvailableStock       int             `json:"available_stock"`
 	Metadata             json.RawMessage `json:"metadata"`
 	Tags                 []string        `json:"tags"`
