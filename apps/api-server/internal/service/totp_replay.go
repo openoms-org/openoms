@@ -7,6 +7,19 @@ import (
 	"github.com/pquerna/otp/totp"
 )
 
+// totpPersistStepOutcome decides whether Verify2FALogin may issue tokens after
+// attempting to record the accepted TOTP step. Persist errors are fail-closed:
+// tokens must not be minted when single-use protection could not be written.
+func totpPersistStepOutcome(advanced bool, persistErr error) error {
+	if persistErr != nil {
+		return persistErr
+	}
+	if !advanced {
+		return ErrInvalid2FACode
+	}
+	return nil
+}
+
 // totpPeriod is the TOTP time-step in seconds and totpSkew is the number of
 // periods of clock drift accepted on either side of the current time. These match
 // the defaults used by totp.Validate (period 30, skew 1), which the rest of the

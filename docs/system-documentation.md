@@ -1366,6 +1366,8 @@ JWT_SECRET (env)
 | Refresh Token | 30 dni | Cookie httpOnly (sciezka `/v1/auth`). Rotacja one-time; reuse kasuje cala rodzine sesji (`ErrRefreshTokenReuse`) |
 | Token API (owner) | Do odwolania | Header `Authorization: Bearer oms_...` na `/v1` |
 
+Dashboard po 60 min bezczynnosci operatora wywoluje best-effort `POST /v1/auth/logout` (`useSessionTimeout`), zeby uniewaznic rodzine refresh, a potem czysci Zustand i cookie `has_session`. Cookie `has_session` to tylko bramka UX, nie sesja.
+
 **Claims JWT:**
 ```json
 {
@@ -1392,6 +1394,8 @@ Logowanie z 2FA:
     POST /v1/auth/login -> 200 { requires_2fa: true, temp_token: "..." }
     POST /v1/auth/2fa/login -> { temp_token, code } -> access + refresh token
 ```
+
+Zablokowane konto (za duzo blednych kodow TOTP) na `POST /v1/auth/2fa/login` zwraca 429, tak samo jak `POST /v1/auth/login`. Blad zapisu last-used TOTP step jest fail-closed: tokeny nie sa wydawane, zeby jeden kod nie otworzyl dwoch sesji.
 
 Sekret TOTP szyfrowany w kolumnie `users.totp_secret`. Kompatybilny z Google Authenticator, Authy i innymi aplikacjami TOTP.
 
@@ -1756,14 +1760,14 @@ Migracja:    000040 UNIQUE index fulfillment_processes(tenant_id, order_id) (add
 |-----------|-----------|
 | SQL Injection | Parametryzowane zapytania (pgx driver) |
 | XSS | React auto-escape + sanityzacja inputow (strip tags) + CSP header. dangerouslySetInnerHTML usuniete. |
-| CSRF | Double-submit cookie (csrf_token cookie + X-CSRF-Token header, SameSite=Lax, Domain=.openoms.org). CSRF jest pomijany, gdy request niesie niepusty credential `Authorization: Bearer` (JWT lub token API), wiec klienci bez cookies dzialaja; sesje cookie nadal wymagaja naglowka. |
+| CSRF | Double-submit cookie (csrf_token cookie + X-CSRF-Token header, SameSite=Lax). Domain cookie CSRF jest eTLD+1 z `FrontendURL` (lista public suffix): `app.openoms.org` -> `.openoms.org`, `app.example.com.pl` -> `.example.com.pl` (nie `.com.pl`), `app.example.co.uk` -> `.example.co.uk` (nie `.co.uk`). Host-only (pusty Domain) dla localhost, adresow IP i nazw, ktore same sa public suffix. CSRF jest pomijany, gdy request niesie niepusty credential `Authorization: Bearer` (JWT lub token API), wiec klienci bez cookies dzialaja; sesje cookie nadal wymagaja naglowka. |
 | Clickjacking | X-Frame-Options: DENY + CSP frame-ancestors 'none' |
 | Tenant leakage | RLS + FORCE ROW LEVEL SECURITY |
 | Token theft | SHA-256 hash w blacklist, httpOnly cookies |
 | Token revocation | Redis-backed composite blacklist; poza developmentem Redis jest wymagany, a in-memory fallback jest tylko lokalny/explicit single-node. Tokeny API sa odwolywane w bazie przez `revoked_at`, nie przez blacklist JWT; odwolanie dziala od nastepnego requestu. |
 | SSRF | noPrivateDialer na wszystkich polaczeniach wychodzacych (webhooks, automation, supplier feeds). IPv4 + IPv6 (w tym ::/128, ff00::/8). |
 | SSRF (WebSocket) | Walidacja Origin header + ticket-only auth (JWT w URL usuniety) |
-| Brute force | Rate limiting (10/min login, 5/min zmiana hasla, 60/min refresh, 30/min public). Atomowy Lua script (INCR+EXPIRE). Invalid login paths wykonuja dummy bcrypt compare, zeby ograniczyc timing oracle dla tenant/email/password. |
+| Brute force | Rate limiting (10/min login, 5/min zmiana hasla, 60/min refresh, 30/min public). Atomowy Lua script (INCR+EXPIRE). Invalid login paths wykonuja dummy bcrypt compare, zeby ograniczyc timing oracle dla tenant/email/password. Lockout konta (haslo i 2FA) zwraca 429. |
 | DoS / webhook poisoning | Max body size (1MB default, 10MB upload). MaxBytesReader na webhook handlerach. BTP XML catalogue feeds maja limit 200 MiB; IOF feeds 50 MiB; 50 000 produktow na import. Tenant-configured shop SDK JSON responses (WooCommerce/PrestaShop/Shoper/Shopify) maja limit 10 MiB. Webhooki znanych providerow fail-closed przy braku sekretu HMAC. |
 | Account takeover | 2FA/TOTP, bcrypt, Ed25519 JWT |
 | Info disclosure | Brak wersji w /health, brak X-Powered-By, /metrics chroniony tokenem |
