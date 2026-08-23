@@ -26,6 +26,9 @@ type automationSetStatusPayload struct {
 	TargetStatus string `json:"target_status"`
 	RuleID       string `json:"rule_id"`
 	ActionIndex  int    `json:"action_index"`
+	// Force mirrors the rule's force opt-in. Absent (the zero value) means the
+	// tenant's transition graph is enforced, matching the direct executor path.
+	Force bool `json:"force"`
 }
 
 // AutomationStatusTransitionHandler applies a set_status automation action that was
@@ -86,8 +89,10 @@ func (h *AutomationStatusTransitionHandler) Handle(ctx context.Context, event mo
 		return nil
 	}
 
-	// Force=true: automation transitions are system-driven and bypass the
-	// per-tenant transition graph (matching the direct executeSetStatus path).
+	// Force comes from the rule's opt-in, so the tenant's transition graph is
+	// enforced unless the rule explicitly asked to bypass it — matching the direct
+	// executeSetStatus path. A graph-rejected transition surfaces as a permanent
+	// failure below and opens a visible blocker.
 	//
 	// IP is intentionally empty: the audit log column is inet (TransitionStatus
 	// writes the actor IP there), and "automation" — the string the legacy direct
@@ -96,7 +101,7 @@ func (h *AutomationStatusTransitionHandler) Handle(ctx context.Context, event mo
 	// actor is already conveyed by uuid.Nil + the audit action, not the IP slot.
 	_, err = h.orders.TransitionStatus(ctx, event.TenantID, orderID, model.StatusTransitionRequest{
 		Status: payload.TargetStatus,
-		Force:  true,
+		Force:  payload.Force,
 	}, uuid.Nil, "")
 	if err != nil {
 		// An unknown/invalid target status (or other validation failure) is not

@@ -220,8 +220,9 @@ func (s *stubTransitioner) Get(_ context.Context, _, orderID uuid.UUID) (*model.
 }
 
 // TestAutomationSetStatus_OrchestrationDisabled_DirectPath verifies the OFF path:
-// set_status calls TransitionStatus directly (Force=true) and writes ZERO outbox
-// rows and no fulfillment process — the orchestration machinery is untouched.
+// set_status calls TransitionStatus directly (graph-validated, since the action does
+// not opt into forcing) and writes ZERO outbox rows and no fulfillment process — the
+// orchestration machinery is untouched.
 func TestAutomationSetStatus_OrchestrationDisabled_DirectPath(t *testing.T) {
 	ctx := context.Background()
 	tenant := seedTenant(t, ctx)
@@ -241,10 +242,16 @@ func TestAutomationSetStatus_OrchestrationDisabled_DirectPath(t *testing.T) {
 	event := automation.Event{Type: "order.status_changed", TenantID: tenant, EntityType: "order", EntityID: orderID}
 	require.NoError(t, executor.ExecuteAction(ctx, tenant, action, event))
 
-	// Direct transition path was taken (Force=true), exactly once.
+	// Direct transition path was taken, exactly once.
 	assert.Equal(t, 1, tr.calls, "disabled path calls TransitionStatus directly")
 	assert.Equal(t, "confirmed", tr.lastReq.Status)
-	assert.True(t, tr.lastReq.Force, "automation transitions force")
+	assert.False(t, tr.lastReq.Force, "automation respects the tenant transition graph by default")
+
+	// An explicit opt-in still forces the transition.
+	forced := automation.Action{Type: "set_status", Params: map[string]any{"status": "delivered", "force": true}, RuleID: uuid.New()}
+	require.NoError(t, executor.ExecuteAction(ctx, tenant, forced, event))
+	assert.Equal(t, 2, tr.calls)
+	assert.True(t, tr.lastReq.Force, "params.force opts into bypassing the graph")
 
 	// No fulfillment process and no outbox rows were created — orchestration untouched.
 	require.NoError(t, database.WithTenant(ctx, appPool, tenant, func(tx pgx.Tx) error {

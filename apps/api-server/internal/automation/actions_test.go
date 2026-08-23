@@ -19,11 +19,13 @@ import (
 // --- fakes for the OPE-421 orchestration-routed set_status path ---
 
 type fakeTransitioner struct {
-	calls int
+	calls   int
+	lastReq model.StatusTransitionRequest
 }
 
-func (f *fakeTransitioner) TransitionStatus(_ context.Context, _, _ uuid.UUID, _ model.StatusTransitionRequest, _ uuid.UUID, _ string) (*model.Order, error) {
+func (f *fakeTransitioner) TransitionStatus(_ context.Context, _, _ uuid.UUID, req model.StatusTransitionRequest, _ uuid.UUID, _ string) (*model.Order, error) {
 	f.calls++
+	f.lastReq = req
 	return &model.Order{}, nil
 }
 
@@ -310,6 +312,73 @@ func TestExecuteSetStatus_OrchestrationDisabled_UsesDirectPath(t *testing.T) {
 	assert.Equal(t, 1, tr.calls, "disabled path calls TransitionStatus directly")
 	assert.Equal(t, 0, enq.calls, "disabled path never enqueues")
 	assert.Equal(t, 0, ens.getCalls, "disabled path does no fulfillment-process work")
+}
+
+// TestActionForce covers the force opt-in parsing: absent/false/garbage means the
+// tenant transition graph is respected, and only an explicit true (bool or its
+// string form, which the dashboard config round-trip can produce) opts into forcing.
+func TestActionForce(t *testing.T) {
+	assert.False(t, actionForce(nil), "no params -> graph respected")
+	assert.False(t, actionForce(map[string]any{}), "absent force -> graph respected")
+	assert.False(t, actionForce(map[string]any{"force": false}))
+	assert.False(t, actionForce(map[string]any{"force": "no"}))
+	assert.False(t, actionForce(map[string]any{"force": 1}), "non-bool, non-string -> graph respected")
+	assert.True(t, actionForce(map[string]any{"force": true}))
+	assert.True(t, actionForce(map[string]any{"force": "true"}))
+	assert.True(t, actionForce(map[string]any{"force": " TRUE "}))
+}
+
+// TestExecuteSetStatus_DirectPath_RespectsTenantGraph verifies the default: a
+// set_status action without an explicit force opt-in transitions WITHOUT Force, so
+// the tenant's transition graph validates it like any operator-driven change.
+func TestExecuteSetStatus_DirectPath_RespectsTenantGraph(t *testing.T) {
+	tr := &fakeTransitioner{}
+	executor := NewDefaultActionExecutor(slog.Default())
+	executor.SetOrderServices(tr, nil, nil, &pgxpool.Pool{})
+
+	err := executor.ExecuteAction(context.Background(), uuid.New(), Action{
+		Type:   "set_status",
+		Params: map[string]any{"status": "confirmed"},
+	}, Event{EntityType: "order", EntityID: uuid.New()})
+
+	require.NoError(t, err)
+	require.Equal(t, 1, tr.calls)
+	assert.False(t, tr.lastReq.Force, "automation must respect the tenant transition graph by default")
+}
+
+// TestExecuteSetStatus_DirectPath_ForceOptIn verifies a rule can still bypass the
+// tenant graph, but only by explicitly asking for it via params.force.
+func TestExecuteSetStatus_DirectPath_ForceOptIn(t *testing.T) {
+	tr := &fakeTransitioner{}
+	executor := NewDefaultActionExecutor(slog.Default())
+	executor.SetOrderServices(tr, nil, nil, &pgxpool.Pool{})
+
+	err := executor.ExecuteAction(context.Background(), uuid.New(), Action{
+		Type:   "set_status",
+		Params: map[string]any{"status": "delivered", "force": true},
+	}, Event{EntityType: "order", EntityID: uuid.New()})
+
+	require.NoError(t, err)
+	require.Equal(t, 1, tr.calls)
+	assert.True(t, tr.lastReq.Force, "an explicit opt-in still forces the transition")
+}
+
+// TestSetStatusOutboxPayload verifies the orchestration payload carries the force
+// opt-in, so the async handler applies the same transition semantics as the direct
+// path instead of always forcing.
+func TestSetStatusOutboxPayload(t *testing.T) {
+	ruleID := uuid.New()
+	orderID := uuid.New()
+
+	graph := setStatusOutboxPayload(orderID, "confirmed", ruleID, 2, false)
+	assert.Equal(t, orderID.String(), graph["order_id"])
+	assert.Equal(t, "confirmed", graph["target_status"])
+	assert.Equal(t, ruleID.String(), graph["rule_id"])
+	assert.Equal(t, 2, graph["action_index"])
+	assert.Equal(t, false, graph["force"], "default payload does not force")
+
+	forced := setStatusOutboxPayload(orderID, "delivered", ruleID, 0, true)
+	assert.Equal(t, true, forced["force"], "opt-in is carried through the outbox")
 }
 
 // TestExecuteSetStatus_OrchestrationEnabled_Enqueues exercises the tx-bound

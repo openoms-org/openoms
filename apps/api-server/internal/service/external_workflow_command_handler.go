@@ -83,7 +83,10 @@ func (h *ExternalWorkflowCommandHandler) applySetStatus(ctx context.Context, ten
 	if order.Status == status { // idempotent: already in target
 		return nil
 	}
-	_, err = h.orders.TransitionStatus(ctx, tenantID, orderID, model.StatusTransitionRequest{Status: status, Force: true}, uuid.Nil, "")
+	// Not forced: the external engine is a third party and cannot opt out of the
+	// tenant's transition graph. An edge the tenant does not allow fails permanently
+	// below rather than silently rewriting the order lifecycle.
+	_, err = h.orders.TransitionStatus(ctx, tenantID, orderID, model.StatusTransitionRequest{Status: status}, uuid.Nil, "")
 	if err != nil {
 		if errors.Is(err, ErrUnknownStatus) || errors.Is(err, ErrInvalidTransition) || isValidationError(err) || errors.Is(err, ErrOrderNotFound) {
 			return model.Permanent(fmt.Errorf("external_workflow command: set_status %q: %w", status, err))

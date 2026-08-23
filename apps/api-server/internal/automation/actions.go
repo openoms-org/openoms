@@ -290,6 +290,23 @@ func (e *DefaultActionExecutor) executeExternalWorkflow(_ context.Context, tenan
 	return e.externalWorkflow.DispatchForOrder(context.Background(), tenantID, event.EntityID, integrationID)
 }
 
+// actionForce reports whether an action explicitly opted into forcing an order status
+// transition past the tenant's transition graph. The default is false: a rule gets the
+// same graph validation an operator gets, so a misconfigured rule cannot drop an order
+// into a status its tenant graph forbids (and an invalid transition surfaces as a rule
+// failure instead of silently corrupting the lifecycle). Both the JSON bool and its
+// string form are accepted — the dashboard action config round-trip can produce either.
+func actionForce(params map[string]any) bool {
+	switch v := params["force"].(type) {
+	case bool:
+		return v
+	case string:
+		return strings.EqualFold(strings.TrimSpace(v), "true")
+	default:
+		return false
+	}
+}
+
 // executeSetStatus transitions an order to the target status specified in action params.
 func (e *DefaultActionExecutor) executeSetStatus(_ context.Context, tenantID uuid.UUID, action Action, event Event) error {
 	e.logger.Info("automation action: set_status",
@@ -312,6 +329,8 @@ func (e *DefaultActionExecutor) executeSetStatus(_ context.Context, tenantID uui
 		return fmt.Errorf("set_status action missing 'status' parameter")
 	}
 
+	force := actionForce(action.Params)
+
 	// Use a fresh context in case the original is cancelled.
 	bgCtx := context.Background()
 
@@ -324,14 +343,15 @@ func (e *DefaultActionExecutor) executeSetStatus(_ context.Context, tenantID uui
 	// (the default) this whole block is skipped and the direct path below runs
 	// byte-for-byte unchanged.
 	if e.orchestrationEnabled && e.orchestration != nil && e.fulfillment != nil && e.pool != nil {
-		return e.enqueueSetStatus(bgCtx, tenantID, action, event, targetStatus)
+		return e.enqueueSetStatus(bgCtx, tenantID, action, event, targetStatus, force)
 	}
 
-	// Use Force=true because automation rules are system-driven and should
-	// bypass normal transition validation rules.
+	// The tenant's transition graph applies unless the rule opted into forcing it
+	// (see actionForce). Automation is system-driven but not privileged: a rule that
+	// asks for an edge the tenant does not allow fails and is logged.
 	req := model.StatusTransitionRequest{
 		Status: targetStatus,
-		Force:  true,
+		Force:  force,
 	}
 
 	_, err := e.orderTransitioner.TransitionStatus(bgCtx, tenantID, event.EntityID, req, uuid.Nil, "automation")
@@ -362,6 +382,19 @@ func setStatusIdempotencyKey(ruleID, orderID uuid.UUID, targetStatus string) str
 	return EventAutomationSetStatus + ":" + ruleID.String() + ":" + orderID.String() + ":" + targetStatus
 }
 
+// setStatusOutboxPayload builds the automation.set_status outbox payload. force is
+// carried so the async handler applies the same transition semantics the direct path
+// would have: graph-validated unless the rule opted in.
+func setStatusOutboxPayload(orderID uuid.UUID, targetStatus string, ruleID uuid.UUID, actionIndex int, force bool) map[string]any {
+	return map[string]any{
+		"order_id":      orderID.String(),
+		"target_status": targetStatus,
+		"rule_id":       ruleID.String(),
+		"action_index":  actionIndex,
+		"force":         force,
+	}
+}
+
 // enqueueSetStatus is the OPE-421 orchestration-routed path for set_status. It runs
 // a single tenant transaction that (1) ensures the order's fulfillment process
 // exists — the outbox process_id FK is NOT NULL — and (2) enqueues an
@@ -369,13 +402,8 @@ func setStatusIdempotencyKey(ruleID, orderID uuid.UUID, targetStatus string) str
 // OrchestrationWorker + AutomationStatusTransitionHandler apply it asynchronously
 // and idempotently. On error it returns to the engine (which records it in
 // automation_rule_logs); it never panics and never silently drops the action.
-func (e *DefaultActionExecutor) enqueueSetStatus(ctx context.Context, tenantID uuid.UUID, action Action, event Event, targetStatus string) error {
-	payload := map[string]any{
-		"order_id":      event.EntityID.String(),
-		"target_status": targetStatus,
-		"rule_id":       action.RuleID.String(),
-		"action_index":  action.ActionIndex,
-	}
+func (e *DefaultActionExecutor) enqueueSetStatus(ctx context.Context, tenantID uuid.UUID, action Action, event Event, targetStatus string, force bool) error {
+	payload := setStatusOutboxPayload(event.EntityID, targetStatus, action.RuleID, action.ActionIndex, force)
 	idemKey := setStatusIdempotencyKey(action.RuleID, event.EntityID, targetStatus)
 
 	err := database.WithTenant(ctx, e.pool, tenantID, func(tx pgx.Tx) error {

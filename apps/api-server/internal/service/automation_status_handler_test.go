@@ -18,6 +18,7 @@ type fakeAutomationOrders struct {
 	getErr          error
 	transitionErr   error
 	transitionCalls int
+	lastReq         model.StatusTransitionRequest
 }
 
 func (f *fakeAutomationOrders) Get(_ context.Context, _, _ uuid.UUID) (*model.Order, error) {
@@ -29,6 +30,7 @@ func (f *fakeAutomationOrders) Get(_ context.Context, _, _ uuid.UUID) (*model.Or
 
 func (f *fakeAutomationOrders) TransitionStatus(_ context.Context, _, _ uuid.UUID, req model.StatusTransitionRequest, _ uuid.UUID, _ string) (*model.Order, error) {
 	f.transitionCalls++
+	f.lastReq = req
 	if f.transitionErr != nil {
 		return nil, f.transitionErr
 	}
@@ -52,7 +54,8 @@ func setStatusEvent(orderID uuid.UUID, target string) model.OrchestrationOutboxE
 }
 
 // TestAutomationStatusHandler_Transitions verifies the happy path: an order not yet
-// in the target status is transitioned (Force=true), exactly once.
+// in the target status is transitioned exactly once, and — with no force opt-in in
+// the payload — the tenant's transition graph is enforced.
 func TestAutomationStatusHandler_Transitions(t *testing.T) {
 	orderID := uuid.New()
 	orders := &fakeAutomationOrders{order: &model.Order{ID: orderID, Status: "new"}}
@@ -61,6 +64,32 @@ func TestAutomationStatusHandler_Transitions(t *testing.T) {
 	err := h.Handle(context.Background(), setStatusEvent(orderID, "confirmed"))
 	require.NoError(t, err)
 	assert.Equal(t, 1, orders.transitionCalls, "transitions once toward the target")
+	assert.False(t, orders.lastReq.Force, "no opt-in in the payload -> tenant graph enforced")
+}
+
+// TestAutomationStatusHandler_ForceOptIn verifies the rule's force opt-in travels
+// through the outbox payload and is applied to the transition.
+func TestAutomationStatusHandler_ForceOptIn(t *testing.T) {
+	orderID := uuid.New()
+	orders := &fakeAutomationOrders{order: &model.Order{ID: orderID, Status: "new"}}
+	h := NewAutomationStatusTransitionHandler(orders)
+
+	event := model.OrchestrationOutboxEvent{
+		TenantID:  uuid.New(),
+		ProcessID: uuid.New(),
+		EventType: "automation.set_status",
+		Payload: map[string]any{
+			"order_id":      orderID.String(),
+			"target_status": "delivered",
+			"rule_id":       uuid.New().String(),
+			"action_index":  0,
+			"force":         true,
+		},
+	}
+
+	require.NoError(t, h.Handle(context.Background(), event))
+	require.Equal(t, 1, orders.transitionCalls)
+	assert.True(t, orders.lastReq.Force, "payload opt-in forces the transition")
 }
 
 // TestAutomationStatusHandler_IdempotentSkip verifies the core idempotency rule:
