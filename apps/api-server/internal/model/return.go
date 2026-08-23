@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -129,4 +130,33 @@ func IsValidReturnTransition(from, to string) bool {
 		return false
 	}
 	return slices.Contains(allowed, to)
+}
+
+// ReturnRestockDefaultStatus is the return status whose entry puts the returned items
+// back into warehouse stock unless the tenant configured otherwise: "received" is the
+// point at which the warehouse has confirmed the goods are physically back.
+const ReturnRestockDefaultStatus = "received"
+
+// ReturnSettings is the tenant-level returns policy, stored under the "returns" key of
+// tenants.settings.
+type ReturnSettings struct {
+	// RestockOn is the return status whose entry restocks the returned line items.
+	// Empty means ReturnRestockDefaultStatus; "off" (or none/never/disabled) turns
+	// restocking off for tenants that reconcile returned goods by hand.
+	RestockOn string `json:"restock_on,omitempty"`
+}
+
+// RestockStatus resolves the status at which returns restock, or "" when the tenant
+// disabled restocking. A status that the return lifecycle never reaches simply never
+// restocks. Because the return transition graph is acyclic, the configured status is
+// entered at most once per return, so a return restocks at most once.
+func (r ReturnSettings) RestockStatus() string {
+	switch configured := strings.ToLower(strings.TrimSpace(r.RestockOn)); configured {
+	case "":
+		return ReturnRestockDefaultStatus
+	case "off", "none", "never", "disabled":
+		return ""
+	default:
+		return configured
+	}
 }

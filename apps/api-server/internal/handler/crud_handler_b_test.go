@@ -602,7 +602,7 @@ func TestAutomationHandler_GetLogs_InvalidUUID(t *testing.T) {
 // ===========================================================================
 
 func TestPublicReturnHandler_CreatePublicReturn_InvalidJSON(t *testing.T) {
-	h := NewPublicReturnHandler(nil, nil, nil)
+	h := NewPublicReturnHandler(nil, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/public/returns", strings.NewReader("bad"))
 	rr := httptest.NewRecorder()
@@ -617,7 +617,7 @@ func TestPublicReturnHandler_CreatePublicReturn_InvalidJSON(t *testing.T) {
 }
 
 func TestPublicReturnHandler_CreatePublicReturn_MissingOrderID(t *testing.T) {
-	h := NewPublicReturnHandler(nil, nil, nil)
+	h := NewPublicReturnHandler(nil, nil)
 
 	body := `{"email":"test@example.com","reason":"defective"}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/public/returns", strings.NewReader(body))
@@ -633,7 +633,7 @@ func TestPublicReturnHandler_CreatePublicReturn_MissingOrderID(t *testing.T) {
 }
 
 func TestPublicReturnHandler_CreatePublicReturn_MissingEmail(t *testing.T) {
-	h := NewPublicReturnHandler(nil, nil, nil)
+	h := NewPublicReturnHandler(nil, nil)
 
 	body := `{"order_id":"` + uuid.New().String() + `","reason":"defective"}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/public/returns", strings.NewReader(body))
@@ -649,7 +649,7 @@ func TestPublicReturnHandler_CreatePublicReturn_MissingEmail(t *testing.T) {
 }
 
 func TestPublicReturnHandler_CreatePublicReturn_MissingReason(t *testing.T) {
-	h := NewPublicReturnHandler(nil, nil, nil)
+	h := NewPublicReturnHandler(nil, nil)
 
 	body := `{"order_id":"` + uuid.New().String() + `","email":"test@example.com"}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/public/returns", strings.NewReader(body))
@@ -665,7 +665,7 @@ func TestPublicReturnHandler_CreatePublicReturn_MissingReason(t *testing.T) {
 }
 
 func TestPublicReturnHandler_GetByToken_EmptyToken(t *testing.T) {
-	h := NewPublicReturnHandler(nil, nil, nil)
+	h := NewPublicReturnHandler(nil, nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("token", "")
@@ -684,7 +684,7 @@ func TestPublicReturnHandler_GetByToken_EmptyToken(t *testing.T) {
 }
 
 func TestPublicReturnHandler_GetStatusByToken_EmptyToken(t *testing.T) {
-	h := NewPublicReturnHandler(nil, nil, nil)
+	h := NewPublicReturnHandler(nil, nil)
 
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("token", "")

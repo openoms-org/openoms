@@ -1244,6 +1244,41 @@ func (s *OrderService) handleStockOnCancel(ctx context.Context, tenantID uuid.UU
 	s.triggerStockSync(tenantID, productQtys, "order_cancelled")
 }
 
+// RestockItems puts line-item quantities back into warehouse stock — the reverse of the
+// decrement a ship performs. It is what a received return calls to make the goods
+// sellable again.
+//
+// Bundle lines are expanded into their components (bundles hold no stock of their own).
+// A product's whole returned quantity goes back onto the first warehouse row the
+// repository returns for it, mirroring the row order the outbound adjustments drain in.
+// A product with no warehouse row is skipped: there is no row to restock into, and
+// inventing one would guess at a warehouse. Runs in its own tenant transaction and
+// pushes the new availability to marketplaces.
+func (s *OrderService) RestockItems(ctx context.Context, tenantID uuid.UUID, items json.RawMessage) error {
+	if s.warehouseStockRepo == nil {
+		return nil
+	}
+	productQtys := extractProductQuantities(items)
+	if len(productQtys) == 0 {
+		return nil
+	}
+	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		s.expandBundleQuantities(ctx, tx, productQtys)
+		return s.adjustStockPerProduct(ctx, tx, productQtys, func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) (int, error) {
+			if _, err := tx.Exec(ctx,
+				`UPDATE warehouse_stock SET quantity = quantity + $1, updated_at = NOW() WHERE id = $2`,
+				remaining, stock.ID); err != nil {
+				return 0, fmt.Errorf("restock row %s (product %s, warehouse %s): %w", stock.ID, productID, stock.WarehouseID, err)
+			}
+			return remaining, nil
+		})
+	}); err != nil {
+		return err
+	}
+	s.triggerStockSync(tenantID, productQtys, "return_restocked")
+	return nil
+}
+
 // CountOrdersThisMonth returns the number of orders created in the current calendar month.
 func (s *OrderService) CountOrdersThisMonth(ctx context.Context, tenantID uuid.UUID) (int, error) {
 	var count int

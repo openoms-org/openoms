@@ -504,6 +504,8 @@ func run() error {
 	// Wire stock sync into services (setter pattern)
 	orderService.SetStockSyncService(stockSyncService)
 	orderService.SetWarehouseStockRepo(warehouseStockRepo)
+	// A received return puts the goods back into warehouse stock (per-tenant policy).
+	returnService.SetRestockPolicy(tenantRepo, orderService)
 	warehouseService.SetStockSyncService(stockSyncService)
 	stocktakeService.SetStockSyncService(stockSyncService)
 	productService.SetStockSyncService(stockSyncService)
@@ -863,7 +865,7 @@ func run() error {
 	helpdeskHandler := handler.NewHelpdeskHandler(freshdeskService)
 
 	// Public return handler (Phase 29)
-	publicReturnHandler := handler.NewPublicReturnHandler(pool, returnRepo, orderRepo)
+	publicReturnHandler := handler.NewPublicReturnHandler(pool, returnService)
 
 	// Exchange rate handler (Phase 30)
 	exchangeRateHandler := handler.NewExchangeRateHandler(exchangeRateService)

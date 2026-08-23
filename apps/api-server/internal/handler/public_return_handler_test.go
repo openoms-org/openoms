@@ -19,12 +19,18 @@ import (
 var publicReturnHandlerSource string
 
 func newPublicReturnHandler() *PublicReturnHandler {
-	return NewPublicReturnHandler(nil, nil, nil)
+	return NewPublicReturnHandler(nil, nil)
 }
 
-func TestPublicReturnHandler_UsesSharedTenantHelper(t *testing.T) {
+// TestPublicReturnHandler_CreatesThroughReturnService pins the CORR-05 contract: the
+// public endpoint must not write the return row itself. It used to call
+// returnRepo.Create directly, which produced no audit entry, no return.created webhook
+// and no automation event for customer-submitted returns.
+func TestPublicReturnHandler_CreatesThroughReturnService(t *testing.T) {
 	assert.NotContains(t, publicReturnHandlerSource, "func (h *PublicReturnHandler) withTenant")
-	assert.Contains(t, publicReturnHandlerSource, "database.WithTenant(r.Context(), h.pool, tenantID")
+	assert.NotContains(t, publicReturnHandlerSource, "returnRepo.Create",
+		"the public endpoint must not insert returns behind the service")
+	assert.Contains(t, publicReturnHandlerSource, "h.returnService.CreatePublic(")
 }
 
 // ---------------------------------------------------------------------------
