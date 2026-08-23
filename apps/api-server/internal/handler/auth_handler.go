@@ -284,6 +284,8 @@ func (h *AuthHandler) TwoFALogin(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusUnauthorized, "invalid or expired 2FA token")
 		case service.ErrInvalid2FACode:
 			writeError(w, http.StatusUnauthorized, "invalid 2FA code")
+		case service.ErrAccountLocked:
+			writeError(w, http.StatusTooManyRequests, "account temporarily locked due to too many failed attempts")
 		default:
 			writeServerError(w, "2FA verification failed", err)
 		}
