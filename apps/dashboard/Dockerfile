@@ -47,7 +47,10 @@ RUN --mount=type=secret,id=sentry_auth_token \
     npx next build
 
 # ── Runtime stage ────────────────────────────────────────────────
-FROM gcr.io/distroless/nodejs22-debian13:nonroot AS runner
+# Distroless has no apt. CVE-2026-45447 / DSA-6335-1 needs
+# libssl3t64 >= 3.5.6-1~deb13u2. Pin the multi-arch index that ships it;
+# Renovate bumps the digest.
+FROM gcr.io/distroless/nodejs22-debian13:nonroot@sha256:22d2f0480e59548ad14cf10d8921b24ef809780e7a61b162838f3d15a4a92e3d AS runner
 
 WORKDIR /app
 
