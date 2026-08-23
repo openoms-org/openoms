@@ -312,6 +312,13 @@ func (e *DefaultActionExecutor) executeSetStatus(_ context.Context, tenantID uui
 		return fmt.Errorf("set_status action missing 'status' parameter")
 	}
 
+	// Automation is system-driven but not omniscient: a rule that targets a status the
+	// tenant's graph cannot reach from the order's current one is a misconfiguration,
+	// and applying it anyway skips the states whose side effects carry the stock and
+	// money (e.g. new -> completed never passes through shipped). Validate by default;
+	// a rule that genuinely needs to jump opts in with "force".
+	force := paramBool(action.Params["force"])
+
 	// Use a fresh context in case the original is cancelled.
 	bgCtx := context.Background()
 
@@ -324,14 +331,12 @@ func (e *DefaultActionExecutor) executeSetStatus(_ context.Context, tenantID uui
 	// (the default) this whole block is skipped and the direct path below runs
 	// byte-for-byte unchanged.
 	if e.orchestrationEnabled && e.orchestration != nil && e.fulfillment != nil && e.pool != nil {
-		return e.enqueueSetStatus(bgCtx, tenantID, action, event, targetStatus)
+		return e.enqueueSetStatus(bgCtx, tenantID, action, event, targetStatus, force)
 	}
 
-	// Use Force=true because automation rules are system-driven and should
-	// bypass normal transition validation rules.
 	req := model.StatusTransitionRequest{
 		Status: targetStatus,
-		Force:  true,
+		Force:  force,
 	}
 
 	_, err := e.orderTransitioner.TransitionStatus(bgCtx, tenantID, event.EntityID, req, uuid.Nil, "automation")
@@ -362,6 +367,34 @@ func setStatusIdempotencyKey(ruleID, orderID uuid.UUID, targetStatus string) str
 	return EventAutomationSetStatus + ":" + ruleID.String() + ":" + orderID.String() + ":" + targetStatus
 }
 
+// setStatusPayload builds the outbox payload for an orchestration-routed set_status.
+// "force" travels with the event so the async handler applies the same graph policy
+// the rule asked for; it is deliberately NOT part of the idempotency key, so flipping
+// the flag on a rule does not mint a second transition for the same target status.
+func setStatusPayload(orderID uuid.UUID, targetStatus string, ruleID uuid.UUID, actionIndex int, force bool) map[string]any {
+	return map[string]any{
+		"order_id":      orderID.String(),
+		"target_status": targetStatus,
+		"rule_id":       ruleID.String(),
+		"action_index":  actionIndex,
+		"force":         force,
+	}
+}
+
+// paramBool interprets an action parameter as a boolean opt-in. Action params arrive
+// as free-form JSON (jsonb, or the dashboard's form state), so a flag can show up as
+// a real boolean or as its string form; anything else counts as not set.
+func paramBool(v any) bool {
+	switch t := v.(type) {
+	case bool:
+		return t
+	case string:
+		return strings.EqualFold(strings.TrimSpace(t), "true")
+	default:
+		return false
+	}
+}
+
 // enqueueSetStatus is the OPE-421 orchestration-routed path for set_status. It runs
 // a single tenant transaction that (1) ensures the order's fulfillment process
 // exists — the outbox process_id FK is NOT NULL — and (2) enqueues an
@@ -369,13 +402,8 @@ func setStatusIdempotencyKey(ruleID, orderID uuid.UUID, targetStatus string) str
 // OrchestrationWorker + AutomationStatusTransitionHandler apply it asynchronously
 // and idempotently. On error it returns to the engine (which records it in
 // automation_rule_logs); it never panics and never silently drops the action.
-func (e *DefaultActionExecutor) enqueueSetStatus(ctx context.Context, tenantID uuid.UUID, action Action, event Event, targetStatus string) error {
-	payload := map[string]any{
-		"order_id":      event.EntityID.String(),
-		"target_status": targetStatus,
-		"rule_id":       action.RuleID.String(),
-		"action_index":  action.ActionIndex,
-	}
+func (e *DefaultActionExecutor) enqueueSetStatus(ctx context.Context, tenantID uuid.UUID, action Action, event Event, targetStatus string, force bool) error {
+	payload := setStatusPayload(event.EntityID, targetStatus, action.RuleID, action.ActionIndex, force)
 	idemKey := setStatusIdempotencyKey(action.RuleID, event.EntityID, targetStatus)
 
 	err := database.WithTenant(ctx, e.pool, tenantID, func(tx pgx.Tx) error {

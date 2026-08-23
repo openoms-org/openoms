@@ -18,6 +18,7 @@ type fakeAutomationOrders struct {
 	getErr          error
 	transitionErr   error
 	transitionCalls int
+	transitionReqs  []model.StatusTransitionRequest
 }
 
 func (f *fakeAutomationOrders) Get(_ context.Context, _, _ uuid.UUID) (*model.Order, error) {
@@ -29,6 +30,7 @@ func (f *fakeAutomationOrders) Get(_ context.Context, _, _ uuid.UUID) (*model.Or
 
 func (f *fakeAutomationOrders) TransitionStatus(_ context.Context, _, _ uuid.UUID, req model.StatusTransitionRequest, _ uuid.UUID, _ string) (*model.Order, error) {
 	f.transitionCalls++
+	f.transitionReqs = append(f.transitionReqs, req)
 	if f.transitionErr != nil {
 		return nil, f.transitionErr
 	}
@@ -52,7 +54,7 @@ func setStatusEvent(orderID uuid.UUID, target string) model.OrchestrationOutboxE
 }
 
 // TestAutomationStatusHandler_Transitions verifies the happy path: an order not yet
-// in the target status is transitioned (Force=true), exactly once.
+// in the target status is transitioned exactly once.
 func TestAutomationStatusHandler_Transitions(t *testing.T) {
 	orderID := uuid.New()
 	orders := &fakeAutomationOrders{order: &model.Order{ID: orderID, Status: "new"}}
@@ -61,6 +63,36 @@ func TestAutomationStatusHandler_Transitions(t *testing.T) {
 	err := h.Handle(context.Background(), setStatusEvent(orderID, "confirmed"))
 	require.NoError(t, err)
 	assert.Equal(t, 1, orders.transitionCalls, "transitions once toward the target")
+}
+
+// TestAutomationStatusHandler_ForceFromPayload verifies the handler applies the rule's
+// graph policy rather than deciding for itself: an absent flag leaves the tenant graph
+// in force, and only an explicit opt-in in the payload bypasses it.
+func TestAutomationStatusHandler_ForceFromPayload(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		force any
+		want  bool
+	}{
+		{"absent (legacy payload)", nil, false},
+		{"explicit false", false, false},
+		{"explicit true", true, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			orderID := uuid.New()
+			orders := &fakeAutomationOrders{order: &model.Order{ID: orderID, Status: "new"}}
+			h := NewAutomationStatusTransitionHandler(orders)
+
+			ev := setStatusEvent(orderID, "completed")
+			if tc.force != nil {
+				ev.Payload.(map[string]any)["force"] = tc.force
+			}
+
+			require.NoError(t, h.Handle(context.Background(), ev))
+			require.Len(t, orders.transitionReqs, 1)
+			assert.Equal(t, tc.want, orders.transitionReqs[0].Force)
+		})
+	}
 }
 
 // TestAutomationStatusHandler_IdempotentSkip verifies the core idempotency rule:
