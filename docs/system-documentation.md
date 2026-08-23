@@ -33,8 +33,8 @@
 - **Powiadomienia** -- Email (SMTP) + SMS (Twilio/SMSAPI)
 - **RBAC** -- role z granularnymi uprawnieniami
 - **2FA/TOTP** -- dwuskladnikowe uwierzytelnianie (Google Authenticator)
-- **API REST** -- 500 endpointow z OpenAPI 3.1
-- **Dashboard** -- Next.js 16 + React 19, 136 stron, dark mode, PWA
+- **API REST** -- ~540 endpointow z OpenAPI 3.1
+- **Dashboard** -- Next.js 16 + React 19, 139 stron, dark mode, PWA
 - **AI** -- auto-kategoryzacja, opis, ulepszanie i tlumaczenie produktow (OpenAI)
 - **Inwentaryzacja** -- pelny cykl zycia stocktake z liczeniem pozycji
 - **Rate shopping** -- porownywanie stawek przewoznikow
@@ -92,8 +92,8 @@
 +-------------------------------------------------------------+
 |                   PostgreSQL 16                               |
 |  +----------+  +--------------+  +-----------------------+   |
-|  | 32 tabel |  |  RLS Policy  |  |  SECURITY DEFINER     |  |
-|  | 46 migr. |  | (per tenant) |  |  (auth bypass)        |  |
+|  | 89 tabel |  |  RLS Policy  |  |  SECURITY DEFINER     |  |
+|  | 50 migr. |  | (per tenant) |  |  (auth bypass)        |  |
 |  +----------+  +--------------+  +-----------------------+   |
 +-------------------------------------------------------------+
 ```
@@ -210,8 +210,8 @@ Domyslna liczba replik: 1 (API, Dashboard, Worker). Skalowanie przez `replicaCou
 
 | Komponent | Technologia | Wersja |
 |-----------|------------|--------|
-| Framework | Next.js | 16.1.6 |
-| UI Library | React | 19.2.3 |
+| Framework | Next.js | 16.2.6 |
+| UI Library | React | 19.2.6 |
 | Komponenty | shadcn/ui + Radix UI | latest |
 | Styl | Tailwind CSS | v4 |
 | Walidacja | Zod | v4 |
@@ -220,7 +220,7 @@ Domyslna liczba replik: 1 (API, Dashboard, Worker). Skalowanie przez `replicaCou
 | Data fetching | TanStack React Query | 5.x |
 | Wykresy | Recharts | 3.x |
 | Ikony | Lucide React | 0.563 |
-| Testy E2E | Playwright | 1.58 |
+| Testy E2E | Playwright | 1.60 |
 | Testy jednostkowe | Vitest + Testing Library | 4.x |
 
 ### Monorepo
@@ -230,20 +230,20 @@ OpenOMS/
 +-- apps/
 |   +-- api-server/          <- Go backend (ELv2)
 |   |   +-- cmd/server/      <- punkt wejscia
-|   |   +-- internal/        <- logika aplikacji (95 handlerow, 78 serwisow, 48 repozytoriow)
-|   |   +-- migrations/      <- 28 migracji SQL
+|   |   +-- internal/        <- logika aplikacji (105 handlerow, 104 serwisy, 63 repozytoria)
+|   |   +-- migrations/      <- 50 wersji SQL (000001-000050)
 |   +-- dashboard/           <- Next.js frontend (ELv2)
-|       +-- src/app/         <- 136 stron (App Router)
-|       +-- src/components/  <- 98 komponentow React
-|       +-- src/hooks/       <- 79 custom hooks
+|       +-- src/app/         <- 139 stron (App Router)
+|       +-- src/components/  <- 151 komponentow React (prod .tsx)
+|       +-- src/hooks/       <- 83 custom hooks
 |       +-- src/lib/         <- utils, API client, auth
-|       +-- e2e/             <- 22 specow E2E Playwright (124 testow)
+|       +-- e2e/             <- 26 specow E2E Playwright
 +-- packages/                <- SDK-i (MIT)
-|   +-- order-engine/        <- maszyna stanow zamowien
+|   +-- order-engine/        <- maszyna stanow zamowien (uzywana przez shipmenty)
 |   +-- allegro-go-sdk/      <- Allegro REST API
 |   +-- inpost-go-sdk/       <- InPost ShipX API
 |   +-- ksef-go-sdk/         <- KSeF e-Faktur API
-|   +-- ...                  <- 27 pakietow SDK
+|   +-- ...                  <- 28 pakietow SDK
 +-- docs/                    <- dokumentacja
 ```
 
@@ -324,7 +324,7 @@ OpenOMS/
         +--------------+   +----------------+
 ```
 
-### Wszystkie tabele (64)
+### Tabele (89 lacznie; ponizej rdzen)
 
 | Tabela | Cel | Kluczowe kolumny |
 |--------|-----|-----------------|
@@ -392,22 +392,38 @@ OpenOMS/
 | `billing_checkout_sessions` | Sesje checkout | stripe_session_id (UNIQUE), plan, billing_interval, email, status, tenant_id, stripe_customer_id, stripe_subscription_id, subscription_status, trial_end, current_period_start, current_period_end |
 | `used_license_tokens` | Uzyte tokeny licencji | jti (UNIQUE), email, plan, used_at |
 | `listing_description_html` | Opisy HTML listingow | listing_id, html_content |
+| `api_tokens` | Tokeny API (owner) | token_hash, name, revoked_at |
+
+Lista powyzej to **podzbior rdzeniowy**. Pelny schemat (89 tabel, 50 wersji migracji `000001`–`000050`) obejmuje dodatkowo:
+
+- fulfillment: `fulfillment_processes`, `fulfillment_units`, `fulfillment_steps`, `fulfillment_blockers`, `fulfillment_provider_attempts`
+- orchestracja: `orchestration_outbox`, `orchestration_attempts`
+- Provider Studio: `provider_definitions`, `provider_versions`, `provider_publication_events`, `provider_tenant_enables`, `provider_field_schemas`, `provider_capability_profiles`, `provider_status_mappings`, `provider_integration_gaps`, `provider_validation_probes`, `provider_validation_runs`, `provider_validation_results`
+- platform: `platform_admins`, `platform_audit_log`
+- pozostale: `loyalty_transactions`, `supplier_availability`, `supplier_availability_policy`, `external_workflow_tokens`, `message_templates`, `marketplace_category_mappings`
+
+**Stan magazynowy:** `products.stock_quantity` jest polem legacy — nie jest zmniejszane przy wysylce. Kanoniczny stan to `warehouse_stock.quantity - reserved`. `Product.AvailableStock` jest wyliczane (`AvailableStockBatch`); 0 na surowym `List` bez populate oznacza "nie pobrano", nie "brak towaru". Rezerwacja/wysylka/anulowanie dotycza wierszy z `variant_id IS NULL`.
 
 ### Funkcje SECURITY DEFINER (bypass RLS)
 
-`PUBLIC EXECUTE` jest cofany dla funkcji omijajacych RLS. Dostep jest nadawany jawnie tylko rolom aplikacyjnym, a CI sprawdza baze po migracjach pod katem regresji.
+`PUBLIC EXECUTE` jest cofany dla funkcji omijajacych RLS. Dostep jest nadawany jawnie tylko rolom aplikacyjnym, a CI sprawdza baze po migracjach pod katem regresji. 22 funkcje (nazwy w kodzie / migracjach):
 
 | Funkcja | Cel |
 |---------|-----|
-| `find_tenant_by_slug(slug)` | Login: znalezienie tenanta po slug; zwraca zredagowane `{}` w polu `settings` dla kompatybilnosci sygnatury |
-| `find_user_for_auth(email, tenant_id)` | Login: pobranie usera z haslem + TOTP |
-| `find_order_tenant_id(order_id)` | Publiczny formularz zwrotu |
-| `find_return_by_token(token)` | Status zwrotu po tokenie |
-| `create_checkout_session(...)` | Billing: tworzenie sesji checkout (pre-rejestracja) |
-| `complete_checkout_session(...)` | Billing: oznaczenie sesji jako zakonczonej |
-| `get_checkout_session(...)` | Billing: pobranie statusu sesji |
-| `claim_checkout_session(...)` | Billing: przypisanie sesji do tenanta |
-| `validate_license_token(...)` | Walidacja tokena licencji |
+| `find_tenant_by_slug` | Login: tenant po slug; `settings` zredagowane |
+| `find_user_for_auth` | Login: user z haslem + TOTP |
+| `find_order_tenant_id` | Publiczny formularz zwrotu |
+| `find_return_by_token` | Status zwrotu po tokenie |
+| `find_invitation_by_token` / `use_invitation` | Rejestracja z zaproszenia |
+| `check_license_token_used` / `mark_license_token_used` / `update_license_token_tenant` | Licencja Ed25519, ochrona JTI |
+| `get_tenant_plan` | Plan tenanta (settings bez zaszyfrowanych blobow) |
+| `billing_create_checkout_session` | Checkout pre-rejestracja |
+| `billing_complete_checkout_session` / `billing_complete_checkout_session_with_refs` | Zakonczenie sesji checkout |
+| `billing_get_checkout_session` / `billing_get_checkout_session_with_refs` | Status sesji |
+| `billing_claim_checkout_session` / `billing_update_checkout_tenant` | Claim sesji dla tenanta |
+| `billing_create_customer` / `billing_get_customer_by_stripe_id` | Klient billing |
+| `billing_upsert_subscription` / `billing_update_subscription_by_stripe_id` | Subskrypcja |
+| `billing_sync_tenant_plan` | Sync planu tenanta z subskrypcji |
 
 Pelne `tenants.settings` sa odczytywane tylko przez tenant-scoped sciezki repozytorium, nie przez publiczny/loginowy lookup sluga.
 
@@ -418,14 +434,23 @@ Pelne `tenants.settings` sa odczytywane tylko przez tenant-scoped sciezki repozy
 ### Middleware Stack
 
 ```
-Request -> RequestID -> TrustedRealIP -> Prometheus -> SecurityHeaders -> CSRF -> HSTS -> Logger -> Recoverer -> CORS
-    -> JWTAuth (JWT first, then hashed API token on /v1; blacklist JWT only) -> RequireRole -> RequirePermission
-    -> RateLimit -> MaxBodySize -> MetricsAuth -> Handler
+Globalnie (router, w tej kolejnosci):
+  RequestID -> TrustedRealIP -> [Sentry] -> [Prometheus] -> SecurityHeaders
+    -> Logging -> Recoverer -> CORS -> CSRF
+  HSTS ustawia SecurityHeaders (gdy https), nie osobny middleware.
+
+Route-scoped (NIE globalne):
+  JWTAuth (Ed25519 access + opcjonalny hashed API token na /v1; blacklist JWT)
+    -> [SentryContext] -> TenantPlanGuard -> MaxBodySize
+    -> RequirePermission -> RateLimit* -> Handler
+
+Nie ma RequireRole. RBAC to wylacznie RequirePermission (uprawnienia z JWT).
+/v1/docs i /v1/openapi.yaml sa wylaczone poza developmentem, dopoki ENABLE_API_DOCS=true.
 ```
 
 `TrustedRealIP` honoruje `X-Forwarded-For` / `X-Real-IP` tylko wtedy, gdy bezposredni peer IP jest w `TRUSTED_PROXY_CIDRS`. `X-Forwarded-For` jest rozwiazywany od prawej do lewej i wybiera pierwszy nie-zaufany hop, zeby lewy wpis podstawiony przez klienta nie mogl zmienic rate-limit key. Przy pustej liscie naglowki forwarded sa ignorowane, a rate limity i logi uzywaja TCP peer address. Produkcyjne values powinny zawierac tylko CIDR-y ingress/cloudflared podow, ktore kontroluja lub sanitizuja forwarded headers.
 
-### Wszystkie endpointy (500)
+### Endpointy (~540; spec `/v1/openapi.yaml`)
 
 #### Autentykacja (publiczne, rate limit 10/min login, 60/min refresh)
 
@@ -985,7 +1010,7 @@ Plan guard egzekwuje status subskrypcji Stripe po stronie backendu: `past_due`/`
 
 ## 6. Frontend Dashboard
 
-### Mapa stron (136 stron)
+### Mapa stron (139 `page.tsx`)
 
 #### Publiczne (bez logowania)
 
@@ -1225,7 +1250,7 @@ Pulpit (Dashboard)
 
 ---
 
-## 7. Pakiety SDK (27)
+## 7. Pakiety SDK (28)
 
 ### Order Engine (packages/order-engine/)
 
@@ -1278,9 +1303,9 @@ Standalone maszyna stanow zamowien i przesylek:
 | amazon-sp-sdk | Amazon | LWA OAuth + AWS Signing | Zamowienia, inventory, pricing; terminalne bledy OAuth oznaczaja integracje jako wymagajaca ponownej autoryzacji |
 | woocommerce-go-sdk | WooCommerce | REST API | Zamowienia, produkty, webhooks; `on-hold` mapuje platnosc jako `pending` (nie `paid`); malformed monetary fields reject order import |
 | ebay-go-sdk | eBay | OAuth 2.0 | Zamowienia (OrderService), fulfillment + refundy (FulfillmentService), inventory CRUD + bulk (InventoryService), oferty lifecycle (OfferService), polityki konta (AccountService); malformed monetary fields reject order import; terminalne bledy OAuth oznaczaja integracje jako wymagajaca ponownej autoryzacji |
-| kaufland-go-sdk | Kaufland | Feed API | Import CSV/XML |
+| kaufland-go-sdk | Kaufland | Feed API | Import CSV/XML; adapter MarketplaceProvider **bez** order pollera |
 | olx-go-sdk | OLX | OAuth 2.0 | Ogloszenia CRUD + komendy (AdvertService), kategorie + atrybuty + sugestie (CategoryService), miasta + dzielnice (CityService), transakcje (TransactionService); `invalid_grant` z endpointu tokenow jest zwracany jako terminalny blad OAuth, a workery oznaczaja integracje jako wymagajaca ponownej autoryzacji |
-| mirakl-go-sdk | Mirakl/Empik | REST | Seller network |
+| mirakl-go-sdk | Mirakl/Empik | REST | Seller network; adapter MarketplaceProvider **bez** order pollera |
 | erli-go-sdk | Erli | REST | Zamowienia, oferty |
 | shoper-go-sdk | Shoper | REST | Zamowienia, produkty |
 | prestashop-go-sdk | PrestaShop | REST | Zamowienia, produkty |
@@ -1338,7 +1363,7 @@ JWT_SECRET (env)
 | Typ | Czas zycia | Uzycie |
 |-----|-----------|--------|
 | Access Token | 1 godzina | Header `Authorization: Bearer ...` |
-| Refresh Token | 30 dni | Cookie httpOnly (sciezka /v1/auth) |
+| Refresh Token | 30 dni | Cookie httpOnly (sciezka `/v1/auth`). Rotacja one-time; reuse kasuje cala rodzine sesji (`ErrRefreshTokenReuse`) |
 | Token API (owner) | Do odwolania | Header `Authorization: Bearer oms_...` na `/v1` |
 
 **Claims JWT:**
@@ -1416,7 +1441,7 @@ Uprawnienia: providers:read, providers:write, providers:validate, providers:publ
              providers:secrets (styl z dwukropkiem — NIGDY nadawane przez role tenanta).
 Middleware:  RequirePlatformAdmin (po JWTAuth; fail-closed: 403 przy braku/niedostępności
              wpisu, 401 bez usera) + RequirePlatformPermission(perm). NIE reużywa
-             tenant RequireRole/RequirePermission.
+             tenant RequirePermission.
 Routing:     grupa /v1/platform/* zamontowana jako rodzeństwo /v1 — NIE dziedziczy
              TenantPlanGuard ani tenant-RBAC. Backend jest autorytatywny; widoczność
              we frontendzie nigdy nie jest autoryzacją. Rate-limit 60/min.
@@ -1833,6 +1858,10 @@ Uzytkownik                Dashboard              API Server              DB
 +----------+     +-----------+
 ```
 
+Zywy graf statusow zamowienia to `tenants.settings.order_statuses` albo `DefaultOrderStatusConfig()`. Pakiet `order-engine` jest uzywany przez **shipmenty**; `OrderService` go nie importuje.
+
+`OrderService.TransitionStatus` po commicie odpala: email, webhook + WebSocket, auto-fakture, SMS, automatyzacje, sync fulfillment Allegro, stock przy pierwszym `shipped`, zwolnienie rezerwacji przy `cancelled`, lojalnosc przy `completed`. `ShipmentService` moze zapisac status zamowienia bezposrednio przez `orderRepo.UpdateStatus` i **pominac** te efekty uboczne. `Duplicate` nie rezerwuje stocku. Publiczny `POST /v1/public/returns` omija `ReturnService.Create` (brak audytu/webhooka/automatyzacji). Zwrot `refunded` ustawia tylko `payment_status`, nie status zamowienia.
+
 ### Flow 3: Webhook dispatch
 
 ```
@@ -1872,10 +1901,10 @@ AutomationEngine.ProcessEvent() [async]
     |     |    tags contains "bulk"? ok
     |     |
     |     +- Jesli wszystkie spelnione:
-    |     |    +- transition_status -> "confirmed"
+    |     |    +- set_status -> "confirmed"  (Force: true; moze pominac graf)
     |     |    +- send_email -> sales@company.com
     |     |    +- add_tag -> "auto-confirmed"
-    |     |    +- delay(30m) -> create_shipment  <- OPOZNIENIE!
+    |     |    +- delay(30m) -> kolejna akcja  <- OPOZNIENIE!
     |     |         |
     |     |         v
     |     |    Zapis w automation_delayed_actions (execute_at = NOW() + 30m)
@@ -2034,7 +2063,7 @@ EbayImportService.ImportOffers()
                     |  Amazon...)  |
                     +------+-------+
                            |
-              Polling co 45s (Worker)
+              Polling (45s-2min, zalezy od marketplace'u)
                            |
                            v
 +----------------------------------------------+
@@ -2146,47 +2175,48 @@ DPD uzywa dwoch powierzchni API: DPD Services REST do tworzenia przesylek i etyk
 
 ---
 
-## 11. Background Workers (26 plikow)
+## 11. Background Workers (32 pliki zrodlowe)
 
-### Workery (22 zarejestrowanych)
+Workery to **tickery w procesie API** (ten sam obraz `openoms-api`, flaga `WORKERS_ENABLED`), nie osobna kolejka asynq. Redis `SET NX` (`openoms:worker-lock:<name>`); blad Redis **pomija** tick. Produkcja wymaga Redis (`ALLOW_IN_MEMORY_STATE=false`). Deployment workera: 1 replica, `Recreate`. Kaufland i Mirakl maja adaptery marketplace, ale **nie maja** order pollera.
+
+### Workery bezwarunkowe (21)
 
 | Worker | Interwal | Cel |
 |--------|----------|-----|
 | AllegroOrderPoller | 45s | Polling zamowien z Allegro |
-| AmazonOrderPoller | 45s | Polling zamowien z Amazon |
-| AmazonFeedStatusWorker | 2min | Sprawdzanie statusu feedow Amazon SP-API |
-| WooCommerceOrderPoller | 45s | Polling zamowien z WooCommerce |
-| ShoperOrderPoller | 45s | Polling zamowien z Shoper |
-| PrestaShopOrderPoller | 45s | Polling zamowien z PrestaShop |
-| ShopifyOrderPoller | 45s | Polling zamowien z Shopify |
-| OLXOrderPoller | 45s | Polling zamowien z OLX |
-| EbayOrderPoller | 45s | Polling zamowien z eBay |
 | ErliOrderPoller | 45s | Polling zamowien z Erli |
-| TrackingPoller | 5min | Aktualizacja statusu przesylek |
-| StockSyncWorker | konfigurowalny | Sync stanow magazynowych do marketplace'ow (BulkStockUpdater: batch 100, AsyncStockUpdater: feeds) |
+| OLXOrderPoller | 45s | Polling zamowien z OLX |
+| WooCommerceOrderPoller | 60s | Polling zamowien z WooCommerce |
+| ShoperOrderPoller | 60s | Polling zamowien z Shoper |
+| ShopifyOrderPoller | 60s | Polling zamowien z Shopify |
+| PrestaShopOrderPoller | 90s | Polling zamowien z PrestaShop |
+| EbayOrderPoller | 90s | Polling zamowien z eBay |
+| AmazonOrderPoller | 2min | Polling zamowien z Amazon |
+| AmazonFeedStatusWorker | 2min | Sprawdzanie statusu feedow Amazon SP-API |
+| StockSyncWorker | 5min | Sync stanow do marketplace'ow (BulkStockUpdater / AsyncStockUpdater) |
 | PriceSyncWorker | 5min | Sync cen do marketplace'ow |
-| SupplierSyncWorker | konfigurowalny | Sync katalogow dostawcow (XML/IOF/CSV/API) |
-| ExchangeRateWorker | 1/dzien | Pobranie kursow z NBP |
-| OAuthRefresher | 30min | Odswiezenie tokenow OAuth (Allegro, OLX, Amazon, eBay); credentials sa czytane z JSONB jako zaszyfrowany string i odszyfrowywane AES-256-GCM |
-| KSeFStatusWorker | 5min | Sprawdzanie statusu faktur wyslanych do KSeF |
-| DelayedActionWorker | 30s | Wykonywanie opoznionych akcji automatyzacji |
-| RecurringOrderWorker | konfigurowalny | Tworzenie zamowien cyklicznych |
-| SegmentRefreshWorker | 1h | Przeliczanie czlonkostwa segmentow rule_based dla wszystkich tenantow (pelny recompute clear-then-repopulate, idempotentny) |
-| RepricingWorker | konfigurowalny | Automatyczna zmiana cen wg regul |
-| ListingSyncWorker | konfigurowalny | Push listingow (oferty/ceny/stan). Pull nie pobiera ofert — MarketplaceProvider nie ma list-offers; pozycje sa skipowane, bez statusu sukcesu |
-| BillingReconciliationWorker | 15min | Naprawia sesje checkout, ktore zarejestrowaly tenanta, ale nie utworzyly rekordow billing/subskrypcji (powtarza idempotentna finalizacje); rejestrowany tylko gdy billing jest skonfigurowany |
+| ListingSyncWorker | 5min | Push listingow (oferty/ceny/stan). Tick 5min; `SyncIntervalMinutes` jest wewnetrzny |
+| KSeFStatusWorker | 5min | Status faktur wyslanych do KSeF |
+| TrackingPoller | 10min | Aktualizacja statusu przesylek |
+| RepricingWorker | 15min | Automatyczna zmiana cen wg regul |
+| DelayedActionWorker | 30s | Opoznione akcje automatyzacji |
+| OAuthRefresher | 30min | Tokeny OAuth (Allegro, OLX, Amazon, eBay); credentials AES-256-GCM |
+| SegmentRefreshWorker | 1h | Przeliczanie czlonkostwa segmentow |
+| RecurringOrderWorker | 1h | Tworzenie zamowien cyklicznych |
+| ExchangeRateWorker | 24h | Kursy NBP |
 
-Workery zarejestrowane w managerze: 22. Liczba plikow zrodlowych w `internal/worker/`: 26. `AllegroWebhookSyncer` jest podpiety do handlera webhookow Allegro (wyzwalany eventem), a nie rejestrowany w managerze workerow -- dlatego nie liczy sie do 22 cyklicznych workerow.
+`AllegroWebhookSyncer` jest podpiety do handlera webhookow (event), nie do managera.
 
-#### Workery orchestracji (gated, rejestrowane warunkowo — tor B, OPE-415/423)
+#### Workery gated (nie w 21)
 
-Poza domyslnym zestawem 21, fulfillment orchestration (sekcja 8) dokłada workery rejestrowane tylko gdy włączone odpowiednią flagą (domyślnie OFF, więc nie liczą się do 21):
-
-| Worker | Flaga | Cel |
-|--------|-------|-----|
-| OrchestrationWorker | `ORCHESTRATION_WORKER_ENABLED` | Drenuje orchestration_outbox (FOR UPDATE SKIP LOCKED, cross-tenant privileged pool), dispatch per event_type, retry/backoff, permanent fail → fulfillment_blocker |
-| FulfillmentBackfillWorker | `FULFILLMENT_BACKFILL_ENABLED` (+ `FULFILLMENT_BACKFILL_DRY_RUN`) | Idempotentny backfill procesów dla niefinalnych zamówień bez procesu; per-tenant, dry-run domyślnie (OPE-423) |
-| SupplierOrderStatusPoller | `SUPPLIER_ORDER_ENABLED` | Reconcile statusu zamówień u dostawcy (adapter SupplierStatusReader) — per-tenant na privileged poolu, kanoniczny mapping statusu (raw zachowany), nieznany status → blocker external_status_unmapped (OPE-418/Phase-7) |
+| Worker | Interwal | Flaga | Cel |
+|--------|----------|-------|-----|
+| SupplierSyncWorker | 1min | `SUPPLIER_SYNC_ENABLED` | Sync katalogow dostawcow (XML/IOF/CSV/API) |
+| BillingReconciliationWorker | 15min | billing enabled (`STRIPE_SECRET_KEY` + `BILLING_PLANS`) | Naprawia sesje checkout bez rekordow billing |
+| OrchestrationWorker | 15s | `ORCHESTRATION_WORKER_ENABLED` | Drenuje orchestration_outbox (FOR UPDATE SKIP LOCKED), dispatch, retry/backoff |
+| SupplierOrderStatusPoller | 5min | orchestration + `SUPPLIER_ORDER_ENABLED` | Reconcile statusu zamowien u dostawcy |
+| FulfillmentBackfillWorker | 5min | `FULFILLMENT_BACKFILL_ENABLED` (+ dry-run default true) | Backfill procesow dla niefinalnych zamowien |
+| FulfillmentGaugeSweeper | 1min | `FULFILLMENT_PROCESS_ENABLED` | Metryki fulfillment |
 
 ### Infrastruktura workerow
 
@@ -2217,13 +2247,14 @@ Poza domyslnym zestawem 21, fulfillment orchestration (sekcja 8) dokłada worker
 | Event | Kiedy |
 |-------|-------|
 | `order.created` | Nowe zamowienie |
+| `order.updated` | Aktualizacja zamowienia |
 | `order.status_changed` | Zmiana statusu zamowienia |
-| `order.confirmed` | Zamowienie potwierdzone |
 | `shipment.created` | Nowa przesylka |
 | `shipment.status_changed` | Zmiana statusu przesylki |
 | `return.created` | Nowy zwrot |
 | `return.status_changed` | Zmiana statusu zwrotu |
-| `product.stock_low` | Niski stan magazynowy |
+| `product.created` / `product.updated` | Katalog |
+| `product.stock_restored` / `product.out_of_stock` | Stan magazynowy |
 
 ### Warunki (conditions)
 
@@ -2236,21 +2267,21 @@ Poza domyslnym zestawem 21, fulfillment orchestration (sekcja 8) dokłada worker
 ]
 ```
 
-Operatory: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `not_contains`, `in`, `not_in`
+Operatory: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `not_contains`, `in`, `not_in`, `starts_with`. Puste warunki = true (AND wszystkich).
 
 ### Akcje (actions)
 
 | Typ akcji | Opis |
 |-----------|------|
-| `transition_status` | Zmiana statusu zamowienia/przesylki |
+| `set_status` | Zmiana statusu zamowienia (`Force: true` — moze pominac graf). Alias w UI: `transition_status` |
 | `send_email` | Wyslanie emaila |
-| `send_sms` | Wyslanie SMS |
 | `add_tag` | Dodanie tagu |
-| `remove_tag` | Usuniecie tagu |
-| `set_field` | Ustawienie pola |
-| `create_shipment` | Auto-tworzenie przesylki |
+| `create_invoice` | Utworzenie faktury |
+| `activate_listing` / `deactivate_listing` | Publikacja / wycofanie oferty |
+| `send_marketplace_message` | Wiadomosc marketplace (Allegro) |
 | `webhook` | Wywolanie custom webhook |
-| `delay` | Opoznienie nastepnych akcji (np. 30m, 2h, 1d) |
+| `external_workflow` | Gated (`EXTERNAL_WORKFLOW_ENABLED`) |
+| `delay` | Zapis do `automation_delayed_actions` (wykonuje DelayedActionWorker) |
 
 ### Routing akcji zmieniających stan przez orchestrator (OPE-421, opcjonalne)
 
@@ -2372,20 +2403,22 @@ Haslo testowe: `password123`
 
 ## 14. Statystyki projektu
 
-| Metryka | Wartosc |
+| Metryka | Wartosc (stan na 2026-08-23, `origin/main`) |
 |---------|--------|
-| **Tabele DB** | 64 |
-| **Migracje SQL** | 28 plikow |
-| **Endpointy API** | 500 |
-| **Strony frontend** | 136 |
-| **Komponenty React** | 98 (bez testów i prymitywów shadcn `ui/`) |
-| **Custom hooks** | 79 (`use-*`) |
-| **Handlery Go** | 97 plikow |
-| **Serwisy Go** | 79 plikow |
-| **Repozytoria Go** | 48 plikow |
-| **Background workers** | 21 zarejestrowanych (25 plikow) |
-| **Middleware** | 21 plikow |
-| **Pakiety SDK** | 27 |
+| **Tabele DB** | 89 |
+| **Migracje SQL** | 50 wersji (`000001`–`000050`) |
+| **Endpointy API** | ~540 (`/v1/openapi.yaml`) |
+| **Strony frontend** | 139 `page.tsx` |
+| **Komponenty React** | 151 plikow prod `.tsx` |
+| **Custom hooks** | 83 (`use-*`) |
+| **Handlery Go** | 105 plikow (non-test) |
+| **Serwisy Go** | 104 plikow (non-test) |
+| **Repozytoria Go** | 63 plikow (non-test) |
+| **Background workers** | 21 bezwarunkowych + gated (32 pliki zrodlowe) |
+| **Middleware** | 23 pliki |
+| **Pakiety SDK** | 28 |
+| **Testy Go (api-server)** | 286 `*_test.go` |
+| **E2E Playwright** | 26 specow |
 | **Jezyki** | Go, TypeScript, SQL |
 | **Licencja** | Elastic License 2.0 (apps) + MIT (packages) |
 
@@ -2401,5 +2434,5 @@ Haslo testowe: `password123`
 
 ---
 
-*Dokument zaktualizowany: 2026-03-09*
+*Dokument zaktualizowany: 2026-08-23 (odswiezenie liczb i faktow z kodu na `origin/main`)*
 *Wersja: OpenOMS v3.5*
