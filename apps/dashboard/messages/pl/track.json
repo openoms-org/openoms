@@ -1,0 +1,34 @@
+{
+  "track": {
+    "title": "Śledź zamówienie",
+    "subtitle": "Wpisz numer zamówienia i adres email, aby sprawdzić status.",
+    "orderId": "Numer zamówienia (ID)",
+    "orderIdPlaceholder": "np. a1b2c3d4-...",
+    "email": "Adres email",
+    "emailPlaceholder": "twoj@email.pl",
+    "submit": "Sprawdź status",
+    "searching": "Szukam...",
+    "logoAlt": "Logo",
+    "errors": {
+      "missingFields": "Podaj numer zamówienia i adres email.",
+      "notFound": "Nie znaleziono zamówienia. Sprawdź numer zamówienia i email.",
+      "emailMismatch": "Podany email nie pasuje do zamówienia.",
+      "rateLimited": "Zbyt wiele prób. Spróbuj ponownie za minutę.",
+      "generic": "Wystąpił błąd. Spróbuj ponownie później.",
+      "network": "Nie udało się połączyć z serwerem. Spróbuj ponownie."
+    },
+    "result": {
+      "order": "Zamówienie",
+      "customer": "Klient",
+      "amount": "Kwota",
+      "placedAt": "Data złożenia",
+      "lastUpdate": "Ostatnia aktualizacja",
+      "items": "Produkty",
+      "quantity": "Ilość",
+      "shipments": "Przesyłki",
+      "timeline": "Historia statusów",
+      "checkAnother": "Sprawdź inne zamówienie"
+    },
+    "footer": "Powered by OpenOMS"
+  }
+}

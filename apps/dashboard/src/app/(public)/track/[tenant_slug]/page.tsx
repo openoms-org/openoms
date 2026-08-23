@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { API_URL } from "@/lib/api-client";
 import { ORDER_STATUSES, SHIPMENT_STATUSES } from "@/lib/constants";
@@ -47,6 +48,7 @@ interface TrackingResponse {
 export default function TrackingPage() {
   const params = useParams();
   const tenantSlug = params.tenant_slug as string;
+  const t = useTranslations("track");
 
   const [orderId, setOrderId] = useState("");
   const [email, setEmail] = useState("");
@@ -60,7 +62,7 @@ export default function TrackingPage() {
     setResult(null);
 
     if (!orderId.trim() || !email.trim()) {
-      setError("Podaj numer zamowienia i adres email.");
+      setError(t("errors.missingFields"));
       return;
     }
 
@@ -75,25 +77,25 @@ export default function TrackingPage() {
         }
       );
       if (res.status === 404) {
-        setError("Nie znaleziono zamowienia. Sprawdz numer zamowienia i email.");
+        setError(t("errors.notFound"));
         return;
       }
       if (res.status === 403) {
-        setError("Podany email nie pasuje do zamowienia.");
+        setError(t("errors.emailMismatch"));
         return;
       }
       if (res.status === 429) {
-        setError("Zbyt wiele prob. Sprobuj ponownie za minute.");
+        setError(t("errors.rateLimited"));
         return;
       }
       if (!res.ok) {
-        setError("Wystapil blad. Sprobuj ponownie pozniej.");
+        setError(t("errors.generic"));
         return;
       }
       const data: TrackingResponse = await res.json();
       setResult(data);
     } catch {
-      setError("Nie udalo sie polaczyc z serwerem. Sprobuj ponownie.");
+      setError(t("errors.network"));
     } finally {
       setLoading(false);
     }
@@ -113,16 +115,16 @@ export default function TrackingPage() {
         {result?.company_logo ? (
           <img
             src={result.company_logo}
-            alt={result.company_name || "Logo"}
+            alt={result.company_name || t("logoAlt")}
             className="mx-auto h-12 w-auto mb-4"
           />
         ) : null}
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">
-          {result?.company_name || "Sledz zamowienie"}
+          {result?.company_name || t("title")}
         </h1>
         {!result && (
           <p className="mt-2 text-slate-600 dark:text-slate-400">
-            Wpisz numer zamowienia i adres email, aby sprawdzic status.
+            {t("subtitle")}
           </p>
         )}
       </div>
@@ -138,14 +140,14 @@ export default function TrackingPage() {
               htmlFor="orderId"
               className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
             >
-              Numer zamowienia (ID)
+              {t("orderId")}
             </label>
             <input
               id="orderId"
               type="text"
               value={orderId}
               onChange={(e) => setOrderId(e.target.value)}
-              placeholder="np. a1b2c3d4-..."
+              placeholder={t("orderIdPlaceholder")}
               className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
               autoComplete="off"
             />
@@ -155,14 +157,14 @@ export default function TrackingPage() {
               htmlFor="email"
               className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1"
             >
-              Adres email
+              {t("email")}
             </label>
             <input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="twoj@email.pl"
+              placeholder={t("emailPlaceholder")}
               className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
               autoComplete="email"
             />
@@ -179,7 +181,7 @@ export default function TrackingPage() {
             disabled={loading}
             className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 px-4 py-2.5 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
-            {loading ? "Szukam..." : "Sprawdz status"}
+            {loading ? t("searching") : t("submit")}
           </button>
         </form>
       )}
@@ -192,7 +194,7 @@ export default function TrackingPage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Zamowienie
+                  {t("result.order")}
                 </p>
                 <p className="text-lg font-semibold text-slate-900 dark:text-slate-100 font-mono">
                   #{result.order_number.substring(0, 8).toUpperCase()}
@@ -213,20 +215,20 @@ export default function TrackingPage() {
 
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-slate-500 dark:text-slate-400">Klient</p>
+                <p className="text-slate-500 dark:text-slate-400">{t("result.customer")}</p>
                 <p className="font-medium text-slate-900 dark:text-slate-100">
                   {result.customer_name}
                 </p>
               </div>
               <div>
-                <p className="text-slate-500 dark:text-slate-400">Kwota</p>
+                <p className="text-slate-500 dark:text-slate-400">{t("result.amount")}</p>
                 <p className="font-medium text-slate-900 dark:text-slate-100">
                   {formatCurrency(result.total_amount, result.currency)}
                 </p>
               </div>
               <div>
                 <p className="text-slate-500 dark:text-slate-400">
-                  Data zlozenia
+                  {t("result.placedAt")}
                 </p>
                 <p className="font-medium text-slate-900 dark:text-slate-100">
                   {formatDate(result.created_at)}
@@ -234,7 +236,7 @@ export default function TrackingPage() {
               </div>
               <div>
                 <p className="text-slate-500 dark:text-slate-400">
-                  Ostatnia aktualizacja
+                  {t("result.lastUpdate")}
                 </p>
                 <p className="font-medium text-slate-900 dark:text-slate-100">
                   {formatDate(result.updated_at)}
@@ -247,7 +249,7 @@ export default function TrackingPage() {
           {result.items.length > 0 && (
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
-                Produkty
+                {t("result.items")}
               </h2>
               <div className="divide-y divide-slate-200 dark:divide-slate-700">
                 {result.items.map((item, i) => (
@@ -260,7 +262,7 @@ export default function TrackingPage() {
                         {item.name}
                       </p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Ilosc: {item.quantity}
+                        {t("result.quantity")}: {item.quantity}
                       </p>
                     </div>
                     <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
@@ -276,7 +278,7 @@ export default function TrackingPage() {
           {result.shipments.length > 0 && (
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
-                Przesylki
+                {t("result.shipments")}
               </h2>
               <div className="space-y-3">
                 {result.shipments.map((shipment, i) => (
@@ -311,7 +313,7 @@ export default function TrackingPage() {
           {result.timeline.length > 0 && (
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">
-                Historia statusow
+                {t("result.timeline")}
               </h2>
               <div className="relative">
                 <div className="absolute left-3.5 top-0 bottom-0 w-px bg-slate-200 dark:bg-slate-700" />
@@ -346,7 +348,7 @@ export default function TrackingPage() {
               onClick={handleReset}
               className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
             >
-              Sprawdz inne zamowienie
+              {t("result.checkAnother")}
             </button>
           </div>
         </div>
@@ -354,7 +356,7 @@ export default function TrackingPage() {
 
       {/* Footer */}
       <footer className="mt-auto pt-12 pb-6 text-center text-xs text-slate-400 dark:text-slate-500">
-        Powered by OpenOMS
+        {t("footer")}
       </footer>
     </div>
   );

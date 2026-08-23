@@ -1,4 +1,5 @@
 import layout from '../../messages/pl/layout.json';
+import track from '../../messages/pl/track.json';
 
 /**
  * Copy read straight out of messages/pl.
@@ -19,6 +20,7 @@ import layout from '../../messages/pl/layout.json';
 // here as specs start needing them.
 const MESSAGES: Record<string, unknown> = {
   ...layout,
+  ...track,
 };
 
 /**
@@ -72,4 +74,14 @@ export const LOGIN_COPY = {
   register: plCopy('auth.login.register'),
   orgRequired: plCopy('auth.validation.orgRequired'),
   passwordRequired: plCopy('auth.validation.passwordRequired'),
+} as const;
+
+/** Public /track copy. The page is unauthenticated. */
+export const TRACK_COPY = {
+  title: plCopy('track.title'),
+  subtitle: plCopy('track.subtitle'),
+  orderId: plCopy('track.orderId'),
+  email: plCopy('track.email'),
+  submit: plCopy('track.submit'),
+  missingFields: plCopy('track.errors.missingFields'),
 } as const;

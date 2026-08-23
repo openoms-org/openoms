@@ -68,11 +68,9 @@ function getProviderLabel(provider?: string, unknownLabel?: string): string {
     allegro: "Allegro",
     amazon: "Amazon",
     ebay: "eBay",
-    kaufland: "Kaufland",
     olx: "OLX",
     woocommerce: "WooCommerce",
     erli: "Erli",
-    mirakl: "Mirakl/Empik",
   };
   return provider ? labels[provider] || provider : (unknownLabel ?? "Unknown");
 }

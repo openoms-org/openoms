@@ -40,9 +40,9 @@ describe("TrackingPage", () => {
 
     render(<TrackingPage />);
 
-    await userEvent.type(screen.getByLabelText("Numer zamowienia (ID)"), " order-123 ");
-    await userEvent.type(screen.getByLabelText("Adres email"), " customer@example.com ");
-    await userEvent.click(screen.getByRole("button", { name: "Sprawdz status" }));
+    await userEvent.type(screen.getByLabelText("orderId"), " order-123 ");
+    await userEvent.type(screen.getByLabelText("email"), " customer@example.com ");
+    await userEvent.click(screen.getByRole("button", { name: "submit" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -54,6 +54,12 @@ describe("TrackingPage", () => {
       headers: { "Content-Type": "application/json" },
     });
     expect(JSON.parse(init.body as string)).toEqual({ email: "customer@example.com" });
+  });
+
+  it("shows a translated validation error when the form is empty", async () => {
+    render(<TrackingPage />);
+    await userEvent.click(screen.getByRole("button", { name: "submit" }));
+    expect(await screen.findByText("errors.missingFields")).toBeInTheDocument();
   });
 
   async function lookup(overrides: Record<string, unknown>) {
@@ -78,9 +84,9 @@ describe("TrackingPage", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     render(<TrackingPage />);
-    await userEvent.type(screen.getByLabelText("Numer zamowienia (ID)"), "order-123");
-    await userEvent.type(screen.getByLabelText("Adres email"), "customer@example.com");
-    await userEvent.click(screen.getByRole("button", { name: "Sprawdz status" }));
+    await userEvent.type(screen.getByLabelText("orderId"), "order-123");
+    await userEvent.type(screen.getByLabelText("email"), "customer@example.com");
+    await userEvent.click(screen.getByRole("button", { name: "submit" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
   }
 
@@ -88,7 +94,6 @@ describe("TrackingPage", () => {
     await lookup({});
 
     const badge = await screen.findByText("Wysłane");
-    // ORDER_STATUSES.shipped
     expect(badge).toHaveClass("bg-violet-100");
     expect(badge).toHaveClass("text-violet-800");
   });
@@ -106,7 +111,6 @@ describe("TrackingPage", () => {
     });
 
     const badge = await screen.findByText("Etykieta gotowa");
-    // SHIPMENT_STATUSES.label_ready — a status the old local map had no colour for
     expect(badge).toHaveClass("bg-indigo-100");
     expect(badge).toHaveClass("text-indigo-800");
   });

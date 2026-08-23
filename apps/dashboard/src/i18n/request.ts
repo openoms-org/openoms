@@ -69,6 +69,7 @@ const MODULES = [
   "shipments",
   "statuses",
   "suppliers",
+  "track",
   "warehouses",
   "workflows",
 ] as const;

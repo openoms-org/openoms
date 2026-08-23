@@ -463,6 +463,15 @@ func syncResultForUnsupportedPull(skipped int) *SyncResult {
 	}
 }
 
+func lastErrorForUnsupportedPull() *string {
+	msg := listingPullUnsupportedReason
+	return &msg
+}
+
+func recordCleanLastSyncForUnsupportedPull() bool {
+	return false
+}
+
 // PullListings does not fetch marketplace offers: MarketplaceProvider has no
 // list-offers API. It records an honest skip per existing listing and does
 // not write a successful pull status for work that did not happen.
@@ -489,7 +498,11 @@ func (s *ListingSyncService) PullListings(ctx context.Context, tenantID uuid.UUI
 		return nil, err
 	}
 
-	s.updateLastSync(ctx, tenantID, configID, false)
+	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		return s.syncRepo.UpdateLastSync(ctx, tx, configID, lastErrorForUnsupportedPull())
+	}); err != nil {
+		slog.Error("failed to update last sync timestamp", "error", err, "tenant_id", tenantID, "config_id", configID)
+	}
 	return syncResultForUnsupportedPull(skipped), nil
 }
 

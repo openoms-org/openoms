@@ -21,16 +21,15 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { getErrorMessage } from "@/lib/api-client";
+import { isLiveOrderChannel } from "@/lib/live-order-channels";
 
 const PROVIDER_LABELS: Record<string, string> = {
   allegro: "Allegro",
   amazon: "Amazon",
   ebay: "eBay",
-  kaufland: "Kaufland",
   olx: "OLX",
   woocommerce: "WooCommerce",
   erli: "Erli",
-  mirakl: "Mirakl/Empik",
   shoper: "Shoper",
   prestashop: "PrestaShop",
   shopify: "Shopify",
@@ -75,7 +74,7 @@ export default function NewListingSyncPage() {
   };
 
   const activeIntegrations = (integrations || []).filter(
-    (i) => i.status === "active"
+    (i) => i.status === "active" && isLiveOrderChannel(i.provider)
   );
 
   return (

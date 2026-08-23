@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { ORDER_STATUSES, ORDER_SOURCES, PAYMENT_STATUSES, ORDER_SOURCE_LABELS, ORDER_PRIORITIES } from "@/lib/constants";
+import { liveOrderSources } from "@/lib/live-order-channels";
 import { useOrderStatuses, statusesToMap } from "@/hooks/use-order-statuses";
 import { useEffectSyncedState } from "@/hooks/use-effect-synced-state";
 
@@ -127,7 +128,7 @@ export function OrderFilters({ filters, onFilterChange }: OrderFiltersProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("filters.allSources")}</SelectItem>
-            {ORDER_SOURCES.map((source) => (
+            {liveOrderSources(ORDER_SOURCES).map((source) => (
               <SelectItem key={source} value={source}>
                 {ORDER_SOURCE_LABELS[source] || source}
               </SelectItem>

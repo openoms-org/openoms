@@ -127,6 +127,7 @@ import { AlertTriangle, Check, ChevronsUpDown, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { sanitizeUrl } from "@/lib/utils";
 import { PROVIDER_CATEGORIES } from "@/lib/constants";
+import { isLiveOrderChannel } from "@/lib/live-order-channels";
 
 // ===================== Constants =====================
 
@@ -647,8 +648,6 @@ function CreateListingWizard({
     erli: { name: "Erli", logo: "/logos/erli.svg", description: tl("providerErli") },
     amazon: { name: "Amazon", logo: "/logos/amazon.svg", description: tl("providerAmazon") },
     ebay: { name: "eBay", logo: "/logos/ebay.svg", description: tl("providerEbay") },
-    kaufland: { name: "Kaufland", logo: "/logos/kaufland.svg", description: tl("providerKaufland") },
-    empik: { name: "Empik Marketplace", logo: "/logos/empik.svg", description: tl("providerEmpik") },
   };
 
   // Filter to only marketplace providers that have active integrations
@@ -656,7 +655,7 @@ function CreateListingWizard({
     if (!integrations) return [];
     const marketplaceProviders = PROVIDER_CATEGORIES.marketplace.providers;
     return integrations
-      .filter((i) => i.status === "active" && marketplaceProviders.includes(i.provider))
+      .filter((i) => i.status === "active" && marketplaceProviders.includes(i.provider) && isLiveOrderChannel(i.provider))
       .map((i) => ({
         key: i.provider,
         integrationId: i.id,
