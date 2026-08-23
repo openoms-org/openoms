@@ -418,6 +418,10 @@ func run() error {
 	orderService.SetSMSService(smsService)
 	orderService.SetShipmentService(shipmentService)
 	shipmentService.SetSMSService(smsService)
+	// Carrier-driven order status changes go through the order service's own writer, so
+	// they run the same side effects (stock, invoice, notifications, automation, loyalty)
+	// as an API-driven transition.
+	shipmentService.SetOrderStatusSyncer(orderService)
 	allegroSyncService := service.NewAllegroSyncService(integrationService).
 		WithFulfillment(fulfillmentService) // OPE-417 followup: best-effort marketplace-sync provider attempts
 	orderService.SetAllegroSyncService(allegroSyncService)
@@ -860,7 +864,7 @@ func run() error {
 	helpdeskHandler := handler.NewHelpdeskHandler(freshdeskService)
 
 	// Public return handler (Phase 29)
-	publicReturnHandler := handler.NewPublicReturnHandler(pool, returnRepo, orderRepo)
+	publicReturnHandler := handler.NewPublicReturnHandler(pool, returnService)
 
 	// Exchange rate handler (Phase 30)
 	exchangeRateHandler := handler.NewExchangeRateHandler(exchangeRateService)

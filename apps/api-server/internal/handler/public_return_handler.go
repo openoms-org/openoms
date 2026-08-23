@@ -2,8 +2,6 @@ package handler
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -13,24 +11,21 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/openoms-org/openoms/apps/api-server/internal/database"
 	"github.com/openoms-org/openoms/apps/api-server/internal/model"
-	"github.com/openoms-org/openoms/apps/api-server/internal/repository"
+	"github.com/openoms-org/openoms/apps/api-server/internal/service"
 )
 
 // PublicReturnHandler handles public (no auth) return endpoints.
 type PublicReturnHandler struct {
-	pool       *pgxpool.Pool
-	returnRepo repository.ReturnRepo
-	orderRepo  repository.OrderRepo
+	pool    *pgxpool.Pool
+	returns *service.ReturnService
 }
 
 // NewPublicReturnHandler creates a new PublicReturnHandler.
-func NewPublicReturnHandler(pool *pgxpool.Pool, returnRepo repository.ReturnRepo, orderRepo repository.OrderRepo) *PublicReturnHandler {
+func NewPublicReturnHandler(pool *pgxpool.Pool, returns *service.ReturnService) *PublicReturnHandler {
 	return &PublicReturnHandler{
-		pool:       pool,
-		returnRepo: returnRepo,
-		orderRepo:  orderRepo,
+		pool:    pool,
+		returns: returns,
 	}
 }
 
@@ -139,42 +134,9 @@ func (h *PublicReturnHandler) CreatePublicReturn(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// Generate random return token
-	tokenBytes := make([]byte, 16)
-	if _, err := rand.Read(tokenBytes); err != nil {
-		writeServerError(w, "failed to generate token", err)
-		return
-	}
-	returnToken := hex.EncodeToString(tokenBytes)
-
-	items := req.Items
-	if items == nil {
-		items = json.RawMessage("[]")
-	}
-
-	var notes *string
-	if req.Notes != "" {
-		notes = &req.Notes
-	}
-
-	ret := &model.Return{
-		ID:            uuid.New(),
-		TenantID:      tenantID,
-		OrderID:       orderID,
-		Status:        "requested",
-		Reason:        req.Reason,
-		Items:         items,
-		RefundAmount:  0,
-		Notes:         notes,
-		ReturnToken:   &returnToken,
-		CustomerEmail: &req.Email,
-		CustomerNotes: notes,
-	}
-
-	// Create the return with tenant context
-	err = database.WithTenant(r.Context(), h.pool, tenantID, func(tx pgx.Tx) error {
-		return h.returnRepo.Create(r.Context(), tx, ret)
-	})
+	// Ownership is proven; the rest of the creation (row, audit, webhook, automation)
+	// is the service's job, so a customer-submitted return behaves like any other.
+	ret, err := h.returns.CreatePublic(r.Context(), tenantID, orderID, req)
 	if err != nil {
 		writeServerError(w, "failed to create return", err)
 		return
@@ -183,7 +145,7 @@ func (h *PublicReturnHandler) CreatePublicReturn(w http.ResponseWriter, r *http.
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"id":           ret.ID,
 		"status":       ret.Status,
-		"return_token": returnToken,
+		"return_token": ret.ReturnToken,
 		"created_at":   ret.CreatedAt,
 	})
 }

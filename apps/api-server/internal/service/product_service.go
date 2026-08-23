@@ -191,11 +191,17 @@ func (s *ProductService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 		return nil, err
 	}
 	DispatchWebhookAsync(s.webhookDispatch, tenantID, "product.created", product)
+	// stock_quantity here is the legacy products.stock_quantity column — the figure the
+	// user just entered, not available stock (which is warehouse_stock.quantity -
+	// reserved and does not exist yet for a product created this instant).
 	FireAutomationEvent(s.automationService, tenantID, "product", "product.created", product.ID, map[string]any{
 		"name": product.Name, "price": product.Price, "stock_quantity": product.StockQuantity,
 		"source": product.Source,
 	})
-	// Trigger marketplace stock sync if product was created with stock
+	// Trigger marketplace stock sync if product was created with stock. The pair passed
+	// to OnStockChange only drives its zero-crossing heuristics (relist / deactivate);
+	// the quantity actually pushed to marketplaces is recomputed there from
+	// warehouse_stock, so the legacy column never reaches a channel.
 	if s.stockSyncService != nil && product.StockQuantity > 0 {
 		asyncutil.SafeGo(func() {
 			s.stockSyncService.OnStockChange(context.Background(), tenantID, product.ID, "product_created", 0, product.StockQuantity)
@@ -264,11 +270,16 @@ func (s *ProductService) Update(ctx context.Context, tenantID, productID uuid.UU
 	}
 	if product != nil {
 		DispatchWebhookAsync(s.webhookDispatch, tenantID, "product.updated", product)
+		// stock_quantity is the legacy column, i.e. what a user last typed on the product
+		// form. It is not available stock: shipments never decrement it.
 		FireAutomationEvent(s.automationService, tenantID, "product", "product.updated", product.ID, map[string]any{
 			"name": product.Name, "price": product.Price, "stock_quantity": product.StockQuantity,
 			"source": product.Source,
 		})
-		// Trigger marketplace stock sync if stock quantity changed
+		// Trigger marketplace stock sync when the legacy column was edited by hand. Both
+		// quantities describe that edit and only feed OnStockChange's zero-crossing
+		// heuristics; the quantity pushed to channels is recomputed there from
+		// warehouse_stock.
 		if s.stockSyncService != nil && req.StockQuantity != nil && product.StockQuantity != oldStockQty {
 			asyncutil.SafeGo(func() {
 				s.stockSyncService.OnStockChange(context.Background(), tenantID, productID, "manual_update", oldStockQty, product.StockQuantity)

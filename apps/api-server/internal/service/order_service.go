@@ -169,26 +169,83 @@ func (s *OrderService) SetBundleService(bundleSvc *BundleService) {
 	s.bundleService = bundleSvc
 }
 
-// expandBundleQuantities rewrites productQtys in place: bundle product entries are removed
-// (bundles are virtual and hold no warehouse_stock of their own) and replaced by their
-// component product quantities, so a single warehouse_stock walk covers components AND
-// normal products. No-op when the bundle service is unwired; on expansion failure it logs
-// and leaves productQtys unchanged (best-effort, matching the surrounding side-effects).
-func (s *OrderService) expandBundleQuantities(ctx context.Context, tx pgx.Tx, productQtys map[uuid.UUID]int) {
-	if s.bundleService == nil || len(productQtys) == 0 {
+// stockLine identifies the warehouse_stock rows one order line draws from. VariantID is
+// uuid.Nil for a line that names only a product, which is a distinct target from any
+// real variant — two lines of the same product in different variants must not collapse
+// into one product total.
+type stockLine struct {
+	ProductID uuid.UUID
+	VariantID uuid.UUID
+}
+
+// expandBundleLines rewrites lines in place: bundle entries are removed (bundles are
+// virtual and hold no warehouse_stock of their own) and replaced by their component
+// product quantities, so a single warehouse_stock walk covers components AND normal
+// products. Only product-level lines are considered for expansion, since a bundle is
+// not itself variant-tracked, and components are added as product-level lines.
+// No-op when the bundle service is unwired; on expansion failure it logs and leaves
+// lines unchanged (best-effort, matching the surrounding side-effects).
+func (s *OrderService) expandBundleLines(ctx context.Context, tx pgx.Tx, lines map[stockLine]int) {
+	if s.bundleService == nil || len(lines) == 0 {
 		return
 	}
-	componentQtys, bundleIDs, err := s.bundleService.ExpandBundleComponents(ctx, tx, productQtys)
+	candidates := make(map[uuid.UUID]int, len(lines))
+	for line, qty := range lines {
+		if line.VariantID == uuid.Nil {
+			candidates[line.ProductID] += qty
+		}
+	}
+	if len(candidates) == 0 {
+		return
+	}
+	componentQtys, bundleIDs, err := s.bundleService.ExpandBundleComponents(ctx, tx, candidates)
 	if err != nil {
 		slog.Error("failed to expand bundle components for stock adjustment", "error", err)
 		return
 	}
 	for id := range bundleIDs {
-		delete(productQtys, id)
+		delete(lines, stockLine{ProductID: id})
 	}
 	for productID, qty := range componentQtys {
-		productQtys[productID] += qty
+		lines[stockLine{ProductID: productID}] += qty
 	}
+}
+
+// stockRowsForLine picks the warehouse_stock rows an order line may draw from, in
+// preference order.
+//
+// A line naming a variant uses that variant's rows, and falls back to the product-level
+// rows when the variant has none: the tenant then tracks stock per product, and the
+// availability the order was accepted against sums every row for the product
+// (ProductRepository.AvailableStockBatch), so the product-level row is exactly what that
+// number promised. A line naming only a product prefers the product-level rows and falls
+// back to the variant rows for the same reason.
+//
+// The fallbacks matter because the alternative is silence: statements used to match on
+// `variant_id IS NULL`, so a variant line updated no row while the walk still counted
+// its quantity as consumed, and the reservation simply evaporated.
+func stockRowsForLine(stocks []model.WarehouseStock, variantID uuid.UUID) []model.WarehouseStock {
+	var matching, productLevel, otherVariants []model.WarehouseStock
+	for _, st := range stocks {
+		switch {
+		case st.VariantID == nil:
+			productLevel = append(productLevel, st)
+		case variantID != uuid.Nil && *st.VariantID == variantID:
+			matching = append(matching, st)
+		default:
+			otherVariants = append(otherVariants, st)
+		}
+	}
+	if variantID != uuid.Nil {
+		if len(matching) > 0 {
+			return matching
+		}
+		return productLevel
+	}
+	if len(productLevel) > 0 {
+		return productLevel
+	}
+	return otherVariants
 }
 
 func (s *OrderService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (*model.OrderStatusConfig, error) {
@@ -497,6 +554,9 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 		order.PaymentMethod = req.PaymentMethod
 	}
 
+	// Products whose reservation the create transaction actually applied, used to
+	// trigger the marketplace stock sync once the order is committed.
+	var reservedQtys map[uuid.UUID]int
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		if err := EnforceMonthlyOrderLimit(ctx, tx, s.orderRepo, tenantID, req.MaxOrdersMonthly, 0); err != nil {
 			return err
@@ -530,7 +590,7 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 				return err
 			}
 		}
-		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
+		if err := s.auditRepo.Log(ctx, tx, model.AuditEntry{
 			TenantID:   tenantID,
 			UserID:     actorID,
 			Action:     "order.created",
@@ -538,39 +598,18 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 			EntityID:   order.ID,
 			Changes:    map[string]string{"source": req.Source, "customer_name": req.CustomerName},
 			IPAddress:  ip,
-		})
+		}); err != nil {
+			return err
+		}
+		reservedQtys, err = s.reserveStockInTx(ctx, tx, order.Items)
+		return err
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	// Reserve stock for order items (best-effort, async stock sync)
-	if s.warehouseStockRepo != nil {
-		productQtys := extractProductQuantities(order.Items)
-		if len(productQtys) > 0 {
-			bgCtx := context.Background()
-			if err := database.WithTenant(bgCtx, s.pool, tenantID, func(tx pgx.Tx) error {
-				s.expandBundleQuantities(bgCtx, tx, productQtys)
-				s.adjustStockPerProduct(bgCtx, tx, productQtys, func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) int {
-					available := stock.Quantity - stock.Reserved
-					if available <= 0 {
-						return 0
-					}
-					reserveQty := min(remaining, available)
-					if _, err := tx.Exec(ctx,
-						`UPDATE warehouse_stock SET reserved = reserved + $1, updated_at = NOW()
-						 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id IS NULL`,
-						reserveQty, stock.WarehouseID, productID); err != nil {
-						slog.Error("failed to reserve stock", "error", err, "product_id", productID, "warehouse_id", stock.WarehouseID)
-					}
-					return reserveQty
-				})
-				return nil
-			}); err != nil {
-				slog.Error("failed to reserve stock for order", "error", err, "tenant_id", tenantID)
-			}
-			s.triggerStockSync(tenantID, productQtys, "order_placed")
-		}
+	if len(reservedQtys) > 0 {
+		s.triggerStockSync(tenantID, reservedQtys, "order_placed")
 	}
 
 	DispatchWebhookAsync(s.webhookDispatch, tenantID, "order.created", order)
@@ -604,12 +643,13 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 // Duplicate creates a copy of an existing order as a fresh "new" order, with a new ID
 // and no external reference. It enforces the monthly order limit inside the same
 // transaction (mirroring Create), increments the linked customer's denormalized order
-// stats, and writes an "order.duplicated" audit entry, then dispatches an order.created
-// webhook after commit. For post-commit side-effects it is webhook-only (no fulfillment
-// process, stock reserve, or automation event) and intentionally non-idempotent — each
-// call mints a new order.
+// stats, reserves stock for the copied line items, and writes an "order.duplicated"
+// audit entry, then dispatches an order.created webhook after commit. It fires no
+// automation event and creates no fulfillment process, and is intentionally
+// non-idempotent — each call mints a new order.
 func (s *OrderService) Duplicate(ctx context.Context, tenantID, orderID uuid.UUID, maxOrdersMonthly int, actorID uuid.UUID, ip string) (*model.Order, error) {
 	var newOrder *model.Order
+	var reservedQtys map[uuid.UUID]int
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		if err := EnforceMonthlyOrderLimit(ctx, tx, s.orderRepo, tenantID, maxOrdersMonthly, 0); err != nil {
 			return err
@@ -673,7 +713,7 @@ func (s *OrderService) Duplicate(ctx context.Context, tenantID, orderID uuid.UUI
 			}
 		}
 
-		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
+		if err := s.auditRepo.Log(ctx, tx, model.AuditEntry{
 			TenantID:   tenantID,
 			UserID:     actorID,
 			Action:     "order.duplicated",
@@ -681,12 +721,23 @@ func (s *OrderService) Duplicate(ctx context.Context, tenantID, orderID uuid.UUI
 			EntityID:   newOrder.ID,
 			Changes:    map[string]string{"source_order_id": orderID.String()},
 			IPAddress:  ip,
-		})
+		}); err != nil {
+			return err
+		}
+
+		// A duplicate is a real, fulfillable order, so its lines have to hold stock like
+		// any other. Without this its quantities stayed invisible to every availability
+		// calculation until someone shipped it.
+		reservedQtys, err = s.reserveStockInTx(ctx, tx, newOrder.Items)
+		return err
 	})
 	if err != nil {
 		return nil, err
 	}
 
+	if len(reservedQtys) > 0 {
+		s.triggerStockSync(tenantID, reservedQtys, "order_placed")
+	}
 	// Dispatch webhook for the duplicated order (async, best-effort)
 	DispatchWebhookAsync(s.webhookDispatch, tenantID, "order.created", newOrder)
 
@@ -769,15 +820,147 @@ func (s *OrderService) Delete(ctx context.Context, tenantID, orderID, actorID uu
 	return err
 }
 
+// OrderStatusChange is the record of one applied order status write, handed from the
+// transactional writer to the post-commit side effects. It exists so a caller that
+// owns its own transaction (ShipmentService, reacting to carrier events) can write the
+// status atomically with its own rows and still run the full side-effect set.
+type OrderStatusChange struct {
+	Order     *model.Order
+	OldStatus string
+	NewStatus string
+	// FirstShip reports that the order had not shipped before this change. shipped_at
+	// is stamped once (COALESCE on update, never cleared), so it gates the one-time
+	// stock decrement and makes a repeated ship a no-op.
+	FirstShip bool
+}
+
+// OrderStatusSyncer is the narrow OrderService surface used by services that change an
+// order's status as a side effect of their own domain event. Splitting the write from
+// the effects is what keeps it safe: the write joins the caller's transaction, and the
+// effects run after that transaction commits. Calling OrderService.TransitionStatus
+// instead would open a second transaction against a row the caller still has locked.
+type OrderStatusSyncer interface {
+	WriteOrderStatusInTx(ctx context.Context, tx pgx.Tx, tenantID, orderID uuid.UUID, newStatus string, actorID uuid.UUID, ip string) (*OrderStatusChange, error)
+	FireOrderStatusEffects(tenantID uuid.UUID, change *OrderStatusChange)
+}
+
+// WriteOrderStatusInTx applies an order status change inside the caller's transaction:
+// the status-specific timestamps, the status update, and the order.status_changed audit
+// entry. It deliberately does NOT consult the tenant transition graph — validation is
+// the caller's policy decision (the API path validates, carrier events do not, because
+// a delivered parcel is a fact rather than a request). The returned change must be
+// passed to FireOrderStatusEffects once the transaction commits, and only then.
+func (s *OrderService) WriteOrderStatusInTx(ctx context.Context, tx pgx.Tx, tenantID, orderID uuid.UUID, newStatus string, actorID uuid.UUID, ip string) (*OrderStatusChange, error) {
+	existing, err := s.orderRepo.FindByID(ctx, tx, orderID)
+	if err != nil {
+		return nil, err
+	}
+	if existing == nil {
+		return nil, ErrOrderNotFound
+	}
+
+	var setShippedAt, setDeliveredAt *time.Time
+	if newStatus == model.OrderStatusShipped {
+		now := time.Now()
+		setShippedAt = &now
+	}
+	if newStatus == model.OrderStatusDelivered {
+		now := time.Now()
+		setDeliveredAt = &now
+	}
+
+	if err := s.orderRepo.UpdateStatus(ctx, tx, orderID, newStatus, setShippedAt, setDeliveredAt); err != nil {
+		return nil, err
+	}
+
+	updated, err := s.orderRepo.FindByID(ctx, tx, orderID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.auditRepo.Log(ctx, tx, model.AuditEntry{
+		TenantID:   tenantID,
+		UserID:     actorID,
+		Action:     "order.status_changed",
+		EntityType: "order",
+		EntityID:   orderID,
+		Changes:    map[string]string{"from": existing.Status, "to": newStatus},
+		IPAddress:  ip,
+	}); err != nil {
+		return nil, err
+	}
+
+	return &OrderStatusChange{
+		Order:     updated,
+		OldStatus: existing.Status,
+		NewStatus: newStatus,
+		FirstShip: existing.ShippedAt == nil,
+	}, nil
+}
+
+// FireOrderStatusEffects runs every post-commit consequence of an order status change:
+// customer email/SMS, the status_changed webhook, invoice auto-create, the automation
+// event, Allegro fulfillment sync, the one-time stock decrement on ship, the
+// reservation release on cancel, and loyalty accrual on completion. Every branch is
+// best-effort and asynchronous, so no side effect can fail the change that caused it.
+//
+// This is the only place those effects live. Any writer of order status must call it,
+// otherwise the status moves while the stock, invoice and notifications do not.
+func (s *OrderService) FireOrderStatusEffects(tenantID uuid.UUID, change *OrderStatusChange) {
+	if change == nil || change.Order == nil {
+		return
+	}
+	order := change.Order
+	oldStatus, newStatus := change.OldStatus, change.NewStatus
+
+	if s.emailService != nil {
+		asyncutil.SafeGo(func() {
+			s.emailService.SendOrderStatusEmail(context.Background(), tenantID, order, oldStatus, newStatus)
+		})
+	}
+	DispatchWebhookAsync(s.webhookDispatch, tenantID, "order.status_changed", map[string]any{"order_id": order.ID.String(), "from": oldStatus, "to": newStatus})
+	if s.invoiceService != nil {
+		asyncutil.SafeGo(func() { s.invoiceService.HandleOrderStatusChange(context.Background(), tenantID, order) })
+	}
+	if s.smsService != nil {
+		asyncutil.SafeGo(func() { s.smsService.SendOrderStatusSMS(context.Background(), tenantID, order, oldStatus, newStatus) })
+	}
+	FireAutomationEvent(s.automationService, tenantID, "order", "order.status_changed", order.ID, map[string]any{
+		"status": order.Status, "old_status": oldStatus, "new_status": newStatus,
+		"source": order.Source, "customer_name": order.CustomerName,
+		"total_amount": order.TotalAmount, "currency": order.Currency,
+		"payment_status": order.PaymentStatus,
+	})
+	// Auto-sync fulfillment status to Allegro (async, best-effort)
+	if s.allegroSync != nil && order.Source == "allegro" {
+		asyncutil.SafeGo(func() { s.allegroSync.SyncFulfillmentStatus(context.Background(), tenantID, order, newStatus) })
+	}
+	// Stock sync on status change
+	switch newStatus {
+	case model.OrderStatusShipped:
+		// Decrement component/product stock exactly once per order (FirstShip gate),
+		// so a re-ship — or a second parcel of the same order — does not double-decrement.
+		if change.FirstShip {
+			asyncutil.SafeGo(func() { s.handleStockOnShip(context.Background(), tenantID, order) })
+		}
+	case model.OrderStatusCancelled:
+		// Release reservations once; skip when the order was already terminal
+		// (cancelled/refunded) to avoid double-releasing.
+		if !isTerminalStockStatus(oldStatus) {
+			asyncutil.SafeGo(func() { s.handleStockOnCancel(context.Background(), tenantID, order) })
+		}
+	case model.OrderStatusCompleted:
+		s.awardLoyaltyOnComplete(tenantID, order)
+	}
+}
+
 // TransitionStatus moves an order to a new status, enforcing allowed transitions.
 func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID uuid.UUID, req model.StatusTransitionRequest, actorID uuid.UUID, ip string) (*model.Order, error) {
 	if err := req.Validate(); err != nil {
 		return nil, NewValidationError(err)
 	}
 
-	var order *model.Order
-	var oldStatus string
-	var firstShip bool
+	var change *OrderStatusChange
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := s.orderRepo.FindByID(ctx, tx, orderID)
 		if err != nil {
@@ -786,11 +969,6 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 		if existing == nil {
 			return ErrOrderNotFound
 		}
-		oldStatus = existing.Status
-		// firstShip is true only when the order has not shipped before. shipped_at is set
-		// once (COALESCE on update, never cleared), so this gates the one-time stock
-		// decrement and makes a forced re-ship a no-op.
-		firstShip = existing.ShippedAt == nil
 
 		config, err := s.loadStatusConfig(ctx, tx, tenantID)
 		if err != nil {
@@ -801,8 +979,6 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 			return fmt.Errorf("%w: %q", ErrUnknownStatus, req.Status)
 		}
 
-		var setShippedAt, setDeliveredAt *time.Time
-
 		if !req.Force {
 			if !config.IsValidStatus(existing.Status) {
 				return fmt.Errorf("%w: current %q", ErrUnknownStatus, existing.Status)
@@ -812,78 +988,19 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 			}
 		}
 
-		// Set timestamps for special statuses
-		if req.Status == "shipped" {
-			now := time.Now()
-			setShippedAt = &now
-		}
-		if req.Status == "delivered" {
-			now := time.Now()
-			setDeliveredAt = &now
-		}
-
-		if err := s.orderRepo.UpdateStatus(ctx, tx, orderID, req.Status, setShippedAt, setDeliveredAt); err != nil {
-			return err
-		}
-
-		order, err = s.orderRepo.FindByID(ctx, tx, orderID)
-		if err != nil {
-			return err
-		}
-
-		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
-			TenantID:   tenantID,
-			UserID:     actorID,
-			Action:     "order.status_changed",
-			EntityType: "order",
-			EntityID:   orderID,
-			Changes:    map[string]string{"from": existing.Status, "to": req.Status},
-			IPAddress:  ip,
-		})
+		change, err = s.WriteOrderStatusInTx(ctx, tx, tenantID, orderID, req.Status, actorID, ip)
+		return err
 	})
-	if err == nil && order != nil {
-		if s.emailService != nil {
-			asyncutil.SafeGo(func() {
-				s.emailService.SendOrderStatusEmail(context.Background(), tenantID, order, oldStatus, req.Status)
-			})
-		}
-		DispatchWebhookAsync(s.webhookDispatch, tenantID, "order.status_changed", map[string]any{"order_id": orderID.String(), "from": oldStatus, "to": req.Status})
-		if s.invoiceService != nil {
-			asyncutil.SafeGo(func() { s.invoiceService.HandleOrderStatusChange(context.Background(), tenantID, order) })
-		}
-		if s.smsService != nil {
-			asyncutil.SafeGo(func() { s.smsService.SendOrderStatusSMS(context.Background(), tenantID, order, oldStatus, req.Status) })
-		}
-		FireAutomationEvent(s.automationService, tenantID, "order", "order.status_changed", order.ID, map[string]any{
-			"status": order.Status, "old_status": oldStatus, "new_status": req.Status,
-			"source": order.Source, "customer_name": order.CustomerName,
-			"total_amount": order.TotalAmount, "currency": order.Currency,
-			"payment_status": order.PaymentStatus,
-		})
-		// Auto-sync fulfillment status to Allegro (async, best-effort)
-		if s.allegroSync != nil && order.Source == "allegro" {
-			asyncutil.SafeGo(func() { s.allegroSync.SyncFulfillmentStatus(context.Background(), tenantID, order, req.Status) })
-		}
-		// Stock sync on status change
-		switch req.Status {
-		case "shipped":
-			// Decrement component/product stock exactly once per order (firstShip gate),
-			// so a forced re-ship does not double-decrement.
-			if firstShip {
-				asyncutil.SafeGo(func() { s.handleStockOnShip(context.Background(), tenantID, order) })
-			}
-		case "cancelled":
-			// Release reservations once; skip when the order was already terminal
-			// (cancelled/refunded) to avoid double-releasing.
-			if !isTerminalStockStatus(oldStatus) {
-				asyncutil.SafeGo(func() { s.handleStockOnCancel(context.Background(), tenantID, order) })
-			}
-		case "completed":
-			s.awardLoyaltyOnComplete(tenantID, order)
-		}
+	if err != nil {
+		return nil, err
 	}
-	return order, err
+	s.FireOrderStatusEffects(tenantID, change)
+	return change.Order, nil
 }
+
+// Compile-time assertion that OrderService is the shared order-status writer that
+// ShipmentService depends on.
+var _ OrderStatusSyncer = (*OrderService)(nil)
 
 // isTerminalStockStatus reports whether an order status already released/closed out its
 // stock reservations, so a transition into cancelled from such a status must not release
@@ -941,20 +1058,9 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 		Results: make([]model.BulkStatusResult, 0, len(req.OrderIDs)),
 	}
 
-	// Collect notifications to dispatch after the transaction commits
-	type emailNotification struct {
-		order     *model.Order
-		oldStatus string
-		newStatus string
-		firstShip bool
-	}
-	type webhookNotification struct {
-		orderID   uuid.UUID
-		oldStatus string
-		newStatus string
-	}
-	var pendingEmails []emailNotification
-	var pendingWebhooks []webhookNotification
+	// Side effects are collected and replayed after the transaction commits, through
+	// the same helper the single-order path uses.
+	var pendingChanges []*OrderStatusChange
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		config, err := s.loadStatusConfig(ctx, tx, tenantID)
@@ -983,8 +1089,6 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 				continue
 			}
 
-			var setShippedAt, setDeliveredAt *time.Time
-
 			if !req.Force && !config.CanTransition(existing.Status, req.Status) {
 				result.Error = fmt.Sprintf("invalid transition: %s -> %s", existing.Status, req.Status)
 				resp.Results = append(resp.Results, result)
@@ -992,53 +1096,22 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 				continue
 			}
 
-			if req.Status == "shipped" {
-				now := time.Now()
-				setShippedAt = &now
-			}
-			if req.Status == "delivered" {
-				now := time.Now()
-				setDeliveredAt = &now
-			}
-
-			oldStatus := existing.Status
-
-			if err := s.orderRepo.UpdateStatus(ctx, tx, orderID, req.Status, setShippedAt, setDeliveredAt); err != nil {
+			change, err := s.WriteOrderStatusInTx(ctx, tx, tenantID, orderID, req.Status, actorID, ip)
+			if err != nil {
+				// A failed audit insert aborts the surrounding transaction, so unlike the
+				// pre-shared-writer code this cannot leave a status change unaudited.
+				slog.Warn("bulk status transition: status write failed",
+					"order_id", orderID, "error", err)
 				result.Error = "failed to update status"
 				resp.Results = append(resp.Results, result)
 				resp.Failed++
-				continue
+				return err
 			}
 
-			if err := s.auditRepo.Log(ctx, tx, model.AuditEntry{
-				TenantID:   tenantID,
-				UserID:     actorID,
-				Action:     "order.status_changed",
-				EntityType: "order",
-				EntityID:   orderID,
-				Changes:    map[string]string{"from": existing.Status, "to": req.Status},
-				IPAddress:  ip,
-			}); err != nil {
-				slog.Warn("bulk status transition: audit log failed, status update succeeded without audit record",
-					"order_id", orderID, "error", err)
-				resp.AuditFailures = append(resp.AuditFailures, orderID.String())
-			}
-
-			updated, err := s.orderRepo.FindByID(ctx, tx, orderID)
-			if err == nil && updated != nil {
-				pendingEmails = append(pendingEmails, emailNotification{
-					order: updated, oldStatus: oldStatus, newStatus: req.Status,
-					firstShip: existing.ShippedAt == nil,
-				})
-			}
-
+			pendingChanges = append(pendingChanges, change)
 			result.Success = true
 			resp.Results = append(resp.Results, result)
 			resp.Succeeded++
-
-			pendingWebhooks = append(pendingWebhooks, webhookNotification{
-				orderID: orderID, oldStatus: oldStatus, newStatus: req.Status,
-			})
 		}
 
 		return nil
@@ -1048,38 +1121,8 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 		return nil, err
 	}
 
-	// Dispatch notifications outside the transaction
-	for _, n := range pendingEmails {
-		if s.emailService != nil {
-			asyncutil.SafeGo(func() {
-				s.emailService.SendOrderStatusEmail(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus)
-			})
-		}
-		if s.smsService != nil {
-			asyncutil.SafeGo(func() {
-				s.smsService.SendOrderStatusSMS(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus)
-			})
-		}
-		// Auto-sync fulfillment status to Allegro (async, best-effort)
-		if s.allegroSync != nil && n.order.Source == "allegro" {
-			asyncutil.SafeGo(func() { s.allegroSync.SyncFulfillmentStatus(context.Background(), tenantID, n.order, n.newStatus) })
-		}
-		// Stock sync on status change
-		switch n.newStatus {
-		case "shipped":
-			if n.firstShip {
-				asyncutil.SafeGo(func() { s.handleStockOnShip(context.Background(), tenantID, n.order) })
-			}
-		case "cancelled":
-			if !isTerminalStockStatus(n.oldStatus) {
-				asyncutil.SafeGo(func() { s.handleStockOnCancel(context.Background(), tenantID, n.order) })
-			}
-		case "completed":
-			s.awardLoyaltyOnComplete(tenantID, n.order)
-		}
-	}
-	for _, n := range pendingWebhooks {
-		DispatchWebhookAsync(s.webhookDispatch, tenantID, "order.status_changed", map[string]any{"order_id": n.orderID.String(), "from": n.oldStatus, "to": n.newStatus})
+	for _, change := range pendingChanges {
+		s.FireOrderStatusEffects(tenantID, change)
 	}
 
 	return resp, nil
@@ -1096,26 +1139,44 @@ func (s *OrderService) GetAudit(ctx context.Context, tenantID, orderID uuid.UUID
 	return entries, err
 }
 
-// extractProductQuantities parses order items JSON to extract product_id -> quantity map.
-func extractProductQuantities(items json.RawMessage) map[uuid.UUID]int {
-	result := make(map[uuid.UUID]int)
+// extractStockLines parses order items JSON into the stock targets they draw from,
+// keyed by (product, variant) so lines of the same product in different variants stay
+// separate.
+func extractStockLines(items json.RawMessage) map[stockLine]int {
+	result := make(map[stockLine]int)
 	if len(items) == 0 {
 		return result
 	}
 
 	var parsed []struct {
 		ProductID *uuid.UUID `json:"product_id"`
+		VariantID *uuid.UUID `json:"variant_id"`
 		Quantity  int        `json:"quantity"`
 	}
 	if err := json.Unmarshal(items, &parsed); err != nil {
 		return result
 	}
 	for _, item := range parsed {
-		if item.ProductID != nil && *item.ProductID != uuid.Nil && item.Quantity > 0 {
-			result[*item.ProductID] += item.Quantity
+		if item.ProductID == nil || *item.ProductID == uuid.Nil || item.Quantity <= 0 {
+			continue
 		}
+		line := stockLine{ProductID: *item.ProductID}
+		if item.VariantID != nil {
+			line.VariantID = *item.VariantID
+		}
+		result[line] += item.Quantity
 	}
 	return result
+}
+
+// productTotals collapses stock lines to per-product quantities, for the marketplace
+// stock sync — which reports availability per product, not per variant.
+func productTotals(lines map[stockLine]int) map[uuid.UUID]int {
+	totals := make(map[uuid.UUID]int, len(lines))
+	for line, qty := range lines {
+		totals[line.ProductID] += qty
+	}
+	return totals
 }
 
 // triggerStockSync fires OnStockChange for each product in the given map.
@@ -1128,31 +1189,78 @@ func (s *OrderService) triggerStockSync(tenantID uuid.UUID, productQtys map[uuid
 	}
 }
 
-// adjustStockPerProduct walks each product in productQtys and, for products that
-// have stock rows, applies perStock to successive rows until the requested
-// quantity is consumed. perStock performs the row-level UPDATE and returns how
-// much of remaining it consumed (0 when it skips the row). It factors out the
-// reserve/ship/cancel iteration skeleton; callers must already run inside a
-// tenant-scoped transaction.
-func (s *OrderService) adjustStockPerProduct(
+// reserveStockInTx reserves warehouse stock for an order's line items inside the
+// caller's transaction, so an order and the reservation backing it commit together or
+// not at all. It returns the per-product quantities it walked, for the post-commit
+// marketplace sync, and nil when there is nothing to reserve.
+//
+// Reserving less than requested is not an error: a line with no warehouse rows, or
+// with fewer on hand than ordered, reserves what exists and lets the order through —
+// the pre-existing overselling tolerance. A failure to *apply* a reservation is an
+// error and fails the order, which is the point: the previous code reserved in a
+// second transaction after the order had committed, so a failure there left a live
+// order holding no stock and nothing reported it.
+func (s *OrderService) reserveStockInTx(ctx context.Context, tx pgx.Tx, items json.RawMessage) (map[uuid.UUID]int, error) {
+	if s.warehouseStockRepo == nil {
+		return nil, nil
+	}
+	lines := extractStockLines(items)
+	if len(lines) == 0 {
+		return nil, nil
+	}
+	s.expandBundleLines(ctx, tx, lines)
+	if err := s.adjustStockPerLine(ctx, tx, lines, func(ctx context.Context, tx pgx.Tx, line stockLine, stock model.WarehouseStock, remaining int) (int, error) {
+		available := stock.Quantity - stock.Reserved
+		if available <= 0 {
+			return 0, nil
+		}
+		reserveQty := min(remaining, available)
+		if _, err := tx.Exec(ctx,
+			`UPDATE warehouse_stock SET reserved = reserved + $1, updated_at = NOW()
+			 WHERE id = $2`,
+			reserveQty, stock.ID); err != nil {
+			return 0, fmt.Errorf("reserve stock for product %s in warehouse %s: %w", line.ProductID, stock.WarehouseID, err)
+		}
+		return reserveQty, nil
+	}); err != nil {
+		return nil, err
+	}
+	return productTotals(lines), nil
+}
+
+// adjustStockPerLine walks each order line and applies perStock to the stock rows that
+// line draws from (see stockRowsForLine), until the requested quantity is consumed.
+// perStock performs the row-level UPDATE and returns how much of remaining it consumed
+// (0 when it skips the row). It factors out the reserve/ship/cancel iteration skeleton;
+// callers must already run inside a tenant-scoped transaction.
+//
+// A perStock error aborts the whole walk: a failed statement has already poisoned the
+// transaction, so continuing would only pile up "current transaction is aborted"
+// failures on top of the real cause.
+func (s *OrderService) adjustStockPerLine(
 	ctx context.Context,
 	tx pgx.Tx,
-	productQtys map[uuid.UUID]int,
-	perStock func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) int,
-) {
-	for productID, qty := range productQtys {
-		stocks, err := s.warehouseStockRepo.ListByProduct(ctx, tx, productID)
-		if err != nil || len(stocks) == 0 {
-			continue
+	lines map[stockLine]int,
+	perStock func(ctx context.Context, tx pgx.Tx, line stockLine, stock model.WarehouseStock, remaining int) (int, error),
+) error {
+	for line, qty := range lines {
+		stocks, err := s.warehouseStockRepo.ListByProduct(ctx, tx, line.ProductID)
+		if err != nil {
+			return fmt.Errorf("list warehouse stock for product %s: %w", line.ProductID, err)
 		}
 		remaining := qty
-		for _, stock := range stocks {
+		for _, stock := range stockRowsForLine(stocks, line.VariantID) {
 			if remaining <= 0 {
 				break
 			}
-			remaining -= perStock(ctx, tx, productID, stock, remaining)
+			consumed, err := perStock(ctx, tx, line, stock, remaining)
+			if err != nil {
+				return err
+			}
+			remaining -= consumed
 		}
 	}
+	return nil
 }
 
 // handleStockOnShip decrements quantity and reserved in warehouse_stock for shipped orders.
@@ -1160,10 +1268,10 @@ func (s *OrderService) handleStockOnShip(ctx context.Context, tenantID uuid.UUID
 	if s.warehouseStockRepo == nil {
 		return
 	}
-	productQtys := extractProductQuantities(order.Items)
+	lines := extractStockLines(order.Items)
 	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		s.expandBundleQuantities(ctx, tx, productQtys)
-		s.adjustStockPerProduct(ctx, tx, productQtys, func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) int {
+		s.expandBundleLines(ctx, tx, lines)
+		return s.adjustStockPerLine(ctx, tx, lines, func(ctx context.Context, tx pgx.Tx, line stockLine, stock model.WarehouseStock, remaining int) (int, error) {
 			deduct := min(remaining, stock.Quantity)
 			// Decrement both quantity and reserved
 			if _, execErr := tx.Exec(ctx,
@@ -1171,17 +1279,16 @@ func (s *OrderService) handleStockOnShip(ctx context.Context, tenantID uuid.UUID
 				 SET quantity = GREATEST(quantity - $1, 0),
 				     reserved = GREATEST(reserved - $1, 0),
 				     updated_at = NOW()
-				 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id IS NULL`,
-				deduct, stock.WarehouseID, productID); execErr != nil {
-				slog.Error("failed to adjust warehouse stock", "warehouse_id", stock.WarehouseID, "product_id", productID, "error", execErr)
+				 WHERE id = $2`,
+				deduct, stock.ID); execErr != nil {
+				return 0, fmt.Errorf("adjust warehouse stock for product %s in warehouse %s: %w", line.ProductID, stock.WarehouseID, execErr)
 			}
-			return deduct
+			return deduct, nil
 		})
-		return nil
 	}); err != nil {
 		slog.Error("handleStockOnShip: failed to adjust stock", "error", err, "order_id", order.ID, "tenant_id", tenantID)
 	}
-	s.triggerStockSync(tenantID, productQtys, "order_shipped")
+	s.triggerStockSync(tenantID, productTotals(lines), "order_shipped")
 }
 
 // handleStockOnCancel releases reserved stock for cancelled orders.
@@ -1189,24 +1296,23 @@ func (s *OrderService) handleStockOnCancel(ctx context.Context, tenantID uuid.UU
 	if s.warehouseStockRepo == nil {
 		return
 	}
-	productQtys := extractProductQuantities(order.Items)
+	lines := extractStockLines(order.Items)
 	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		s.expandBundleQuantities(ctx, tx, productQtys)
-		s.adjustStockPerProduct(ctx, tx, productQtys, func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) int {
+		s.expandBundleLines(ctx, tx, lines)
+		return s.adjustStockPerLine(ctx, tx, lines, func(ctx context.Context, tx pgx.Tx, line stockLine, stock model.WarehouseStock, remaining int) (int, error) {
 			release := min(remaining, stock.Reserved)
 			if _, execErr := tx.Exec(ctx,
 				`UPDATE warehouse_stock SET reserved = GREATEST(reserved - $1, 0), updated_at = NOW()
-				 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id IS NULL`,
-				release, stock.WarehouseID, productID); execErr != nil {
-				slog.Error("failed to release warehouse stock reservation", "warehouse_id", stock.WarehouseID, "product_id", productID, "error", execErr)
+				 WHERE id = $2`,
+				release, stock.ID); execErr != nil {
+				return 0, fmt.Errorf("release stock reservation for product %s in warehouse %s: %w", line.ProductID, stock.WarehouseID, execErr)
 			}
-			return release
+			return release, nil
 		})
-		return nil
 	}); err != nil {
 		slog.Error("handleStockOnCancel: failed to release reserved stock", "error", err, "order_id", order.ID, "tenant_id", tenantID)
 	}
-	s.triggerStockSync(tenantID, productQtys, "order_cancelled")
+	s.triggerStockSync(tenantID, productTotals(lines), "order_cancelled")
 }
 
 // CountOrdersThisMonth returns the number of orders created in the current calendar month.

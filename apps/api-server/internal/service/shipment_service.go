@@ -47,6 +47,16 @@ type ShipmentService struct {
 	allegroSync       *AllegroSyncService
 	fulfillment       *FulfillmentService
 	objectStorage     storage.ObjectStorage
+	orderStatusSyncer OrderStatusSyncer
+}
+
+// SetOrderStatusSyncer wires the shared order-status writer (OrderService) so a carrier
+// event that moves the order also runs the order's own side effects — stock, invoice,
+// notifications, automation, loyalty. Called after construction to avoid a circular
+// dependency. Left unwired, shipment-driven status changes fall back to a bare status
+// write and those effects do not happen.
+func (s *ShipmentService) SetOrderStatusSyncer(syncer OrderStatusSyncer) {
+	s.orderStatusSyncer = syncer
 }
 
 // SetFulfillmentService wires the gated fulfillment service used for best-effort
@@ -364,6 +374,9 @@ func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipme
 	}
 
 	var shipment *model.Shipment
+	// Carrier-driven order status change, applied in this transaction and replayed as
+	// side effects after it commits.
+	var orderChange *OrderStatusChange
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		existing, err := s.shipmentRepo.FindByID(ctx, tx, shipmentID)
 		if err != nil {
@@ -430,15 +443,16 @@ func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipme
 				}
 			}
 			if allDelivered {
-				if err := s.orderRepo.UpdateStatus(ctx, tx, existing.OrderID, "delivered", nil, func() *time.Time { t := time.Now(); return &t }()); err != nil {
+				orderChange, err = s.syncOrderStatus(ctx, tx, tenantID, existing.OrderID, model.OrderStatusDelivered, actorID, ip)
+				if err != nil {
 					return fmt.Errorf("sync order status to delivered: %w", err)
 				}
 			}
 		case "picked_up", "in_transit":
 			order, err := s.orderRepo.FindByID(ctx, tx, existing.OrderID)
-			if err == nil && order != nil && order.Status != "shipped" && order.Status != "delivered" {
-				now := time.Now()
-				if err := s.orderRepo.UpdateStatus(ctx, tx, existing.OrderID, "shipped", &now, nil); err != nil {
+			if err == nil && order != nil && order.Status != model.OrderStatusShipped && order.Status != model.OrderStatusDelivered {
+				orderChange, err = s.syncOrderStatus(ctx, tx, tenantID, existing.OrderID, model.OrderStatusShipped, actorID, ip)
+				if err != nil {
 					return fmt.Errorf("sync order status to shipped: %w", err)
 				}
 			}
@@ -447,6 +461,11 @@ func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipme
 		return nil
 	})
 	if err == nil && shipment != nil {
+		// After commit, so the order's own consequences (stock decrement on first ship,
+		// invoice, notifications, automation) cannot roll back the carrier event.
+		if s.orderStatusSyncer != nil && orderChange != nil {
+			s.orderStatusSyncer.FireOrderStatusEffects(tenantID, orderChange)
+		}
 		DispatchWebhookAsync(s.webhookDispatch, tenantID, "shipment.status_changed", shipment)
 		if s.smsService != nil {
 			asyncutil.SafeGo(func() { s.smsService.SendShipmentStatusSMS(context.Background(), tenantID, shipment, "") })
@@ -456,6 +475,32 @@ func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipme
 		})
 	}
 	return shipment, err
+}
+
+// syncOrderStatus applies a carrier-driven order status change through the shared
+// order-status writer, inside the shipment's own transaction so the two rows move
+// together. The returned change carries the post-commit side effects; a nil change
+// means the caller has nothing to fire.
+//
+// The tenant transition graph is deliberately not consulted: a parcel that has been
+// picked up or delivered is a fact reported by the carrier, not a request that the
+// order's current status may veto. What used to be wrong is that the fact was recorded
+// without any of its consequences.
+func (s *ShipmentService) syncOrderStatus(ctx context.Context, tx pgx.Tx, tenantID, orderID uuid.UUID, newStatus string, actorID uuid.UUID, ip string) (*OrderStatusChange, error) {
+	if s.orderStatusSyncer != nil {
+		return s.orderStatusSyncer.WriteOrderStatusInTx(ctx, tx, tenantID, orderID, newStatus, actorID, ip)
+	}
+	// Unwired fallback: preserve the historical bare status write rather than dropping
+	// the carrier event entirely.
+	var setShippedAt, setDeliveredAt *time.Time
+	now := time.Now()
+	switch newStatus {
+	case model.OrderStatusShipped:
+		setShippedAt = &now
+	case model.OrderStatusDelivered:
+		setDeliveredAt = &now
+	}
+	return nil, s.orderRepo.UpdateStatus(ctx, tx, orderID, newStatus, setShippedAt, setDeliveredAt)
 }
 
 // GetLabelFile loads the already-stored label PDF for a single shipment.

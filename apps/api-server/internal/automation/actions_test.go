@@ -20,10 +20,12 @@ import (
 
 type fakeTransitioner struct {
 	calls int
+	reqs  []model.StatusTransitionRequest
 }
 
-func (f *fakeTransitioner) TransitionStatus(_ context.Context, _, _ uuid.UUID, _ model.StatusTransitionRequest, _ uuid.UUID, _ string) (*model.Order, error) {
+func (f *fakeTransitioner) TransitionStatus(_ context.Context, _, _ uuid.UUID, req model.StatusTransitionRequest, _ uuid.UUID, _ string) (*model.Order, error) {
 	f.calls++
+	f.reqs = append(f.reqs, req)
 	return &model.Order{}, nil
 }
 
@@ -382,6 +384,114 @@ func TestExecuteSetStatus_OrchestrationEnabled_LookupErrorPropagates(t *testing.
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "lookup fulfillment process")
 	assert.Equal(t, 0, enq.calls, "no event enqueued when the process lookup fails")
+}
+
+// TestExecuteSetStatus_DefaultRespectsOrderGraph pins the CORR-07 contract: a
+// set_status action without an explicit opt-in must NOT force the transition, so
+// OrderService validates it against the tenant's status graph and an illegal jump
+// (e.g. new -> completed) is rejected instead of silently applied.
+func TestExecuteSetStatus_DefaultRespectsOrderGraph(t *testing.T) {
+	tr := &fakeTransitioner{}
+	executor := NewDefaultActionExecutor(slog.Default())
+	executor.SetOrderServices(tr, nil, nil, &pgxpool.Pool{})
+
+	err := executor.ExecuteAction(context.Background(), uuid.New(), Action{
+		Type:   "set_status",
+		Params: map[string]any{"status": "completed"},
+	}, Event{EntityType: "order", EntityID: uuid.New()})
+
+	require.NoError(t, err)
+	require.Len(t, tr.reqs, 1)
+	assert.False(t, tr.reqs[0].Force, "set_status must not force by default")
+	assert.Equal(t, "completed", tr.reqs[0].Status)
+}
+
+// TestExecuteSetStatus_ForceParamOptsIn verifies a rule can still bypass the graph,
+// but only by explicitly asking for it. The dashboard stores action params as JSON,
+// so a boolean and its string form must both opt in.
+func TestExecuteSetStatus_ForceParamOptsIn(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		force any
+	}{
+		{"json bool", true},
+		{"string form", "true"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tr := &fakeTransitioner{}
+			executor := NewDefaultActionExecutor(slog.Default())
+			executor.SetOrderServices(tr, nil, nil, &pgxpool.Pool{})
+
+			err := executor.ExecuteAction(context.Background(), uuid.New(), Action{
+				Type:   "set_status",
+				Params: map[string]any{"status": "completed", "force": tc.force},
+			}, Event{EntityType: "order", EntityID: uuid.New()})
+
+			require.NoError(t, err)
+			require.Len(t, tr.reqs, 1)
+			assert.True(t, tr.reqs[0].Force, "explicit force param opts into bypassing the graph")
+		})
+	}
+}
+
+// TestExecuteSetStatus_ForceParamNotOptIn covers the values that must leave the
+// graph check in place — absent, false, and anything non-boolean.
+func TestExecuteSetStatus_ForceParamNotOptIn(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		params map[string]any
+	}{
+		{"absent", map[string]any{"status": "completed"}},
+		{"json false", map[string]any{"status": "completed", "force": false}},
+		{"string false", map[string]any{"status": "completed", "force": "false"}},
+		{"garbage", map[string]any{"status": "completed", "force": "yes please"}},
+		{"number", map[string]any{"status": "completed", "force": 1}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tr := &fakeTransitioner{}
+			executor := NewDefaultActionExecutor(slog.Default())
+			executor.SetOrderServices(tr, nil, nil, &pgxpool.Pool{})
+
+			require.NoError(t, executor.ExecuteAction(context.Background(), uuid.New(), Action{
+				Type:   "set_status",
+				Params: tc.params,
+			}, Event{EntityType: "order", EntityID: uuid.New()}))
+			require.Len(t, tr.reqs, 1)
+			assert.False(t, tr.reqs[0].Force)
+		})
+	}
+}
+
+// TestExecuteSetStatus_OrchestrationEnabled_PayloadCarriesForce verifies the
+// orchestration-routed path does not lose the opt-in: the flag has to survive the
+// outbox round-trip, otherwise the async handler would silently re-force.
+func TestExecuteSetStatus_OrchestrationEnabled_PayloadCarriesForce(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		params map[string]any
+		want   bool
+	}{
+		{"default", map[string]any{"status": "completed"}, false},
+		{"opt-in", map[string]any{"status": "completed", "force": true}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			enq := &fakeEnqueuer{}
+			ens := &fakeProcessEnsurer{}
+			executor := NewDefaultActionExecutor(slog.Default())
+			executor.SetOrderServices(&fakeTransitioner{}, nil, nil, &pgxpool.Pool{})
+			executor.SetOrchestration(true, enq, ens)
+
+			orderID := uuid.New()
+			payload := setStatusPayload(orderID, "completed", uuid.New(), 0, paramBool(tc.params["force"]))
+			require.NoError(t, executor.ensureProcessAndEnqueueSetStatus(
+				context.Background(), nil, uuid.New(), orderID, "k", payload))
+
+			require.Len(t, enq.events, 1)
+			got, ok := enq.events[0].Payload.(map[string]any)
+			require.True(t, ok)
+			assert.Equal(t, tc.want, got["force"], "force flag is carried in the outbox payload")
+		})
+	}
 }
 
 type errLookupEnsurer struct{ err error }

@@ -296,6 +296,10 @@ type BulkStatusResult struct {
 }
 
 // BulkStatusTransitionResponse is returned after a bulk status transition operation.
+//
+// AuditFailures is retained for response compatibility but is never populated: a
+// failed audit insert aborts the surrounding Postgres transaction, so a status change
+// can no longer succeed without its audit row and there is nothing partial to report.
 type BulkStatusTransitionResponse struct {
 	Results       []BulkStatusResult `json:"results"`
 	Succeeded     int                `json:"succeeded"`

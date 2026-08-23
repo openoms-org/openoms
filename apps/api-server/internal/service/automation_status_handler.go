@@ -21,11 +21,16 @@ type AutomationOrderTransitioner interface {
 
 // automationSetStatusPayload is the outbox payload enqueued by the orchestration-
 // routed set_status automation action (automation.EventAutomationSetStatus).
+// Force mirrors the rule's explicit opt-in to bypass the tenant status graph. It
+// defaults to false for payloads written before the flag existed, which is the safe
+// direction: an unforced transition that the graph rejects fails visibly instead of
+// silently skipping the intermediate states.
 type automationSetStatusPayload struct {
 	OrderID      string `json:"order_id"`
 	TargetStatus string `json:"target_status"`
 	RuleID       string `json:"rule_id"`
 	ActionIndex  int    `json:"action_index"`
+	Force        bool   `json:"force"`
 }
 
 // AutomationStatusTransitionHandler applies a set_status automation action that was
@@ -86,8 +91,8 @@ func (h *AutomationStatusTransitionHandler) Handle(ctx context.Context, event mo
 		return nil
 	}
 
-	// Force=true: automation transitions are system-driven and bypass the
-	// per-tenant transition graph (matching the direct executeSetStatus path).
+	// Force comes from the rule, not from this handler: the tenant status graph is
+	// validated unless the rule opted out (matching the direct executeSetStatus path).
 	//
 	// IP is intentionally empty: the audit log column is inet (TransitionStatus
 	// writes the actor IP there), and "automation" — the string the legacy direct
@@ -96,7 +101,7 @@ func (h *AutomationStatusTransitionHandler) Handle(ctx context.Context, event mo
 	// actor is already conveyed by uuid.Nil + the audit action, not the IP slot.
 	_, err = h.orders.TransitionStatus(ctx, event.TenantID, orderID, model.StatusTransitionRequest{
 		Status: payload.TargetStatus,
-		Force:  true,
+		Force:  payload.Force,
 	}, uuid.Nil, "")
 	if err != nil {
 		// An unknown/invalid target status (or other validation failure) is not
