@@ -19,12 +19,18 @@ import (
 var publicReturnHandlerSource string
 
 func newPublicReturnHandler() *PublicReturnHandler {
-	return NewPublicReturnHandler(nil, nil, nil)
+	return NewPublicReturnHandler(nil, nil)
 }
 
-func TestPublicReturnHandler_UsesSharedTenantHelper(t *testing.T) {
+// TestPublicReturnHandler_DelegatesCreationToService guards the CORR-05 fix: the
+// handler must not insert the return itself. It owns only the ownership check (which
+// needs an RLS-bypassing lookup); the row, audit entry, webhook and automation event
+// belong to ReturnService, and a repository call here would silently skip all of them.
+func TestPublicReturnHandler_DelegatesCreationToService(t *testing.T) {
 	assert.NotContains(t, publicReturnHandlerSource, "func (h *PublicReturnHandler) withTenant")
-	assert.Contains(t, publicReturnHandlerSource, "database.WithTenant(r.Context(), h.pool, tenantID")
+	assert.NotContains(t, publicReturnHandlerSource, "returnRepo",
+		"creation goes through the service, not the repository")
+	assert.Contains(t, publicReturnHandlerSource, "h.returns.CreatePublic(")
 }
 
 // ---------------------------------------------------------------------------

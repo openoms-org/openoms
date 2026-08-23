@@ -864,7 +864,7 @@ func run() error {
 	helpdeskHandler := handler.NewHelpdeskHandler(freshdeskService)
 
 	// Public return handler (Phase 29)
-	publicReturnHandler := handler.NewPublicReturnHandler(pool, returnRepo, orderRepo)
+	publicReturnHandler := handler.NewPublicReturnHandler(pool, returnService)
 
 	// Exchange rate handler (Phase 30)
 	exchangeRateHandler := handler.NewExchangeRateHandler(exchangeRateService)

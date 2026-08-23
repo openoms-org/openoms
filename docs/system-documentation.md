@@ -402,7 +402,9 @@ Lista powyzej to **podzbior rdzeniowy**. Pelny schemat (89 tabel, 50 wersji migr
 - platform: `platform_admins`, `platform_audit_log`
 - pozostale: `loyalty_transactions`, `supplier_availability`, `supplier_availability_policy`, `external_workflow_tokens`, `message_templates`, `marketplace_category_mappings`
 
-**Stan magazynowy:** `products.stock_quantity` jest polem legacy — nie jest zmniejszane przy wysylce. Kanoniczny stan to `warehouse_stock.quantity - reserved`. `Product.AvailableStock` jest wyliczane (`AvailableStockBatch`); 0 na surowym `List` bez populate oznacza "nie pobrano", nie "brak towaru". Rezerwacja/wysylka/anulowanie dotycza wierszy z `variant_id IS NULL`.
+**Stan magazynowy:** `products.stock_quantity` jest polem legacy — nie jest zmniejszane przy wysylce. Kanoniczny stan to `warehouse_stock.quantity - reserved`. `Product.AvailableStock` jest wyliczane (`AvailableStockBatch`); 0 na surowym `List` bez populate oznacza "nie pobrano", nie "brak towaru".
+
+Rezerwacja, wysylka i anulowanie sa **swiadome wariantow**: pozycja zamowienia jest kluczowana para `(product_id, variant_id)`, a instrukcja `UPDATE` trafia w konkretny wiersz `warehouse_stock` po jego `id`. Pozycja z wariantem korzysta z wierszy tego wariantu, a gdy wariant nie ma wlasnych wierszy — z wiersza produktowego (`variant_id IS NULL`), i odwrotnie. Ten fallback jest zgodny z dostepnoscia, na ktora zamowienie zostalo przyjete: `AvailableStockBatch` sumuje wszystkie wiersze produktu. Dopisanie towaru ze zwrotu (`received`) wybiera wiersz tak samo, preferujac magazyn domyslny; produkt bez zadnego wiersza magazynowego jest pomijany.
 
 ### Funkcje SECURITY DEFINER (bypass RLS)
 
@@ -1860,7 +1862,13 @@ Uzytkownik                Dashboard              API Server              DB
 
 Zywy graf statusow zamowienia to `tenants.settings.order_statuses` albo `DefaultOrderStatusConfig()`. Pakiet `order-engine` jest uzywany przez **shipmenty**; `OrderService` go nie importuje.
 
-`OrderService.TransitionStatus` po commicie odpala: email, webhook + WebSocket, auto-fakture, SMS, automatyzacje, sync fulfillment Allegro, stock przy pierwszym `shipped`, zwolnienie rezerwacji przy `cancelled`, lojalnosc przy `completed`. `ShipmentService` moze zapisac status zamowienia bezposrednio przez `orderRepo.UpdateStatus` i **pominac** te efekty uboczne. `Duplicate` nie rezerwuje stocku. Publiczny `POST /v1/public/returns` omija `ReturnService.Create` (brak audytu/webhooka/automatyzacji). Zwrot `refunded` ustawia tylko `payment_status`, nie status zamowienia.
+`OrderService.TransitionStatus` po commicie odpala: email, webhook + WebSocket, auto-fakture, SMS, automatyzacje, sync fulfillment Allegro, stock przy pierwszym `shipped`, zwolnienie rezerwacji przy `cancelled`, lojalnosc przy `completed`.
+
+Zapis statusu i efekty uboczne sa rozdzielone na dwie metody, `WriteOrderStatusInTx` (zapis + wpis audytowy, w transakcji wolajacego) i `FireOrderStatusEffects` (efekty po commicie), wystawione jako interfejs `OrderStatusSyncer`. `ShipmentService` uzywa obu: status zamowienia wynikajacy ze zdarzenia kuriera zapisuje sie atomowo z wierszami przesylki, a caly zestaw efektow odpala po commicie tej samej transakcji. Zdarzenie kuriera nie przechodzi walidacji grafu statusow — odebrana paczka jest faktem, nie wnioskiem. Dekrement stocku jest bramkowany przez `shipped_at` (`COALESCE` przy zapisie, nigdy nie czyszczone), wiec powtorzony `picked_up` nie zdejmuje stocku po raz drugi.
+
+Rezerwacja stocku wykonuje sie **w tej samej transakcji** co zapis zamowienia, w `Create` i w `Duplicate`. Niemoznosc zapisania rezerwacji przewraca cale zamowienie; zarezerwowanie mniej niz zamowiono (brak wierszy magazynowych albo mniej na stanie) nie jest bledem i przepuszcza zamowienie, jak dotychczas.
+
+Publiczny `POST /v1/public/returns` przechodzi przez `ReturnService.CreatePublic` — handler odpowiada tylko za sprawdzenie wlasnosci zamowienia (dopasowanie e-maila przez funkcje omijajaca RLS), a wiersz, audyt, webhook i zdarzenie automatyzacji sa wspolne z tworzeniem wewnetrznym. Zwrot przy statusie `received` **dopisuje towar do stocku magazynowego** (fizyczny powrot towaru); `refunded` pozostaje zdarzeniem finansowym i ustawia tylko `payment_status` zamowienia. Graf zwrotow nie ma sciezki powrotnej do `received`, wiec dopisanie nie moze zadzialac dwa razy.
 
 ### Flow 3: Webhook dispatch
 
@@ -1901,7 +1909,7 @@ AutomationEngine.ProcessEvent() [async]
     |     |    tags contains "bulk"? ok
     |     |
     |     +- Jesli wszystkie spelnione:
-    |     |    +- set_status -> "confirmed"  (Force: true; moze pominac graf)
+    |     |    +- set_status -> "confirmed"  (graf statusow obowiazuje; params.force = opt-in)
     |     |    +- send_email -> sales@company.com
     |     |    +- add_tag -> "auto-confirmed"
     |     |    +- delay(30m) -> kolejna akcja  <- OPOZNIENIE!
@@ -2273,7 +2281,7 @@ Operatory: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `not_contains`, `i
 
 | Typ akcji | Opis |
 |-----------|------|
-| `set_status` | Zmiana statusu zamowienia (`Force: true` — moze pominac graf). Alias w UI: `transition_status` |
+| `set_status` | Zmiana statusu zamowienia. Domyslnie **respektuje graf statusow**; pominiecie grafu wymaga jawnego `params.force = true` (przyjmowane tez jako string `"true"`) i jest przenoszone przez payload outboxa. Alias w UI: `transition_status` |
 | `send_email` | Wyslanie emaila |
 | `add_tag` | Dodanie tagu |
 | `create_invoice` | Utworzenie faktury |
