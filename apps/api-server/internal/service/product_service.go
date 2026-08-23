@@ -170,8 +170,13 @@ func (s *ProductService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 		DropshipSupplierID: req.DropshipSupplierID,
 	}
 
+	var available int
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		if err := s.productRepo.Create(ctx, tx, product); err != nil {
+			return err
+		}
+		var err error
+		if available, err = s.availableStock(ctx, tx, product.ID); err != nil {
 			return err
 		}
 		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
@@ -190,18 +195,36 @@ func (s *ProductService) Create(ctx context.Context, tenantID uuid.UUID, req mod
 		}
 		return nil, err
 	}
+	product.AvailableStock = available
 	DispatchWebhookAsync(s.webhookDispatch, tenantID, "product.created", product)
+	// available_stock is the canonical figure a rule should condition on;
+	// stock_quantity reports the legacy column as-is and is stale for any product the
+	// warehouse tracks.
 	FireAutomationEvent(s.automationService, tenantID, "product", "product.created", product.ID, map[string]any{
 		"name": product.Name, "price": product.Price, "stock_quantity": product.StockQuantity,
-		"source": product.Source,
+		"available_stock": available, "source": product.Source,
 	})
-	// Trigger marketplace stock sync if product was created with stock
-	if s.stockSyncService != nil && product.StockQuantity > 0 {
+	// Trigger marketplace stock sync if the product is actually sellable. The
+	// quantity handed to the stock owner is the canonical available stock, never the
+	// legacy stock_quantity column — that column is not decremented on shipment, so
+	// using it here would relist products that have nothing left in the warehouse.
+	if s.stockSyncService != nil && available > 0 {
 		asyncutil.SafeGo(func() {
-			s.stockSyncService.OnStockChange(context.Background(), tenantID, product.ID, "product_created", 0, product.StockQuantity)
+			s.stockSyncService.OnStockChange(context.Background(), tenantID, product.ID, "product_created", 0, available)
 		})
 	}
 	return product, nil
+}
+
+// availableStock resolves one product's canonical available stock (warehouse_stock
+// quantity - reserved, with the legacy products.stock_quantity standing in only for
+// products that have no warehouse rows at all).
+func (s *ProductService) availableStock(ctx context.Context, tx pgx.Tx, productID uuid.UUID) (int, error) {
+	avail, err := s.productRepo.AvailableStockBatch(ctx, tx, []uuid.UUID{productID})
+	if err != nil {
+		return 0, err
+	}
+	return avail[productID], nil
 }
 
 // Update modifies an existing product.
@@ -225,7 +248,7 @@ func (s *ProductService) Update(ctx context.Context, tenantID, productID uuid.UU
 	}
 
 	var product *model.Product
-	var oldStockQty int
+	var availableBefore, availableAfter int
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		var err error
 		product, err = s.productRepo.FindByID(ctx, tx, productID)
@@ -235,7 +258,9 @@ func (s *ProductService) Update(ctx context.Context, tenantID, productID uuid.UU
 		if product == nil {
 			return ErrProductNotFound
 		}
-		oldStockQty = product.StockQuantity
+		if availableBefore, err = s.availableStock(ctx, tx, productID); err != nil {
+			return err
+		}
 
 		if err := s.productRepo.Update(ctx, tx, productID, req); err != nil {
 			return err
@@ -244,6 +269,9 @@ func (s *ProductService) Update(ctx context.Context, tenantID, productID uuid.UU
 		// Re-fetch to get updated fields
 		product, err = s.productRepo.FindByID(ctx, tx, productID)
 		if err != nil {
+			return err
+		}
+		if availableAfter, err = s.availableStock(ctx, tx, productID); err != nil {
 			return err
 		}
 
@@ -263,15 +291,20 @@ func (s *ProductService) Update(ctx context.Context, tenantID, productID uuid.UU
 		return nil, err
 	}
 	if product != nil {
+		product.AvailableStock = availableAfter
 		DispatchWebhookAsync(s.webhookDispatch, tenantID, "product.updated", product)
 		FireAutomationEvent(s.automationService, tenantID, "product", "product.updated", product.ID, map[string]any{
 			"name": product.Name, "price": product.Price, "stock_quantity": product.StockQuantity,
-			"source": product.Source,
+			"available_stock": availableAfter, "source": product.Source,
 		})
-		// Trigger marketplace stock sync if stock quantity changed
-		if s.stockSyncService != nil && req.StockQuantity != nil && product.StockQuantity != oldStockQty {
+		// Trigger marketplace stock sync when editing the stock field actually moved
+		// the canonical available stock. Comparing the legacy stock_quantity column
+		// instead (as this used to) both misreported the quantities the relist /
+		// deactivate decisions read and fired for warehouse-tracked products, whose
+		// availability that column does not affect at all.
+		if s.stockSyncService != nil && req.StockQuantity != nil && availableAfter != availableBefore {
 			asyncutil.SafeGo(func() {
-				s.stockSyncService.OnStockChange(context.Background(), tenantID, productID, "manual_update", oldStockQty, product.StockQuantity)
+				s.stockSyncService.OnStockChange(context.Background(), tenantID, productID, "manual_update", availableBefore, availableAfter)
 			})
 		}
 	}
