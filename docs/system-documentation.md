@@ -1756,7 +1756,7 @@ Migracja:    000040 UNIQUE index fulfillment_processes(tenant_id, order_id) (add
 |-----------|-----------|
 | SQL Injection | Parametryzowane zapytania (pgx driver) |
 | XSS | React auto-escape + sanityzacja inputow (strip tags) + CSP header. dangerouslySetInnerHTML usuniete. |
-| CSRF | Double-submit cookie (csrf_token cookie + X-CSRF-Token header, SameSite=Lax, Domain=.openoms.org). CSRF jest pomijany, gdy request niesie niepusty credential `Authorization: Bearer` (JWT lub token API), wiec klienci bez cookies dzialaja; sesje cookie nadal wymagaja naglowka. |
+| CSRF | Double-submit cookie (csrf_token cookie + X-CSRF-Token header, SameSite=Lax). Domain cookie CSRF jest eTLD+1 z `FrontendURL` (lista public suffix): `app.openoms.org` -> `.openoms.org`, `app.example.com.pl` -> `.example.com.pl` (nie `.com.pl`), `app.example.co.uk` -> `.example.co.uk` (nie `.co.uk`). Host-only (pusty Domain) dla localhost, adresow IP i nazw, ktore same sa public suffix. CSRF jest pomijany, gdy request niesie niepusty credential `Authorization: Bearer` (JWT lub token API), wiec klienci bez cookies dzialaja; sesje cookie nadal wymagaja naglowka. |
 | Clickjacking | X-Frame-Options: DENY + CSP frame-ancestors 'none' |
 | Tenant leakage | RLS + FORCE ROW LEVEL SECURITY |
 | Token theft | SHA-256 hash w blacklist, httpOnly cookies |

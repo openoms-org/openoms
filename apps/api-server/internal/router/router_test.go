@@ -20,6 +20,10 @@ func TestExtractCookieDomain(t *testing.T) {
 		{"IPv6 loopback returns empty", "http://[::1]:3000", ""},
 		{"invalid URL returns empty", "://not-a-url", ""},
 		{"empty string returns empty", "", ""},
+		{"com.pl public suffix is not used as cookie domain", "https://app.example.com.pl", ".example.com.pl"},
+		{"co.uk public suffix is not used as cookie domain", "https://app.example.co.uk", ".example.co.uk"},
+		{"deep subdomain on com.pl uses eTLD+1", "https://admin.app.example.com.pl", ".example.com.pl"},
+		{"apex on com.pl uses eTLD+1", "https://example.com.pl", ".example.com.pl"},
 	}
 
 	for _, tt := range tests {
