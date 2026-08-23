@@ -1127,6 +1127,14 @@ func (s *OrderService) triggerStockSync(tenantID uuid.UUID, productQtys map[uuid
 // reserve/ship/cancel iteration skeleton; callers must already run inside a
 // tenant-scoped transaction.
 //
+// perStock must address its row by primary key. The rows here are whatever
+// warehouse_stock holds for the product, variant rows included — which is the same
+// set AvailableStockBatch sums into the availability the order was accepted against.
+// Filtering the write down to the variant-less row instead (as this used to) meant a
+// product whose stock is tracked per variant advertised availability but never
+// reserved or decremented anything. Order line items carry no variant, so a line
+// draws from the product's rows in the order the repository returns them.
+//
 // The first failure aborts the walk and is returned: a failed statement poisons the
 // surrounding transaction anyway, so continuing would only produce a partially
 // applied adjustment behind a rollback.
@@ -1177,10 +1185,9 @@ func (s *OrderService) reserveStockForOrder(ctx context.Context, tx pgx.Tx, prod
 		}
 		reserveQty := min(remaining, available)
 		if _, err := tx.Exec(ctx,
-			`UPDATE warehouse_stock SET reserved = reserved + $1, updated_at = NOW()
-			 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id IS NULL`,
-			reserveQty, stock.WarehouseID, productID); err != nil {
-			return 0, fmt.Errorf("reserve stock for product %s in warehouse %s: %w", productID, stock.WarehouseID, err)
+			`UPDATE warehouse_stock SET reserved = reserved + $1, updated_at = NOW() WHERE id = $2`,
+			reserveQty, stock.ID); err != nil {
+			return 0, fmt.Errorf("reserve stock row %s (product %s, warehouse %s): %w", stock.ID, productID, stock.WarehouseID, err)
 		}
 		return reserveQty, nil
 	})
@@ -1202,9 +1209,9 @@ func (s *OrderService) handleStockOnShip(ctx context.Context, tenantID uuid.UUID
 				 SET quantity = GREATEST(quantity - $1, 0),
 				     reserved = GREATEST(reserved - $1, 0),
 				     updated_at = NOW()
-				 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id IS NULL`,
-				deduct, stock.WarehouseID, productID); execErr != nil {
-				return 0, fmt.Errorf("adjust warehouse stock for product %s in warehouse %s: %w", productID, stock.WarehouseID, execErr)
+				 WHERE id = $2`,
+				deduct, stock.ID); execErr != nil {
+				return 0, fmt.Errorf("adjust warehouse stock row %s (product %s, warehouse %s): %w", stock.ID, productID, stock.WarehouseID, execErr)
 			}
 			return deduct, nil
 		})
@@ -1225,10 +1232,9 @@ func (s *OrderService) handleStockOnCancel(ctx context.Context, tenantID uuid.UU
 		return s.adjustStockPerProduct(ctx, tx, productQtys, func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) (int, error) {
 			release := min(remaining, stock.Reserved)
 			if _, execErr := tx.Exec(ctx,
-				`UPDATE warehouse_stock SET reserved = GREATEST(reserved - $1, 0), updated_at = NOW()
-				 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id IS NULL`,
-				release, stock.WarehouseID, productID); execErr != nil {
-				return 0, fmt.Errorf("release warehouse stock reservation for product %s in warehouse %s: %w", productID, stock.WarehouseID, execErr)
+				`UPDATE warehouse_stock SET reserved = GREATEST(reserved - $1, 0), updated_at = NOW() WHERE id = $2`,
+				release, stock.ID); execErr != nil {
+				return 0, fmt.Errorf("release warehouse stock reservation row %s (product %s, warehouse %s): %w", stock.ID, productID, stock.WarehouseID, execErr)
 			}
 			return release, nil
 		})
