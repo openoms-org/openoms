@@ -1,0 +1,34 @@
+{
+  "track": {
+    "title": "Track order",
+    "subtitle": "Enter the order number and email address to check the status.",
+    "orderId": "Order number (ID)",
+    "orderIdPlaceholder": "e.g. a1b2c3d4-...",
+    "email": "Email address",
+    "emailPlaceholder": "you@example.com",
+    "submit": "Check status",
+    "searching": "Searching...",
+    "logoAlt": "Logo",
+    "errors": {
+      "missingFields": "Enter the order number and email address.",
+      "notFound": "Order not found. Check the order number and email.",
+      "emailMismatch": "That email does not match the order.",
+      "rateLimited": "Too many attempts. Try again in a minute.",
+      "generic": "Something went wrong. Try again later.",
+      "network": "Could not reach the server. Try again."
+    },
+    "result": {
+      "order": "Order",
+      "customer": "Customer",
+      "amount": "Amount",
+      "placedAt": "Placed on",
+      "lastUpdate": "Last update",
+      "items": "Items",
+      "quantity": "Quantity",
+      "shipments": "Shipments",
+      "timeline": "Status history",
+      "checkAnother": "Check another order"
+    },
+    "footer": "Powered by OpenOMS"
+  }
+}
