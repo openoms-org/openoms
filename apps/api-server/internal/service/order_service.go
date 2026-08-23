@@ -169,26 +169,83 @@ func (s *OrderService) SetBundleService(bundleSvc *BundleService) {
 	s.bundleService = bundleSvc
 }
 
-// expandBundleQuantities rewrites productQtys in place: bundle product entries are removed
-// (bundles are virtual and hold no warehouse_stock of their own) and replaced by their
-// component product quantities, so a single warehouse_stock walk covers components AND
-// normal products. No-op when the bundle service is unwired; on expansion failure it logs
-// and leaves productQtys unchanged (best-effort, matching the surrounding side-effects).
-func (s *OrderService) expandBundleQuantities(ctx context.Context, tx pgx.Tx, productQtys map[uuid.UUID]int) {
-	if s.bundleService == nil || len(productQtys) == 0 {
+// stockLine identifies the warehouse_stock rows one order line draws from. VariantID is
+// uuid.Nil for a line that names only a product, which is a distinct target from any
+// real variant — two lines of the same product in different variants must not collapse
+// into one product total.
+type stockLine struct {
+	ProductID uuid.UUID
+	VariantID uuid.UUID
+}
+
+// expandBundleLines rewrites lines in place: bundle entries are removed (bundles are
+// virtual and hold no warehouse_stock of their own) and replaced by their component
+// product quantities, so a single warehouse_stock walk covers components AND normal
+// products. Only product-level lines are considered for expansion, since a bundle is
+// not itself variant-tracked, and components are added as product-level lines.
+// No-op when the bundle service is unwired; on expansion failure it logs and leaves
+// lines unchanged (best-effort, matching the surrounding side-effects).
+func (s *OrderService) expandBundleLines(ctx context.Context, tx pgx.Tx, lines map[stockLine]int) {
+	if s.bundleService == nil || len(lines) == 0 {
 		return
 	}
-	componentQtys, bundleIDs, err := s.bundleService.ExpandBundleComponents(ctx, tx, productQtys)
+	candidates := make(map[uuid.UUID]int, len(lines))
+	for line, qty := range lines {
+		if line.VariantID == uuid.Nil {
+			candidates[line.ProductID] += qty
+		}
+	}
+	if len(candidates) == 0 {
+		return
+	}
+	componentQtys, bundleIDs, err := s.bundleService.ExpandBundleComponents(ctx, tx, candidates)
 	if err != nil {
 		slog.Error("failed to expand bundle components for stock adjustment", "error", err)
 		return
 	}
 	for id := range bundleIDs {
-		delete(productQtys, id)
+		delete(lines, stockLine{ProductID: id})
 	}
 	for productID, qty := range componentQtys {
-		productQtys[productID] += qty
+		lines[stockLine{ProductID: productID}] += qty
 	}
+}
+
+// stockRowsForLine picks the warehouse_stock rows an order line may draw from, in
+// preference order.
+//
+// A line naming a variant uses that variant's rows, and falls back to the product-level
+// rows when the variant has none: the tenant then tracks stock per product, and the
+// availability the order was accepted against sums every row for the product
+// (ProductRepository.AvailableStockBatch), so the product-level row is exactly what that
+// number promised. A line naming only a product prefers the product-level rows and falls
+// back to the variant rows for the same reason.
+//
+// The fallbacks matter because the alternative is silence: statements used to match on
+// `variant_id IS NULL`, so a variant line updated no row while the walk still counted
+// its quantity as consumed, and the reservation simply evaporated.
+func stockRowsForLine(stocks []model.WarehouseStock, variantID uuid.UUID) []model.WarehouseStock {
+	var matching, productLevel, otherVariants []model.WarehouseStock
+	for _, st := range stocks {
+		switch {
+		case st.VariantID == nil:
+			productLevel = append(productLevel, st)
+		case variantID != uuid.Nil && *st.VariantID == variantID:
+			matching = append(matching, st)
+		default:
+			otherVariants = append(otherVariants, st)
+		}
+	}
+	if variantID != uuid.Nil {
+		if len(matching) > 0 {
+			return matching
+		}
+		return productLevel
+	}
+	if len(productLevel) > 0 {
+		return productLevel
+	}
+	return otherVariants
 }
 
 func (s *OrderService) loadStatusConfig(ctx context.Context, tx pgx.Tx, tenantID uuid.UUID) (*model.OrderStatusConfig, error) {
@@ -1082,26 +1139,44 @@ func (s *OrderService) GetAudit(ctx context.Context, tenantID, orderID uuid.UUID
 	return entries, err
 }
 
-// extractProductQuantities parses order items JSON to extract product_id -> quantity map.
-func extractProductQuantities(items json.RawMessage) map[uuid.UUID]int {
-	result := make(map[uuid.UUID]int)
+// extractStockLines parses order items JSON into the stock targets they draw from,
+// keyed by (product, variant) so lines of the same product in different variants stay
+// separate.
+func extractStockLines(items json.RawMessage) map[stockLine]int {
+	result := make(map[stockLine]int)
 	if len(items) == 0 {
 		return result
 	}
 
 	var parsed []struct {
 		ProductID *uuid.UUID `json:"product_id"`
+		VariantID *uuid.UUID `json:"variant_id"`
 		Quantity  int        `json:"quantity"`
 	}
 	if err := json.Unmarshal(items, &parsed); err != nil {
 		return result
 	}
 	for _, item := range parsed {
-		if item.ProductID != nil && *item.ProductID != uuid.Nil && item.Quantity > 0 {
-			result[*item.ProductID] += item.Quantity
+		if item.ProductID == nil || *item.ProductID == uuid.Nil || item.Quantity <= 0 {
+			continue
 		}
+		line := stockLine{ProductID: *item.ProductID}
+		if item.VariantID != nil {
+			line.VariantID = *item.VariantID
+		}
+		result[line] += item.Quantity
 	}
 	return result
+}
+
+// productTotals collapses stock lines to per-product quantities, for the marketplace
+// stock sync — which reports availability per product, not per variant.
+func productTotals(lines map[stockLine]int) map[uuid.UUID]int {
+	totals := make(map[uuid.UUID]int, len(lines))
+	for line, qty := range lines {
+		totals[line.ProductID] += qty
+	}
+	return totals
 }
 
 // triggerStockSync fires OnStockChange for each product in the given map.
@@ -1129,12 +1204,12 @@ func (s *OrderService) reserveStockInTx(ctx context.Context, tx pgx.Tx, items js
 	if s.warehouseStockRepo == nil {
 		return nil, nil
 	}
-	productQtys := extractProductQuantities(items)
-	if len(productQtys) == 0 {
+	lines := extractStockLines(items)
+	if len(lines) == 0 {
 		return nil, nil
 	}
-	s.expandBundleQuantities(ctx, tx, productQtys)
-	if err := s.adjustStockPerProduct(ctx, tx, productQtys, func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) (int, error) {
+	s.expandBundleLines(ctx, tx, lines)
+	if err := s.adjustStockPerLine(ctx, tx, lines, func(ctx context.Context, tx pgx.Tx, line stockLine, stock model.WarehouseStock, remaining int) (int, error) {
 		available := stock.Quantity - stock.Reserved
 		if available <= 0 {
 			return 0, nil
@@ -1144,42 +1219,41 @@ func (s *OrderService) reserveStockInTx(ctx context.Context, tx pgx.Tx, items js
 			`UPDATE warehouse_stock SET reserved = reserved + $1, updated_at = NOW()
 			 WHERE id = $2`,
 			reserveQty, stock.ID); err != nil {
-			return 0, fmt.Errorf("reserve stock for product %s in warehouse %s: %w", productID, stock.WarehouseID, err)
+			return 0, fmt.Errorf("reserve stock for product %s in warehouse %s: %w", line.ProductID, stock.WarehouseID, err)
 		}
 		return reserveQty, nil
 	}); err != nil {
 		return nil, err
 	}
-	return productQtys, nil
+	return productTotals(lines), nil
 }
 
-// adjustStockPerProduct walks each product in productQtys and, for products that
-// have stock rows, applies perStock to successive rows until the requested
-// quantity is consumed. perStock performs the row-level UPDATE and returns how
-// much of remaining it consumed (0 when it skips the row). It factors out the
-// reserve/ship/cancel iteration skeleton; callers must already run inside a
-// tenant-scoped transaction.
+// adjustStockPerLine walks each order line and applies perStock to the stock rows that
+// line draws from (see stockRowsForLine), until the requested quantity is consumed.
+// perStock performs the row-level UPDATE and returns how much of remaining it consumed
+// (0 when it skips the row). It factors out the reserve/ship/cancel iteration skeleton;
+// callers must already run inside a tenant-scoped transaction.
 //
 // A perStock error aborts the whole walk: a failed statement has already poisoned the
 // transaction, so continuing would only pile up "current transaction is aborted"
 // failures on top of the real cause.
-func (s *OrderService) adjustStockPerProduct(
+func (s *OrderService) adjustStockPerLine(
 	ctx context.Context,
 	tx pgx.Tx,
-	productQtys map[uuid.UUID]int,
-	perStock func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) (int, error),
+	lines map[stockLine]int,
+	perStock func(ctx context.Context, tx pgx.Tx, line stockLine, stock model.WarehouseStock, remaining int) (int, error),
 ) error {
-	for productID, qty := range productQtys {
-		stocks, err := s.warehouseStockRepo.ListByProduct(ctx, tx, productID)
+	for line, qty := range lines {
+		stocks, err := s.warehouseStockRepo.ListByProduct(ctx, tx, line.ProductID)
 		if err != nil {
-			return fmt.Errorf("list warehouse stock for product %s: %w", productID, err)
+			return fmt.Errorf("list warehouse stock for product %s: %w", line.ProductID, err)
 		}
 		remaining := qty
-		for _, stock := range stocks {
+		for _, stock := range stockRowsForLine(stocks, line.VariantID) {
 			if remaining <= 0 {
 				break
 			}
-			consumed, err := perStock(ctx, tx, productID, stock, remaining)
+			consumed, err := perStock(ctx, tx, line, stock, remaining)
 			if err != nil {
 				return err
 			}
@@ -1194,10 +1268,10 @@ func (s *OrderService) handleStockOnShip(ctx context.Context, tenantID uuid.UUID
 	if s.warehouseStockRepo == nil {
 		return
 	}
-	productQtys := extractProductQuantities(order.Items)
+	lines := extractStockLines(order.Items)
 	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		s.expandBundleQuantities(ctx, tx, productQtys)
-		return s.adjustStockPerProduct(ctx, tx, productQtys, func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) (int, error) {
+		s.expandBundleLines(ctx, tx, lines)
+		return s.adjustStockPerLine(ctx, tx, lines, func(ctx context.Context, tx pgx.Tx, line stockLine, stock model.WarehouseStock, remaining int) (int, error) {
 			deduct := min(remaining, stock.Quantity)
 			// Decrement both quantity and reserved
 			if _, execErr := tx.Exec(ctx,
@@ -1207,14 +1281,14 @@ func (s *OrderService) handleStockOnShip(ctx context.Context, tenantID uuid.UUID
 				     updated_at = NOW()
 				 WHERE id = $2`,
 				deduct, stock.ID); execErr != nil {
-				return 0, fmt.Errorf("adjust warehouse stock for product %s in warehouse %s: %w", productID, stock.WarehouseID, execErr)
+				return 0, fmt.Errorf("adjust warehouse stock for product %s in warehouse %s: %w", line.ProductID, stock.WarehouseID, execErr)
 			}
 			return deduct, nil
 		})
 	}); err != nil {
 		slog.Error("handleStockOnShip: failed to adjust stock", "error", err, "order_id", order.ID, "tenant_id", tenantID)
 	}
-	s.triggerStockSync(tenantID, productQtys, "order_shipped")
+	s.triggerStockSync(tenantID, productTotals(lines), "order_shipped")
 }
 
 // handleStockOnCancel releases reserved stock for cancelled orders.
@@ -1222,23 +1296,23 @@ func (s *OrderService) handleStockOnCancel(ctx context.Context, tenantID uuid.UU
 	if s.warehouseStockRepo == nil {
 		return
 	}
-	productQtys := extractProductQuantities(order.Items)
+	lines := extractStockLines(order.Items)
 	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
-		s.expandBundleQuantities(ctx, tx, productQtys)
-		return s.adjustStockPerProduct(ctx, tx, productQtys, func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) (int, error) {
+		s.expandBundleLines(ctx, tx, lines)
+		return s.adjustStockPerLine(ctx, tx, lines, func(ctx context.Context, tx pgx.Tx, line stockLine, stock model.WarehouseStock, remaining int) (int, error) {
 			release := min(remaining, stock.Reserved)
 			if _, execErr := tx.Exec(ctx,
 				`UPDATE warehouse_stock SET reserved = GREATEST(reserved - $1, 0), updated_at = NOW()
 				 WHERE id = $2`,
 				release, stock.ID); execErr != nil {
-				return 0, fmt.Errorf("release stock reservation for product %s in warehouse %s: %w", productID, stock.WarehouseID, execErr)
+				return 0, fmt.Errorf("release stock reservation for product %s in warehouse %s: %w", line.ProductID, stock.WarehouseID, execErr)
 			}
 			return release, nil
 		})
 	}); err != nil {
 		slog.Error("handleStockOnCancel: failed to release reserved stock", "error", err, "order_id", order.ID, "tenant_id", tenantID)
 	}
-	s.triggerStockSync(tenantID, productQtys, "order_cancelled")
+	s.triggerStockSync(tenantID, productTotals(lines), "order_cancelled")
 }
 
 // CountOrdersThisMonth returns the number of orders created in the current calendar month.
