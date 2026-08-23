@@ -137,16 +137,21 @@ func countStockSyncEvents(t *testing.T, ctx context.Context, product uuid.UUID) 
 // the stock-change gate is exercised end to end.
 func newStockSyncProductService(pool *pgxpool.Pool) *service.ProductService {
 	productRepo := repository.NewProductRepository()
-	auditRepo := repository.NewAuditRepository()
-	svc := service.NewProductService(productRepo, auditRepo, pool, nil)
-	svc.SetStockSyncService(service.NewStockSyncService(
+	svc := service.NewProductService(productRepo, repository.NewAuditRepository(), pool, nil)
+	svc.SetStockSyncService(newStockSyncService(pool))
+	return svc
+}
+
+// newStockSyncService builds the real StockSyncService (no marketplace credentials, so
+// propagation stops at recording the event).
+func newStockSyncService(pool *pgxpool.Pool) *service.StockSyncService {
+	return service.NewStockSyncService(
 		repository.NewStockSyncChannelRepository(),
 		repository.NewStockSyncEventRepository(),
-		productRepo,
-		auditRepo,
+		repository.NewProductRepository(),
+		repository.NewAuditRepository(),
 		repository.NewProductListingRepository(),
 		repository.NewIntegrationRepository(),
 		pool, nil, nil, slog.Default(),
-	))
-	return svc
+	)
 }

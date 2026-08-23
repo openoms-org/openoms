@@ -66,6 +66,13 @@ func (n *noopRestocker) RestockItems(_ context.Context, _ uuid.UUID, items json.
 	return n.err
 }
 
+// TestReturnRestockTriggerTypeIsAccepted guards the stock-sync trigger allowlist:
+// StockSyncService.OnStockChange drops an unknown trigger type with a warning, which
+// would silently skip pushing the restocked availability to marketplaces.
+func TestReturnRestockTriggerTypeIsAccepted(t *testing.T) {
+	assert.True(t, model.IsValidTriggerType("return_restocked"))
+}
+
 // TestReturnSettings_RestockStatus covers the policy resolution: the default point of
 // restock, the disable words, and a custom status.
 func TestReturnSettings_RestockStatus(t *testing.T) {

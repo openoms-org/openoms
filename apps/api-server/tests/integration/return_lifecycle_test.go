@@ -24,6 +24,9 @@ import (
 // warehouse write.
 func newReturnServiceWithRestock(pool *pgxpool.Pool) (*service.ReturnService, *service.OrderService) {
 	orders := newLifecycleOrderService(pool)
+	// Wired so a restock actually reaches the stock owner, which is what proves the
+	// restock trigger type is one it accepts.
+	orders.SetStockSyncService(newStockSyncService(pool))
 	returns := service.NewReturnService(
 		repository.NewReturnRepository(),
 		repository.NewOrderRepository(),
@@ -156,6 +159,16 @@ func TestReturnLifecycle_ReceivedRestocks(t *testing.T) {
 	qty, reserved := readStock(t, ctx, warehouse, product)
 	assert.Equal(t, 10, qty, "the 2 returned units are sellable again")
 	assert.Zero(t, reserved, "restocking does not create reservations")
+
+	// The new availability is pushed on: the trigger type must be one the stock owner
+	// accepts, or the propagation is dropped with a warning.
+	require.Eventually(t, func() bool {
+		var n int
+		require.NoError(t, superPool.QueryRow(ctx,
+			`SELECT COUNT(*) FROM stock_sync_events WHERE product_id = $1 AND trigger_type = 'return_restocked'`,
+			product).Scan(&n))
+		return n == 1
+	}, 4*time.Second, 50*time.Millisecond, "the restock is recorded as a stock change")
 }
 
 // TestReturnLifecycle_RestockPolicyOff verifies a tenant that reconciles returned goods

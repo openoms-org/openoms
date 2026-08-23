@@ -106,6 +106,7 @@ var validTriggerTypes = map[string]bool{
 	"supplier_sync":      true,
 	"supplier_delinked":  true,
 	"allegro_import":     true,
+	"return_restocked":   true,
 }
 
 // CreateStockSyncChannelRequest is the payload for creating a stock sync channel.
