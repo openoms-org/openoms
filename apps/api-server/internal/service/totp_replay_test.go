@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -136,6 +137,42 @@ func TestIsTOTPReplay(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			assert.Equal(t, tc.want, isTOTPReplay(tc.step, tc.lastStep))
+		})
+	}
+}
+
+// TestTOTPPersistStepOutcome_PersistFailureDoesNotGrantTokens is the named
+// fail-closed contract for openoms-dev-pdp.2.1 AUTH-02. A transient write error
+// while recording the accepted TOTP step must not mint tokens; otherwise a
+// concurrent replay of the same code can race past single-use protection.
+func TestTOTPPersistStepOutcome_PersistFailureDoesNotGrantTokens(t *testing.T) {
+	persistErr := errors.New("db unavailable")
+	err := totpPersistStepOutcome(true, persistErr)
+	require.Error(t, err, "persist-step failure must not grant tokens")
+	assert.ErrorIs(t, err, persistErr)
+}
+
+func TestTOTPPersistStepOutcome(t *testing.T) {
+	persistErr := errors.New("db unavailable")
+	tests := []struct {
+		name     string
+		advanced bool
+		persist  error
+		wantErr  error
+	}{
+		{"advanced and persisted allows tokens", true, nil, nil},
+		{"not advanced is a spent code", false, nil, ErrInvalid2FACode},
+		{"persist error is fail-closed even if advanced=true", true, persistErr, persistErr},
+		{"persist error is fail-closed even if advanced=false", false, persistErr, persistErr},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := totpPersistStepOutcome(tc.advanced, tc.persist)
+			if tc.wantErr == nil {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorIs(t, err, tc.wantErr)
 		})
 	}
 }

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"crypto/ed25519"
 	"crypto/sha512"
 	"encoding/json"
@@ -113,6 +114,43 @@ func TestAuthHandler_Logout_BlacklistsAccessTokenUntilTokenExpiry(t *testing.T) 
 	require.Len(t, store.revocations, 1)
 	assert.Equal(t, middleware.HashToken(tokenStr), store.revocations[0].tokenHash)
 	assert.WithinDuration(t, expiresAt, store.revocations[0].expiresAt, time.Second)
+}
+
+func TestAuthHandler_TwoFALogin_AccountLockedMapsTo429(t *testing.T) {
+	// openoms-dev-pdp.2.1 AUTH-01: Login already maps ErrAccountLocked to 429;
+	// TwoFALogin must do the same so a locked 2FA account is not a 500.
+	tokenSvc, err := service.NewTokenService("test-secret-key-for-unit-tests-32chars!")
+	require.NoError(t, err)
+
+	authSvc := service.NewAuthService(nil, nil, nil, tokenSvc, nil, nil)
+	store := service.NewMemoryLoginLockoutStore()
+	defer store.Close()
+	lockout := service.NewLoginLockout(store)
+	authSvc.SetLoginLockout(lockout)
+
+	userID := uuid.New()
+	tenantID := uuid.New()
+	user := model.User{ID: userID, TenantID: tenantID, Email: "user@example.com", Role: "owner"}
+	tempToken, err := tokenSvc.Generate2FAPendingToken(user)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	for range 5 {
+		require.NoError(t, lockout.Record2FAFailure(ctx, tenantID.String(), userID.String()))
+	}
+
+	h := NewAuthHandler(authSvc, true)
+	body := `{"temp_token":"` + tempToken + `","code":"000000"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/auth/2fa/login", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	h.TwoFALogin(rr, req)
+
+	assert.Equal(t, http.StatusTooManyRequests, rr.Code)
+	var resp map[string]string
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&resp))
+	assert.Equal(t, "account temporarily locked due to too many failed attempts", resp["error"])
 }
 
 func TestAuthHandler_Logout_DoesNotBlacklistInvalidAccessToken(t *testing.T) {

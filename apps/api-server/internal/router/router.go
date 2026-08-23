@@ -2,11 +2,14 @@
 package router
 
 import (
+	"net"
 	"net/http"
 	"net/netip"
 	"net/url"
 	"strings"
 	"time"
+
+	"golang.org/x/net/publicsuffix"
 
 	"github.com/getsentry/sentry-go"
 	"github.com/go-chi/chi/v5"
@@ -1324,30 +1327,27 @@ func New(deps RouterDeps) *chi.Mux {
 	return r
 }
 
-// extractCookieDomain derives a cookie Domain attribute from the frontend URL.
+// extractCookieDomain derives a cookie Domain attribute from the frontend URL
+// using the public suffix list (eTLD+1).
 // "https://app.openoms.org" → ".openoms.org" (cross-subdomain access).
-// "http://localhost:3000" → "" (no domain restriction for local dev).
-//
-// NOTE: This uses a simple heuristic (last 2 hostname parts) which works for
-// single-part TLDs (.org, .com, .pl) but NOT for multi-part ccTLDs like .co.uk
-// or .com.pl. This is intentional — openoms.org uses a single-part TLD and we
-// avoid pulling in golang.org/x/net/publicsuffix for this one call site.
+// "https://app.example.com.pl" → ".example.com.pl" (not ".com.pl").
+// "http://localhost:3000" → "" (host-only for local dev).
+// Host-only (empty Domain) is used for loopback, IP literals, and names that
+// are not a registrable domain (the host is itself a public suffix).
 func extractCookieDomain(frontendURL string) string {
 	u, err := url.Parse(frontendURL)
 	if err != nil {
 		return ""
 	}
 	host := u.Hostname()
-	if host == "localhost" || host == "127.0.0.1" || host == "::1" {
+	if host == "localhost" || net.ParseIP(host) != nil {
 		return ""
 	}
-	parts := strings.Split(host, ".")
-	if len(parts) < 2 {
-		return "" // single-label hostname
+	eTLDPlusOne, err := publicsuffix.EffectiveTLDPlusOne(host)
+	if err != nil {
+		return ""
 	}
-	// "openoms.org" → ".openoms.org"
-	// "app.openoms.org" → ".openoms.org"
-	return "." + strings.Join(parts[len(parts)-2:], ".")
+	return "." + eTLDPlusOne
 }
 
 // apiDocsEnabled reports whether the unauthenticated OpenAPI spec and Swagger UI

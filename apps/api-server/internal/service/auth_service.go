@@ -630,25 +630,23 @@ func (s *AuthService) Verify2FALogin(ctx context.Context, tempTokenStr, code str
 	// between two requests presenting the SAME valid code, exactly one advances the row; the
 	// loser observes the already-advanced value (advanced=false) and is rejected below, so a
 	// single code can never mint two sessions. Token issuance is gated on this result.
-	advanced := true
-	if perr := database.WithTenant(ctx, s.pool, claims.TenantID, func(tx pgx.Tx) error {
+	// Persist-step failure is fail-closed (openoms-dev-pdp.2.1 AUTH-02): a write error
+	// must not mint tokens, or a concurrent replay can bypass single-use protection.
+	advanced := false
+	perr := database.WithTenant(ctx, s.pool, claims.TenantID, func(tx pgx.Tx) error {
 		var serr error
 		advanced, serr = s.userRepo.SetTOTPLastUsedStep(ctx, tx, userID, step)
 		return serr
-	}); perr != nil {
-		// Persisting the step failed (transient DB error). Preserve availability — a valid
-		// login must not be blocked by a write error — at the cost of degrading single-use
-		// protection for this one request (the sequential replay is still blocked above).
-		slog.Warn("failed to persist TOTP last-used step (single-use protection degraded)", "error", perr, "user_id", userID)
-		advanced = true
-	}
-	if !advanced {
-		// The accepted step was already consumed (a concurrent request won the race, or a
-		// replay that slipped past the stale pre-check read). The code is spent; reject it.
-		if s.lockout != nil {
-			_ = s.lockout.Record2FAFailure(ctx, lockTenant, lockUser)
+	})
+	if outcome := totpPersistStepOutcome(advanced, perr); outcome != nil {
+		if errors.Is(outcome, ErrInvalid2FACode) {
+			if s.lockout != nil {
+				_ = s.lockout.Record2FAFailure(ctx, lockTenant, lockUser)
+			}
+			return nil, "", ErrInvalid2FACode
 		}
-		return nil, "", ErrInvalid2FACode
+		slog.Error("failed to persist TOTP last-used step; refusing tokens", "error", perr, "user_id", userID)
+		return nil, "", fmt.Errorf("persist totp last-used step: %w", perr)
 	}
 	// Successful 2FA: clear the failure counter.
 	if s.lockout != nil {
