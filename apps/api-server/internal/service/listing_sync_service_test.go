@@ -191,3 +191,10 @@ func TestPlanUnsupportedListingPull_NeverMarksSynced(t *testing.T) {
 	assert.Contains(t, result.Message, "not supported")
 	assert.NotContains(t, result.Message, "Fetched")
 }
+
+func TestUnsupportedListingPull_DoesNotRecordCleanLastSync(t *testing.T) {
+	errMsg := lastErrorForUnsupportedPull()
+	require.NotNil(t, errMsg)
+	assert.Equal(t, listingPullUnsupportedReason, *errMsg)
+	assert.False(t, recordCleanLastSyncForUnsupportedPull())
+}
