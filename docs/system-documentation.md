@@ -336,7 +336,7 @@ OpenOMS/
 | `returns` | Zwroty/RMA | status, reason, refund_amount, return_token, customer_email |
 | `products` | Produkty | sku, ean, price, stock_quantity, images JSONB, description, dimensions |
 | `product_variants` | Warianty | attributes JSONB, sku, price_override |
-| `product_listings` | Oferty marketplace | integration_id, external_id, sync_status, price_override |
+| `product_listings` | Oferty marketplace | integration_id, external_id, sync_status, price_override. `sync_status=synced` tylko po realnym pushu/potwierdzeniu feedu, nie po pullu bez danych z marketplace |
 | `product_bundles` | Zestawy | bundle_product_id, component_product_id, quantity |
 | `customers` | Klienci | email, phone, name, company_name, nip, total_orders, total_spent |
 | `integrations` | Integracje | provider, credentials JSONB (szyfrowane AES), settings |
@@ -1025,6 +1025,7 @@ Plan guard egzekwuje status subskrypcji Stripe po stronie backendu: `past_due`/`
 | `/register/complete` | Formularz po platnosci Stripe |
 | `/register/invite` | Rejestracja z tokenem zaproszenia |
 | `/onboarding` | Wizard onboardingu (4 kroki) |
+| `/track/[tenant_slug]` | Publiczne sledzenie zamowienia (numer + email). Teksty przez next-intl (`messages/pl/track.json`, `messages/en/track.json`). Bez logowania. |
 
 #### Pulpit
 
@@ -1305,9 +1306,9 @@ Standalone maszyna stanow zamowien i przesylek:
 | amazon-sp-sdk | Amazon | LWA OAuth + AWS Signing | Zamowienia, inventory, pricing; terminalne bledy OAuth oznaczaja integracje jako wymagajaca ponownej autoryzacji |
 | woocommerce-go-sdk | WooCommerce | REST API | Zamowienia, produkty, webhooks; `on-hold` mapuje platnosc jako `pending` (nie `paid`); malformed monetary fields reject order import |
 | ebay-go-sdk | eBay | OAuth 2.0 | Zamowienia (OrderService), fulfillment + refundy (FulfillmentService), inventory CRUD + bulk (InventoryService), oferty lifecycle (OfferService), polityki konta (AccountService); malformed monetary fields reject order import; terminalne bledy OAuth oznaczaja integracje jako wymagajaca ponownej autoryzacji |
-| kaufland-go-sdk | Kaufland | Feed API | Import CSV/XML; adapter MarketplaceProvider **bez** order pollera |
+| kaufland-go-sdk | Kaufland | Feed API | Import CSV/XML; adapter MarketplaceProvider **bez** order pollera. To **nie** jest zywy kanal zamowien: `main.go` nie rejestruje `*OrderPoller`, a UI (picker, listing-sync, filtr zrodla zamowien) ukrywa `kaufland` |
 | olx-go-sdk | OLX | OAuth 2.0 | Ogloszenia CRUD + komendy (AdvertService), kategorie + atrybuty + sugestie (CategoryService), miasta + dzielnice (CityService), transakcje (TransactionService); `invalid_grant` z endpointu tokenow jest zwracany jako terminalny blad OAuth, a workery oznaczaja integracje jako wymagajaca ponownej autoryzacji |
-| mirakl-go-sdk | Mirakl/Empik | REST | Seller network; adapter MarketplaceProvider **bez** order pollera |
+| mirakl-go-sdk | Mirakl/Empik | REST | Seller network; adapter MarketplaceProvider **bez** order pollera. Empik/Mirakl tez **nie** sa zywym kanalem zamowien (brak pollera, ukryte w UI) |
 | erli-go-sdk | Erli | REST | Zamowienia, oferty |
 | shoper-go-sdk | Shoper | REST | Zamowienia, produkty |
 | prestashop-go-sdk | PrestaShop | REST | Zamowienia, produkty |
@@ -1615,6 +1616,10 @@ Reaper:      każdy tick zaczyna się od reap-pass (OPE-534): wiersze 'claimed' 
 ### Routing tworzenia zamówień przez fulfillment (OPE-416, tor B)
 
 Most między tworzeniem zamówienia a orchestracją — **addytywny, gated `FULFILLMENT_PROCESS_ENABLED`** (domyślnie OFF → zero zmian w zachowaniu).
+
+`FULFILLMENT_PROCESS_ENABLED` jest flaga **recording**. OFF: `EnsureProcessForOrder` jest no-op, home (`/`) zostaje przy dashboardzie heurystycznym, a panel control tower na home i strona `/operations/fulfillment` pokazuja puste/zerowe stany (endpointy read sa zarejestrowane, RLS-scoped). `/operations/fulfillment` jest `ready` w obu surface'ach, zeby operator mogl czytac parity **zanim** ktokolwiek wlaczy recording. ON: tworzenie zamowienia zapisuje proces + event `order.created` w tej samej transakcji.
+
+Produkcyjny Helm (`deploy/helm/openoms/values.yaml` + ConfigMap) **nie** ustawia `FULFILLMENT_PROCESS_ENABLED`. Wykres nie ma tej zmiennej. Domysl `envDefault:"false"` w `internal/config` zostaje. Tej fali **nie** wolno flipowac produkcji przez Helm. Wlaczenie jest recznym env na srodowisku, po backfillu i progu parity (kolejnosc nizej).
 
 ```
 Hook:        FulfillmentService.EnsureProcessForOrder(ctx, tx, tenantID, orderID) wołany W TEJ
@@ -2143,9 +2148,9 @@ EbayImportService.ImportOffers()
 | | Amazon | SP-API, OAuth2, polling, async feeds (stock/price), feed status polling |
 | | WooCommerce | REST API, webhooks, listings, stock sync |
 | | eBay | OAuth 2.0, polling, fulfillment, tracking, refundy, 3-step listings, bulk stock/price, import ofert, activate/deactivate |
-| | Kaufland | Feed API, stock sync |
+| | Kaufland | SDK + adapter; **nie** kanal zamowien (brak pollera, ukryte w UI) |
 | | OLX | OAuth 2.0, listings (kategorie, miasta, dzielnice, atrybuty), activate/deactivate |
-| | Mirakl/Empik | REST API |
+| | Mirakl/Empik | SDK + adapter; **nie** kanal zamowien (brak pollera, ukryte w UI) |
 | | Erli | REST API, listings |
 | **Carrier** | InPost | Paczkomaty, kurier, Geowidget, webhook, dispatch orders |
 | | DHL | Krajowe i miedzynarodowe, adres nadawcy (shipper), DHL24 SOAP WebAPI2 |
@@ -2207,7 +2212,7 @@ Workery to **tickery w procesie API** (ten sam obraz `openoms-api`, flaga `WORKE
 | AmazonFeedStatusWorker | 2min | Sprawdzanie statusu feedow Amazon SP-API |
 | StockSyncWorker | 5min | Sync stanow do marketplace'ow (BulkStockUpdater / AsyncStockUpdater) |
 | PriceSyncWorker | 5min | Sync cen do marketplace'ow |
-| ListingSyncWorker | 5min | Push listingow (oferty/ceny/stan). Tick 5min; `SyncIntervalMinutes` jest wewnetrzny |
+| ListingSyncWorker | 5min | Push listingow (oferty/ceny/stan). Tick 5min; `SyncIntervalMinutes` jest wewnetrzny. Pull **nie** ustawia `sync_status=synced` bez danych z marketplace: `MarketplaceProvider` nie ma list-offers, wiec `PullListings` zapisuje skip + `last_error` (`provider does not expose offer listing`) |
 | KSeFStatusWorker | 5min | Status faktur wyslanych do KSeF |
 | TrackingPoller | 10min | Aktualizacja statusu przesylek |
 | RepricingWorker | 15min | Automatyczna zmiana cen wg regul |
