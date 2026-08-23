@@ -497,6 +497,11 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 		order.PaymentMethod = req.PaymentMethod
 	}
 
+	// Line quantities are needed inside the transaction (to reserve) and after it (to
+	// push the new availability to marketplaces). reserveStockForOrder expands bundle
+	// lines into components in place, so the post-commit sync covers components too.
+	productQtys := extractProductQuantities(order.Items)
+
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		if err := EnforceMonthlyOrderLimit(ctx, tx, s.orderRepo, tenantID, req.MaxOrdersMonthly, 0); err != nil {
 			return err
@@ -522,6 +527,10 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 				return err
 			}
 		}
+		// Claim the stock in the same transaction as the order itself.
+		if err := s.reserveStockForOrder(ctx, tx, productQtys); err != nil {
+			return err
+		}
 		// Route the new order through the fulfillment commands (OPE-416): create
 		// its fulfillment process + enqueue the orchestration event in the SAME
 		// transaction. No-op when the gated service is nil/disabled.
@@ -544,34 +553,7 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 		return nil, err
 	}
 
-	// Reserve stock for order items (best-effort, async stock sync)
-	if s.warehouseStockRepo != nil {
-		productQtys := extractProductQuantities(order.Items)
-		if len(productQtys) > 0 {
-			bgCtx := context.Background()
-			if err := database.WithTenant(bgCtx, s.pool, tenantID, func(tx pgx.Tx) error {
-				s.expandBundleQuantities(bgCtx, tx, productQtys)
-				s.adjustStockPerProduct(bgCtx, tx, productQtys, func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) int {
-					available := stock.Quantity - stock.Reserved
-					if available <= 0 {
-						return 0
-					}
-					reserveQty := min(remaining, available)
-					if _, err := tx.Exec(ctx,
-						`UPDATE warehouse_stock SET reserved = reserved + $1, updated_at = NOW()
-						 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id IS NULL`,
-						reserveQty, stock.WarehouseID, productID); err != nil {
-						slog.Error("failed to reserve stock", "error", err, "product_id", productID, "warehouse_id", stock.WarehouseID)
-					}
-					return reserveQty
-				})
-				return nil
-			}); err != nil {
-				slog.Error("failed to reserve stock for order", "error", err, "tenant_id", tenantID)
-			}
-			s.triggerStockSync(tenantID, productQtys, "order_placed")
-		}
-	}
+	s.triggerStockSync(tenantID, productQtys, "order_placed")
 
 	DispatchWebhookAsync(s.webhookDispatch, tenantID, "order.created", order)
 	FireAutomationEvent(s.automationService, tenantID, "order", "order.created", order.ID, map[string]any{
@@ -604,12 +586,12 @@ func (s *OrderService) Create(ctx context.Context, tenantID uuid.UUID, req model
 // Duplicate creates a copy of an existing order as a fresh "new" order, with a new ID
 // and no external reference. It enforces the monthly order limit inside the same
 // transaction (mirroring Create), increments the linked customer's denormalized order
-// stats, and writes an "order.duplicated" audit entry, then dispatches an order.created
-// webhook after commit. For post-commit side-effects it is webhook-only (no fulfillment
-// process, stock reserve, or automation event) and intentionally non-idempotent — each
-// call mints a new order.
+// stats, reserves the stock the copied lines claim, and writes an "order.duplicated"
+// audit entry, then dispatches an order.created webhook after commit. It is
+// intentionally non-idempotent — each call mints a new order.
 func (s *OrderService) Duplicate(ctx context.Context, tenantID, orderID uuid.UUID, maxOrdersMonthly int, actorID uuid.UUID, ip string) (*model.Order, error) {
 	var newOrder *model.Order
+	var productQtys map[uuid.UUID]int
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		if err := EnforceMonthlyOrderLimit(ctx, tx, s.orderRepo, tenantID, maxOrdersMonthly, 0); err != nil {
 			return err
@@ -673,6 +655,14 @@ func (s *OrderService) Duplicate(ctx context.Context, tenantID, orderID uuid.UUI
 			}
 		}
 
+		// The copy carries the source order's line items, so it claims stock exactly
+		// like a fresh order does. Without this the duplicate was fulfillable from
+		// stock nothing had reserved, and every duplicate widened the oversell gap.
+		productQtys = extractProductQuantities(newOrder.Items)
+		if err := s.reserveStockForOrder(ctx, tx, productQtys); err != nil {
+			return err
+		}
+
 		return s.auditRepo.Log(ctx, tx, model.AuditEntry{
 			TenantID:   tenantID,
 			UserID:     actorID,
@@ -686,6 +676,8 @@ func (s *OrderService) Duplicate(ctx context.Context, tenantID, orderID uuid.UUI
 	if err != nil {
 		return nil, err
 	}
+
+	s.triggerStockSync(tenantID, productQtys, "order_placed")
 
 	// Dispatch webhook for the duplicated order (async, best-effort)
 	DispatchWebhookAsync(s.webhookDispatch, tenantID, "order.created", newOrder)
@@ -1134,25 +1126,64 @@ func (s *OrderService) triggerStockSync(tenantID uuid.UUID, productQtys map[uuid
 // much of remaining it consumed (0 when it skips the row). It factors out the
 // reserve/ship/cancel iteration skeleton; callers must already run inside a
 // tenant-scoped transaction.
+//
+// The first failure aborts the walk and is returned: a failed statement poisons the
+// surrounding transaction anyway, so continuing would only produce a partially
+// applied adjustment behind a rollback.
 func (s *OrderService) adjustStockPerProduct(
 	ctx context.Context,
 	tx pgx.Tx,
 	productQtys map[uuid.UUID]int,
-	perStock func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) int,
-) {
+	perStock func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) (int, error),
+) error {
 	for productID, qty := range productQtys {
 		stocks, err := s.warehouseStockRepo.ListByProduct(ctx, tx, productID)
-		if err != nil || len(stocks) == 0 {
-			continue
+		if err != nil {
+			return fmt.Errorf("list warehouse stock for product %s: %w", productID, err)
 		}
 		remaining := qty
 		for _, stock := range stocks {
 			if remaining <= 0 {
 				break
 			}
-			remaining -= perStock(ctx, tx, productID, stock, remaining)
+			consumed, err := perStock(ctx, tx, productID, stock, remaining)
+			if err != nil {
+				return err
+			}
+			remaining -= consumed
 		}
 	}
+	return nil
+}
+
+// reserveStockForOrder raises the reservations an order's line items claim, inside the
+// caller's tenant transaction — so an order that exists always has its reservation, and
+// a reservation can no longer be silently lost after the order row is committed. Bundle
+// lines are expanded to their components first (bundles hold no stock of their own).
+//
+// Each row is reserved up to what it actually has available, so a line that exceeds
+// stock reserves what it can; order acceptance is unchanged (whether to reject an
+// oversold order is a separate policy decision). A database failure aborts the
+// transaction, and with it the order.
+func (s *OrderService) reserveStockForOrder(ctx context.Context, tx pgx.Tx, productQtys map[uuid.UUID]int) error {
+	if s.warehouseStockRepo == nil || len(productQtys) == 0 {
+		return nil
+	}
+	s.expandBundleQuantities(ctx, tx, productQtys)
+	return s.adjustStockPerProduct(ctx, tx, productQtys, func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) (int, error) {
+		available := stock.Quantity - stock.Reserved
+		if available <= 0 {
+			return 0, nil
+		}
+		reserveQty := min(remaining, available)
+		if _, err := tx.Exec(ctx,
+			`UPDATE warehouse_stock SET reserved = reserved + $1, updated_at = NOW()
+			 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id IS NULL`,
+			reserveQty, stock.WarehouseID, productID); err != nil {
+			return 0, fmt.Errorf("reserve stock for product %s in warehouse %s: %w", productID, stock.WarehouseID, err)
+		}
+		return reserveQty, nil
+	})
 }
 
 // handleStockOnShip decrements quantity and reserved in warehouse_stock for shipped orders.
@@ -1163,7 +1194,7 @@ func (s *OrderService) handleStockOnShip(ctx context.Context, tenantID uuid.UUID
 	productQtys := extractProductQuantities(order.Items)
 	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		s.expandBundleQuantities(ctx, tx, productQtys)
-		s.adjustStockPerProduct(ctx, tx, productQtys, func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) int {
+		return s.adjustStockPerProduct(ctx, tx, productQtys, func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) (int, error) {
 			deduct := min(remaining, stock.Quantity)
 			// Decrement both quantity and reserved
 			if _, execErr := tx.Exec(ctx,
@@ -1173,11 +1204,10 @@ func (s *OrderService) handleStockOnShip(ctx context.Context, tenantID uuid.UUID
 				     updated_at = NOW()
 				 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id IS NULL`,
 				deduct, stock.WarehouseID, productID); execErr != nil {
-				slog.Error("failed to adjust warehouse stock", "warehouse_id", stock.WarehouseID, "product_id", productID, "error", execErr)
+				return 0, fmt.Errorf("adjust warehouse stock for product %s in warehouse %s: %w", productID, stock.WarehouseID, execErr)
 			}
-			return deduct
+			return deduct, nil
 		})
-		return nil
 	}); err != nil {
 		slog.Error("handleStockOnShip: failed to adjust stock", "error", err, "order_id", order.ID, "tenant_id", tenantID)
 	}
@@ -1192,17 +1222,16 @@ func (s *OrderService) handleStockOnCancel(ctx context.Context, tenantID uuid.UU
 	productQtys := extractProductQuantities(order.Items)
 	if err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		s.expandBundleQuantities(ctx, tx, productQtys)
-		s.adjustStockPerProduct(ctx, tx, productQtys, func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) int {
+		return s.adjustStockPerProduct(ctx, tx, productQtys, func(ctx context.Context, tx pgx.Tx, productID uuid.UUID, stock model.WarehouseStock, remaining int) (int, error) {
 			release := min(remaining, stock.Reserved)
 			if _, execErr := tx.Exec(ctx,
 				`UPDATE warehouse_stock SET reserved = GREATEST(reserved - $1, 0), updated_at = NOW()
 				 WHERE warehouse_id = $2 AND product_id = $3 AND variant_id IS NULL`,
 				release, stock.WarehouseID, productID); execErr != nil {
-				slog.Error("failed to release warehouse stock reservation", "warehouse_id", stock.WarehouseID, "product_id", productID, "error", execErr)
+				return 0, fmt.Errorf("release warehouse stock reservation for product %s in warehouse %s: %w", productID, stock.WarehouseID, execErr)
 			}
-			return release
+			return release, nil
 		})
-		return nil
 	}); err != nil {
 		slog.Error("handleStockOnCancel: failed to release reserved stock", "error", err, "order_id", order.ID, "tenant_id", tenantID)
 	}
