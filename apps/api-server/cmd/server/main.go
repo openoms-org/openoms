@@ -417,6 +417,9 @@ func run() error {
 	orderService.SetInvoiceService(invoiceService)
 	orderService.SetSMSService(smsService)
 	orderService.SetShipmentService(shipmentService)
+	// Carrier-driven order status changes (package picked up / delivered) fan out the
+	// same side effects as an operator-driven transition.
+	shipmentService.SetOrderStatusSideEffects(orderService)
 	shipmentService.SetSMSService(smsService)
 	allegroSyncService := service.NewAllegroSyncService(integrationService).
 		WithFulfillment(fulfillmentService) // OPE-417 followup: best-effort marketplace-sync provider attempts

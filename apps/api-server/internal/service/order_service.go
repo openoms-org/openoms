@@ -842,47 +842,88 @@ func (s *OrderService) TransitionStatus(ctx context.Context, tenantID, orderID u
 		})
 	})
 	if err == nil && order != nil {
-		if s.emailService != nil {
-			asyncutil.SafeGo(func() {
-				s.emailService.SendOrderStatusEmail(context.Background(), tenantID, order, oldStatus, req.Status)
-			})
-		}
-		DispatchWebhookAsync(s.webhookDispatch, tenantID, "order.status_changed", map[string]any{"order_id": orderID.String(), "from": oldStatus, "to": req.Status})
-		if s.invoiceService != nil {
-			asyncutil.SafeGo(func() { s.invoiceService.HandleOrderStatusChange(context.Background(), tenantID, order) })
-		}
-		if s.smsService != nil {
-			asyncutil.SafeGo(func() { s.smsService.SendOrderStatusSMS(context.Background(), tenantID, order, oldStatus, req.Status) })
-		}
-		FireAutomationEvent(s.automationService, tenantID, "order", "order.status_changed", order.ID, map[string]any{
-			"status": order.Status, "old_status": oldStatus, "new_status": req.Status,
-			"source": order.Source, "customer_name": order.CustomerName,
-			"total_amount": order.TotalAmount, "currency": order.Currency,
-			"payment_status": order.PaymentStatus,
+		s.applyStatusChangeSideEffects(tenantID, orderStatusChange{
+			orderID:   orderID,
+			order:     order,
+			oldStatus: oldStatus,
+			newStatus: req.Status,
+			firstShip: firstShip,
 		})
-		// Auto-sync fulfillment status to Allegro (async, best-effort)
-		if s.allegroSync != nil && order.Source == "allegro" {
-			asyncutil.SafeGo(func() { s.allegroSync.SyncFulfillmentStatus(context.Background(), tenantID, order, req.Status) })
-		}
-		// Stock sync on status change
-		switch req.Status {
-		case "shipped":
-			// Decrement component/product stock exactly once per order (firstShip gate),
-			// so a forced re-ship does not double-decrement.
-			if firstShip {
-				asyncutil.SafeGo(func() { s.handleStockOnShip(context.Background(), tenantID, order) })
-			}
-		case "cancelled":
-			// Release reservations once; skip when the order was already terminal
-			// (cancelled/refunded) to avoid double-releasing.
-			if !isTerminalStockStatus(oldStatus) {
-				asyncutil.SafeGo(func() { s.handleStockOnCancel(context.Background(), tenantID, order) })
-			}
-		case "completed":
-			s.awardLoyaltyOnComplete(tenantID, order)
-		}
 	}
 	return order, err
+}
+
+// orderStatusChange describes one already-committed order status change whose
+// post-commit side effects still have to fan out. order is the order as it reads
+// AFTER the update, and may be nil when the post-update re-fetch failed — the status
+// change still happened, so its webhook is still owed. firstShip reports whether the
+// order had never shipped before the update (read from shipped_at, which is only ever
+// set once), which gates the one-time stock decrement.
+type orderStatusChange struct {
+	orderID   uuid.UUID
+	order     *model.Order
+	oldStatus string
+	newStatus string
+	firstShip bool
+}
+
+// applyStatusChangeSideEffects fans out everything an order status change owes the
+// rest of the system once its transaction has committed: customer email, the
+// order.status_changed webhook + WebSocket broadcast, auto-invoicing, SMS, the
+// automation event, Allegro fulfillment sync, the one-time stock decrement on the
+// first ship, the reservation release on cancel, and loyalty accrual on completion.
+//
+// Every effect is nil-safe and asynchronous, so a status change never fails on them.
+// This is the single owner of that fan-out: TransitionStatus, BulkTransitionStatus and
+// ShipmentService (which writes the order status itself when a carrier reports a
+// package picked up or delivered) all route through it, so no path that moves an order
+// can silently skip the effects.
+func (s *OrderService) applyStatusChangeSideEffects(tenantID uuid.UUID, c orderStatusChange) {
+	DispatchWebhookAsync(s.webhookDispatch, tenantID, "order.status_changed", map[string]any{"order_id": c.orderID.String(), "from": c.oldStatus, "to": c.newStatus})
+	if c.order == nil {
+		return
+	}
+	order := c.order
+	if s.emailService != nil {
+		asyncutil.SafeGo(func() {
+			s.emailService.SendOrderStatusEmail(context.Background(), tenantID, order, c.oldStatus, c.newStatus)
+		})
+	}
+	if s.invoiceService != nil {
+		asyncutil.SafeGo(func() { s.invoiceService.HandleOrderStatusChange(context.Background(), tenantID, order) })
+	}
+	if s.smsService != nil {
+		asyncutil.SafeGo(func() {
+			s.smsService.SendOrderStatusSMS(context.Background(), tenantID, order, c.oldStatus, c.newStatus)
+		})
+	}
+	FireAutomationEvent(s.automationService, tenantID, "order", "order.status_changed", order.ID, map[string]any{
+		"status": order.Status, "old_status": c.oldStatus, "new_status": c.newStatus,
+		"source": order.Source, "customer_name": order.CustomerName,
+		"total_amount": order.TotalAmount, "currency": order.Currency,
+		"payment_status": order.PaymentStatus,
+	})
+	// Auto-sync fulfillment status to Allegro (async, best-effort)
+	if s.allegroSync != nil && order.Source == "allegro" {
+		asyncutil.SafeGo(func() { s.allegroSync.SyncFulfillmentStatus(context.Background(), tenantID, order, c.newStatus) })
+	}
+	// Stock sync on status change
+	switch c.newStatus {
+	case model.OrderStatusShipped:
+		// Decrement component/product stock exactly once per order (firstShip gate),
+		// so a forced re-ship does not double-decrement.
+		if c.firstShip {
+			asyncutil.SafeGo(func() { s.handleStockOnShip(context.Background(), tenantID, order) })
+		}
+	case model.OrderStatusCancelled:
+		// Release reservations once; skip when the order was already terminal
+		// (cancelled/refunded) to avoid double-releasing.
+		if !isTerminalStockStatus(c.oldStatus) {
+			asyncutil.SafeGo(func() { s.handleStockOnCancel(context.Background(), tenantID, order) })
+		}
+	case model.OrderStatusCompleted:
+		s.awardLoyaltyOnComplete(tenantID, order)
+	}
 }
 
 // isTerminalStockStatus reports whether an order status already released/closed out its
@@ -941,20 +982,10 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 		Results: make([]model.BulkStatusResult, 0, len(req.OrderIDs)),
 	}
 
-	// Collect notifications to dispatch after the transaction commits
-	type emailNotification struct {
-		order     *model.Order
-		oldStatus string
-		newStatus string
-		firstShip bool
-	}
-	type webhookNotification struct {
-		orderID   uuid.UUID
-		oldStatus string
-		newStatus string
-	}
-	var pendingEmails []emailNotification
-	var pendingWebhooks []webhookNotification
+	// Collect the committed status changes so their side effects fan out after the
+	// transaction commits. order is nil when the post-update re-fetch failed; such a
+	// change still gets its webhook (see the dispatch loop below).
+	var pendingChanges []orderStatusChange
 
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
 		config, err := s.loadStatusConfig(ctx, tx, tenantID)
@@ -1024,21 +1055,18 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 				resp.AuditFailures = append(resp.AuditFailures, orderID.String())
 			}
 
-			updated, err := s.orderRepo.FindByID(ctx, tx, orderID)
-			if err == nil && updated != nil {
-				pendingEmails = append(pendingEmails, emailNotification{
-					order: updated, oldStatus: oldStatus, newStatus: req.Status,
-					firstShip: existing.ShippedAt == nil,
-				})
+			change := orderStatusChange{
+				orderID: orderID, oldStatus: oldStatus, newStatus: req.Status,
+				firstShip: existing.ShippedAt == nil,
 			}
+			if updated, ferr := s.orderRepo.FindByID(ctx, tx, orderID); ferr == nil {
+				change.order = updated
+			}
+			pendingChanges = append(pendingChanges, change)
 
 			result.Success = true
 			resp.Results = append(resp.Results, result)
 			resp.Succeeded++
-
-			pendingWebhooks = append(pendingWebhooks, webhookNotification{
-				orderID: orderID, oldStatus: oldStatus, newStatus: req.Status,
-			})
 		}
 
 		return nil
@@ -1048,38 +1076,10 @@ func (s *OrderService) BulkTransitionStatus(ctx context.Context, tenantID uuid.U
 		return nil, err
 	}
 
-	// Dispatch notifications outside the transaction
-	for _, n := range pendingEmails {
-		if s.emailService != nil {
-			asyncutil.SafeGo(func() {
-				s.emailService.SendOrderStatusEmail(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus)
-			})
-		}
-		if s.smsService != nil {
-			asyncutil.SafeGo(func() {
-				s.smsService.SendOrderStatusSMS(context.Background(), tenantID, n.order, n.oldStatus, n.newStatus)
-			})
-		}
-		// Auto-sync fulfillment status to Allegro (async, best-effort)
-		if s.allegroSync != nil && n.order.Source == "allegro" {
-			asyncutil.SafeGo(func() { s.allegroSync.SyncFulfillmentStatus(context.Background(), tenantID, n.order, n.newStatus) })
-		}
-		// Stock sync on status change
-		switch n.newStatus {
-		case "shipped":
-			if n.firstShip {
-				asyncutil.SafeGo(func() { s.handleStockOnShip(context.Background(), tenantID, n.order) })
-			}
-		case "cancelled":
-			if !isTerminalStockStatus(n.oldStatus) {
-				asyncutil.SafeGo(func() { s.handleStockOnCancel(context.Background(), tenantID, n.order) })
-			}
-		case "completed":
-			s.awardLoyaltyOnComplete(tenantID, n.order)
-		}
-	}
-	for _, n := range pendingWebhooks {
-		DispatchWebhookAsync(s.webhookDispatch, tenantID, "order.status_changed", map[string]any{"order_id": n.orderID.String(), "from": n.oldStatus, "to": n.newStatus})
+	// Dispatch notifications outside the transaction, through the same fan-out a
+	// single-order transition uses.
+	for _, c := range pendingChanges {
+		s.applyStatusChangeSideEffects(tenantID, c)
 	}
 
 	return resp, nil

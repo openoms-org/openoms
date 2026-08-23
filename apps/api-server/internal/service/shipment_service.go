@@ -32,6 +32,14 @@ type shipmentLookupQuerier interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
+// orderStatusSideEffectApplier is the OrderService surface ShipmentService needs to fan
+// out the post-commit side effects of an order status change that ShipmentService wrote
+// itself (carrier reported the package picked up, in transit, or delivered). Implemented
+// by *OrderService.
+type orderStatusSideEffectApplier interface {
+	applyStatusChangeSideEffects(tenantID uuid.UUID, c orderStatusChange)
+}
+
 // ShipmentService handles business logic for shipment management.
 type ShipmentService struct {
 	shipmentRepo      repository.ShipmentRepo
@@ -47,6 +55,16 @@ type ShipmentService struct {
 	allegroSync       *AllegroSyncService
 	fulfillment       *FulfillmentService
 	objectStorage     storage.ObjectStorage
+	orderStatusFanout orderStatusSideEffectApplier
+}
+
+// SetOrderStatusSideEffects wires the OrderService whose status-change fan-out applies
+// to orders this service moves on a carrier's behalf. Called after construction to
+// avoid a circular dependency. When left unwired the order status is still synced, but
+// its side effects (email, webhook, invoice, SMS, automation, stock on first ship) do
+// not fire — which is exactly the gap this wiring closes, so production must set it.
+func (s *ShipmentService) SetOrderStatusSideEffects(applier orderStatusSideEffectApplier) {
+	s.orderStatusFanout = applier
 }
 
 // SetFulfillmentService wires the gated fulfillment service used for best-effort
@@ -364,7 +382,9 @@ func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipme
 	}
 
 	var shipment *model.Shipment
+	var orderChange *orderStatusChange
 	err := database.WithTenant(ctx, s.pool, tenantID, func(tx pgx.Tx) error {
+		orderChange = nil
 		existing, err := s.shipmentRepo.FindByID(ctx, tx, shipmentID)
 		if err != nil {
 			return err
@@ -408,43 +428,10 @@ func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipme
 			return err
 		}
 
-		// Order-shipment status sync (multi-package aware)
-		switch req.Status {
-		case "delivered":
-			// Only mark order as delivered if ALL shipments for this order are delivered
-			allDelivered := true
-			orderShipments, _, err := s.shipmentRepo.List(ctx, tx, model.ShipmentListFilter{
-				OrderID:          &existing.OrderID,
-				PaginationParams: model.PaginationParams{Limit: 1000, Offset: 0},
-			})
-			if err != nil {
-				return fmt.Errorf("list order shipments for status sync: %w", err)
-			}
-			for _, os := range orderShipments {
-				if os.ID == shipmentID {
-					continue // skip the one we just updated — it's now "delivered"
-				}
-				if os.Status != "delivered" {
-					allDelivered = false
-					break
-				}
-			}
-			if allDelivered {
-				if err := s.orderRepo.UpdateStatus(ctx, tx, existing.OrderID, "delivered", nil, func() *time.Time { t := time.Now(); return &t }()); err != nil {
-					return fmt.Errorf("sync order status to delivered: %w", err)
-				}
-			}
-		case "picked_up", "in_transit":
-			order, err := s.orderRepo.FindByID(ctx, tx, existing.OrderID)
-			if err == nil && order != nil && order.Status != "shipped" && order.Status != "delivered" {
-				now := time.Now()
-				if err := s.orderRepo.UpdateStatus(ctx, tx, existing.OrderID, "shipped", &now, nil); err != nil {
-					return fmt.Errorf("sync order status to shipped: %w", err)
-				}
-			}
-		}
-
-		return nil
+		// Order-shipment status sync (multi-package aware). The write stays in this
+		// transaction; its post-commit fan-out is applied below.
+		orderChange, err = s.syncOrderStatusForShipment(ctx, tx, tenantID, existing, req.Status, actorID, ip)
+		return err
 	})
 	if err == nil && shipment != nil {
 		DispatchWebhookAsync(s.webhookDispatch, tenantID, "shipment.status_changed", shipment)
@@ -454,8 +441,124 @@ func (s *ShipmentService) TransitionStatus(ctx context.Context, tenantID, shipme
 		FireAutomationEvent(s.automationService, tenantID, "shipment", "shipment.status_changed", shipment.ID, map[string]any{
 			"status": shipment.Status, "provider": shipment.Provider, "order_id": shipment.OrderID.String(),
 		})
+		// The synced order status owes the same side effects an operator-driven
+		// transition would fire — most importantly the stock decrement on first ship,
+		// which used to be skipped entirely for carrier-driven ships.
+		if orderChange != nil && s.orderStatusFanout != nil {
+			s.orderStatusFanout.applyStatusChangeSideEffects(tenantID, *orderChange)
+		}
 	}
 	return shipment, err
+}
+
+// syncOrderStatusForShipment mirrors a shipment's new carrier status onto its order
+// inside the caller's transaction and returns the change whose side effects must fan
+// out after commit, or nil when the shipment status implies no order change.
+//
+// The order status is written directly (not through OrderService.TransitionStatus) so
+// it stays atomic with the shipment status: a failed order write rolls the shipment
+// transition back. The carrier is the authority on what physically happened, so the
+// tenant transition graph is not consulted — but the audit entry and the post-commit
+// fan-out now match what TransitionStatus would have produced.
+func (s *ShipmentService) syncOrderStatusForShipment(
+	ctx context.Context,
+	tx pgx.Tx,
+	tenantID uuid.UUID,
+	shipment *model.Shipment,
+	newShipmentStatus string,
+	actorID uuid.UUID,
+	ip string,
+) (*orderStatusChange, error) {
+	order, err := s.orderRepo.FindByID(ctx, tx, shipment.OrderID)
+	if err != nil {
+		return nil, fmt.Errorf("load order for shipment status sync: %w", err)
+	}
+	if order == nil {
+		return nil, nil
+	}
+
+	now := time.Now()
+	var targetStatus string
+	var setShippedAt, setDeliveredAt *time.Time
+
+	switch newShipmentStatus {
+	case "delivered":
+		// Only mark the order delivered when ALL its shipments are delivered.
+		allDelivered, err := s.allOrderShipmentsDelivered(ctx, tx, shipment)
+		if err != nil {
+			return nil, err
+		}
+		if !allDelivered {
+			return nil, nil
+		}
+		targetStatus = model.OrderStatusDelivered
+		setDeliveredAt = &now
+	case "picked_up", "in_transit":
+		if order.Status == model.OrderStatusShipped || order.Status == model.OrderStatusDelivered {
+			return nil, nil
+		}
+		targetStatus = model.OrderStatusShipped
+		setShippedAt = &now
+	default:
+		return nil, nil
+	}
+
+	if order.Status == targetStatus {
+		return nil, nil // already there: no write, and no duplicate side effects
+	}
+
+	oldStatus := order.Status
+	// shipped_at is only ever set (COALESCE on update), so this gates the one-time
+	// stock decrement even if several packages report movement.
+	firstShip := order.ShippedAt == nil
+
+	if err := s.orderRepo.UpdateStatus(ctx, tx, order.ID, targetStatus, setShippedAt, setDeliveredAt); err != nil {
+		return nil, fmt.Errorf("sync order status to %s: %w", targetStatus, err)
+	}
+	if err := s.auditRepo.Log(ctx, tx, model.AuditEntry{
+		TenantID:   tenantID,
+		UserID:     actorID,
+		Action:     "order.status_changed",
+		EntityType: "order",
+		EntityID:   order.ID,
+		Changes:    map[string]string{"from": oldStatus, "to": targetStatus, "shipment_id": shipment.ID.String()},
+		IPAddress:  ip,
+	}); err != nil {
+		return nil, fmt.Errorf("audit synced order status: %w", err)
+	}
+
+	updated, err := s.orderRepo.FindByID(ctx, tx, order.ID)
+	if err != nil {
+		return nil, fmt.Errorf("reload order after shipment status sync: %w", err)
+	}
+	return &orderStatusChange{
+		orderID:   order.ID,
+		order:     updated,
+		oldStatus: oldStatus,
+		newStatus: targetStatus,
+		firstShip: firstShip,
+	}, nil
+}
+
+// allOrderShipmentsDelivered reports whether every shipment of the order is delivered,
+// treating the just-updated shipment as delivered.
+func (s *ShipmentService) allOrderShipmentsDelivered(ctx context.Context, tx pgx.Tx, updated *model.Shipment) (bool, error) {
+	orderShipments, _, err := s.shipmentRepo.List(ctx, tx, model.ShipmentListFilter{
+		OrderID:          &updated.OrderID,
+		PaginationParams: model.PaginationParams{Limit: 1000, Offset: 0},
+	})
+	if err != nil {
+		return false, fmt.Errorf("list order shipments for status sync: %w", err)
+	}
+	for _, os := range orderShipments {
+		if os.ID == updated.ID {
+			continue // the one we just updated — it is now "delivered"
+		}
+		if os.Status != "delivered" {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 // GetLabelFile loads the already-stored label PDF for a single shipment.
