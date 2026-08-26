@@ -36,6 +36,37 @@ func TestConfig_Validate_RegistrationModes(t *testing.T) {
 	}
 }
 
+func TestConfig_Validate_RejectsPublishedExampleSecretsOutsideDevelopment(t *testing.T) {
+	t.Run("jwt", func(t *testing.T) {
+		cfg := validConfigForValidation("invite")
+		cfg.JWTSecret = exampleJWTSecret
+
+		err := cfg.Validate()
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "JWT_SECRET must not use the published example value")
+	})
+
+	t.Run("encryption key", func(t *testing.T) {
+		cfg := validConfigForValidation("invite")
+		cfg.EncryptionKey = exampleEncryptionKey
+
+		err := cfg.Validate()
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ENCRYPTION_KEY must not use the published example value")
+	})
+
+	t.Run("allowed in development", func(t *testing.T) {
+		cfg := validConfigForValidation("invite")
+		cfg.Env = "development"
+		cfg.JWTSecret = exampleJWTSecret
+		cfg.EncryptionKey = exampleEncryptionKey
+
+		require.NoError(t, cfg.Validate())
+	})
+}
+
 func TestConfig_Validate_RejectsOpenRegistrationOutsideDevelopment(t *testing.T) {
 	err := validConfigForValidation("open").Validate()
 

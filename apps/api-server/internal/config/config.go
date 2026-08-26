@@ -14,6 +14,13 @@ import (
 	"github.com/caarlos0/env/v11"
 )
 
+// Published values from .env.example. Rejected outside development so a
+// copy-paste production start cannot keep the documented sample secrets.
+const (
+	exampleJWTSecret     = "dev-jwt-secret-change-me-in-production-must-be-64-chars-minimum-xxxxxx"
+	exampleEncryptionKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+)
+
 // Config holds all runtime configuration loaded from environment variables.
 type Config struct {
 	Port        string `env:"PORT" envDefault:"8080"`
@@ -247,6 +254,17 @@ func (c *Config) Validate() error {
 	// JWTSecret must be at least 32 characters.
 	if len(c.JWTSecret) < 32 {
 		return fmt.Errorf("JWT_SECRET must be at least 32 characters long (got %d)", len(c.JWTSecret))
+	}
+
+	// Published .env.example values are fine for local development. Shipping them
+	// is enough to mint tokens and decrypt stored integration credentials.
+	if !c.IsDevelopment() {
+		if c.JWTSecret == exampleJWTSecret {
+			return fmt.Errorf("JWT_SECRET must not use the published example value outside development")
+		}
+		if strings.EqualFold(c.EncryptionKey, exampleEncryptionKey) {
+			return fmt.Errorf("ENCRYPTION_KEY must not use the published example value outside development")
+		}
 	}
 
 	// RegistrationMode must be one of the allowed values.
