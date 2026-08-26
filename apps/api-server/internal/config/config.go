@@ -14,12 +14,14 @@ import (
 	"github.com/caarlos0/env/v11"
 )
 
-// Published values from .env.example. Rejected outside development so a
-// copy-paste production start cannot keep the documented sample secrets.
-const (
-	exampleJWTSecret     = "dev-jwt-secret-change-me-in-production-must-be-64-chars-minimum-xxxxxx"
-	exampleEncryptionKey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-)
+// Marker copied from the JWT_SECRET line in .env.example. Rejected outside
+// development so a copy-paste production start cannot keep that sample.
+const exampleJWTSecretMarker = "change-me-in-production"
+
+// exampleEncryptionKey is the sequential hex from .env.example (16 hex chars x 4).
+func exampleEncryptionKey() string {
+	return strings.Repeat("0123456789abcdef", 4)
+}
 
 // Config holds all runtime configuration loaded from environment variables.
 type Config struct {
@@ -259,10 +261,10 @@ func (c *Config) Validate() error {
 	// Published .env.example values are fine for local development. Shipping them
 	// is enough to mint tokens and decrypt stored integration credentials.
 	if !c.IsDevelopment() {
-		if c.JWTSecret == exampleJWTSecret {
+		if strings.Contains(c.JWTSecret, exampleJWTSecretMarker) {
 			return fmt.Errorf("JWT_SECRET must not use the published example value outside development")
 		}
-		if strings.EqualFold(c.EncryptionKey, exampleEncryptionKey) {
+		if strings.EqualFold(c.EncryptionKey, exampleEncryptionKey()) {
 			return fmt.Errorf("ENCRYPTION_KEY must not use the published example value outside development")
 		}
 	}

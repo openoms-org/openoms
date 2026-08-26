@@ -37,9 +37,13 @@ func TestConfig_Validate_RegistrationModes(t *testing.T) {
 }
 
 func TestConfig_Validate_RejectsPublishedExampleSecretsOutsideDevelopment(t *testing.T) {
+	// Exact values from .env.example. Kept here so the gate stays tied to the
+	// documented sample, not a reconstructed stand-in.
+	const publishedJWT = "dev-jwt-secret-change-me-in-production-must-be-64-chars-minimum-xxxxxx" //nolint:gosec // G101: published .env.example sample
+
 	t.Run("jwt", func(t *testing.T) {
 		cfg := validConfigForValidation("invite")
-		cfg.JWTSecret = exampleJWTSecret
+		cfg.JWTSecret = publishedJWT
 
 		err := cfg.Validate()
 
@@ -49,7 +53,7 @@ func TestConfig_Validate_RejectsPublishedExampleSecretsOutsideDevelopment(t *tes
 
 	t.Run("encryption key", func(t *testing.T) {
 		cfg := validConfigForValidation("invite")
-		cfg.EncryptionKey = exampleEncryptionKey
+		cfg.EncryptionKey = exampleEncryptionKey()
 
 		err := cfg.Validate()
 
@@ -60,8 +64,8 @@ func TestConfig_Validate_RejectsPublishedExampleSecretsOutsideDevelopment(t *tes
 	t.Run("allowed in development", func(t *testing.T) {
 		cfg := validConfigForValidation("invite")
 		cfg.Env = "development"
-		cfg.JWTSecret = exampleJWTSecret
-		cfg.EncryptionKey = exampleEncryptionKey
+		cfg.JWTSecret = publishedJWT
+		cfg.EncryptionKey = exampleEncryptionKey()
 
 		require.NoError(t, cfg.Validate())
 	})
