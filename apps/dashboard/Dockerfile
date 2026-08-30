@@ -50,7 +50,7 @@ RUN --mount=type=secret,id=sentry_auth_token \
 # Distroless has no apt. CVE-2026-45447 / DSA-6335-1 needs
 # libssl3t64 >= 3.5.6-1~deb13u2. Pin the multi-arch index that ships it;
 # Renovate bumps the digest.
-FROM gcr.io/distroless/nodejs22-debian13:nonroot@sha256:22d2f0480e59548ad14cf10d8921b24ef809780e7a61b162838f3d15a4a92e3d AS runner
+FROM gcr.io/distroless/nodejs22-debian13:nonroot@sha256:4e4fb0ce55fd73901600796ef079a9490369d2515d7da31633a91608c82ca13b AS runner
 
 WORKDIR /app
 
