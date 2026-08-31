@@ -109,13 +109,26 @@ assert_fails "build_secret_rejects_preflight_outside_dashboard_job" \
 
 assert_release_path_filter() {
   local path="$1"
-  if ! ruby -ryaml -e '
-    workflow = YAML.load_file(ARGV[0])
-    triggers = workflow["on"] || workflow[true] || {}
-    push = triggers["push"] || {}
-    paths = push["paths"] || []
-    exit(paths.include?(ARGV[1]) ? 0 : 1)
-  ' "$repo_root/.github/workflows/release.yml" "$path"; then
+  # python3 is already used by scripts/check-helm-pss.py. The previous ruby
+  # one-liner made local-ci fail on machines that do not have ruby.
+  if ! python3 -c '
+import sys
+needle = sys.argv[2]
+in_paths = False
+for raw in open(sys.argv[1], encoding="utf-8"):
+    stripped = raw.strip()
+    if stripped == "paths:":
+        in_paths = True
+        continue
+    if in_paths:
+        if stripped.startswith("- "):
+            value = stripped[2:].strip().strip(chr(34))
+            if value == needle:
+                sys.exit(0)
+        elif stripped and not raw[:1].isspace():
+            break
+sys.exit(1)
+' "$repo_root/.github/workflows/release.yml" "$path"; then
     fail "release workflow path filter must include $path"
   fi
   echo "release_path_filter_${path//[^[:alnum:]]/_}=pass"
