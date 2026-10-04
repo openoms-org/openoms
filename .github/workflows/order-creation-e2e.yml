@@ -1,0 +1,109 @@
+﻿name: OpenOMS Order Creation E2E
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  order-creation-e2e:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            apps/dashboard/package-lock.json
+            qa-automation/order-creation/package-lock.json
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.27"
+
+      - name: Install dashboard dependencies
+        working-directory: apps/dashboard
+        run: npm ci
+
+      - name: Install QA dependencies
+        working-directory: qa-automation/order-creation
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: qa-automation/order-creation
+        run: npx playwright install --with-deps chromium
+
+      - name: Start PostgreSQL and Redis
+        run: docker compose -f docker-compose.dev.yml up -d postgres redis
+
+      - name: Install golang-migrate
+        run: go install -tags postgres github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgres://openoms:openoms-dev-password@localhost:5433/openoms?sslmode=disable
+        run: |
+          for i in {1..30}; do
+            if docker compose -f docker-compose.dev.yml exec -T postgres pg_isready -U openoms -d openoms; then
+              break
+            fi
+            sleep 2
+          done
+          migrate -path apps/api-server/migrations -database "$DATABASE_URL" up
+
+      - name: Seed database
+        run: docker compose -f docker-compose.dev.yml exec -T postgres psql -U openoms -d openoms < scripts/seed.sql
+
+      - name: Start OpenOMS API
+        run: |
+          nohup go run ./cmd/server > /tmp/openoms-api.log 2>&1 &
+          for i in {1..60}; do
+            if curl --fail --silent http://localhost:8080/health > /dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl --fail http://localhost:8080/health
+
+      - name: Start OpenOMS Dashboard
+        working-directory: apps/dashboard
+        run: |
+          nohup npm run dev > /tmp/openoms-dashboard.log 2>&1 &
+          for i in {1..60}; do
+            if curl --fail --silent http://localhost:3000/login > /dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl --fail http://localhost:3000/login > /dev/null
+
+      - name: Run Playwright Order Creation suite
+        working-directory: qa-automation/order-creation
+        run: npx playwright test --project=chromium --workers=1 --retries=0
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: qa-automation/order-creation/playwright-report/
+          if-no-files-found: ignore
+
+      - name: Dump service logs on failure
+        if: failure()
+        run: |
+          echo "===== API LOG ====="
+          cat /tmp/openoms-api.log || true
+          echo "===== DASHBOARD LOG ====="
+          cat /tmp/openoms-dashboard.log || true
+
+      - name: Cleanup
+        if: always()
+        run: docker compose -f docker-compose.dev.yml down -v
