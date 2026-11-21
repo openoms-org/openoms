@@ -1,14 +1,49 @@
 ﻿name: OpenOMS Order Creation E2E
 
+# Runs the sale-order automation suite (UI + API + DB) against a real OpenOMS stack.
+#   - workflow_dispatch: started by a person, by TestNexus AI, or by the TestNexus dashboard.
+#   - pull_request: runs only when order-related code or the suite itself changes.
 on:
-  push:
-    branches: ["**"]
-  pull_request:
   workflow_dispatch:
+    inputs:
+      suite:
+        description: "Suite name (label only, shown in the run title)"
+        required: false
+        default: "sale-order-regression"
+        type: string
+      grep:
+        description: "Playwright --grep filter, for example @regression or @smoke. Leave empty to run everything."
+        required: false
+        default: "@regression"
+        type: string
+  pull_request:
+    paths:
+      - "qa-automation/order-creation/**"
+      - "apps/api-server/**/order*"
+      - "apps/api-server/migrations/**"
+      - "apps/dashboard/src/**/orders/**"
+      - ".github/workflows/order-creation-e2e.yml"
+
+run-name: "Order E2E - ${{ inputs.suite || 'pull request' }} (${{ inputs.grep || 'all tests' }})"
+
+concurrency:
+  group: order-creation-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DATABASE_URL: postgres://openoms:openoms-dev-password@localhost:5433/openoms?sslmode=disable
+  REDIS_URL: redis://localhost:6379
+  # CI-only values. Never reuse these outside a throwaway test machine.
+  JWT_SECRET: ci-only-jwt-secret-for-order-e2e-0123456789abcdef
+  ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 
 jobs:
   order-creation-e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -26,7 +61,8 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.27"
+          go-version-file: apps/api-server/go.mod
+          cache-dependency-path: apps/api-server/go.sum
 
       - name: Install dashboard dependencies
         working-directory: apps/dashboard
@@ -47,8 +83,6 @@ jobs:
         run: go install -tags postgres github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
       - name: Run database migrations
-        env:
-          DATABASE_URL: postgres://openoms:openoms-dev-password@localhost:5433/openoms?sslmode=disable
         run: |
           for i in {1..30}; do
             if docker compose -f docker-compose.dev.yml exec -T postgres pg_isready -U openoms -d openoms; then
@@ -62,8 +96,16 @@ jobs:
         run: docker compose -f docker-compose.dev.yml exec -T postgres psql -U openoms -d openoms < scripts/seed.sql
 
       - name: Start OpenOMS API
+        working-directory: apps/api-server
+        env:
+          PORT: "8080"
+          ENV: development
+          BASE_URL: http://localhost:8080
+          FRONTEND_URL: http://localhost:3000
+          WORKERS_ENABLED: "false"
         run: |
-          nohup go run ./cmd/server > /tmp/openoms-api.log 2>&1 &
+          go build -o /tmp/openoms-api ./cmd/server
+          nohup /tmp/openoms-api > /tmp/openoms-api.log 2>&1 &
           for i in {1..60}; do
             if curl --fail --silent http://localhost:8080/health > /dev/null; then
               break
@@ -74,9 +116,11 @@ jobs:
 
       - name: Start OpenOMS Dashboard
         working-directory: apps/dashboard
+        env:
+          DASHBOARD_API_PROXY_URL: http://localhost:8080
         run: |
           nohup npm run dev > /tmp/openoms-dashboard.log 2>&1 &
-          for i in {1..60}; do
+          for i in {1..90}; do
             if curl --fail --silent http://localhost:3000/login > /dev/null; then
               break
             fi
@@ -84,9 +128,16 @@ jobs:
           done
           curl --fail http://localhost:3000/login > /dev/null
 
-      - name: Run Playwright Order Creation suite
+      - name: Run Playwright suite
         working-directory: qa-automation/order-creation
-        run: npx playwright test --project=chromium --workers=1 --retries=0
+        env:
+          SUITE_GREP: ${{ inputs.grep }}
+        run: |
+          if [ -n "$SUITE_GREP" ]; then
+            npx playwright test --project=chromium --workers=1 --retries=0 --grep "$SUITE_GREP"
+          else
+            npx playwright test --project=chromium --workers=1 --retries=0
+          fi
 
       - name: Upload Playwright report
         if: always()
@@ -94,6 +145,14 @@ jobs:
         with:
           name: playwright-report
           path: qa-automation/order-creation/playwright-report/
+          if-no-files-found: ignore
+
+      - name: Upload machine-readable results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: qa-automation/order-creation/results/results.json
           if-no-files-found: ignore
 
       - name: Dump service logs on failure

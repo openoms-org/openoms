@@ -3,7 +3,7 @@ const { gotoWithAuth } = require('../helpers/actions');
 const { OrderCreatePage } = require('../pages/OrderCreatePage');
 
 test.describe('POM Smoke', () => {
-  test('creates a basic order using Page Object Model', async ({ page }) => {
+  test('creates a basic order using Page Object Model @smoke @regression', async ({ page }) => {
     const orderPage = new OrderCreatePage(page);
 
     await gotoWithAuth(page, '/orders/new');

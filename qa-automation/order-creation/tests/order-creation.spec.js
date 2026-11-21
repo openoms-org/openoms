@@ -9,7 +9,7 @@ const { getOrderFromDb } = require('../helpers/db');
 const { NEW_ORDER } = require('../fixtures/test-data');
 
 test.describe('OMS Order Creation - E2E Showcase', () => {
-  test('creates an order through UI and validates API + DB persistence', async ({
+  test('creates an order through UI and validates API + DB persistence @smoke @regression', async ({
     page,
   }) => {
 
