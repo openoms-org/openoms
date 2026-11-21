@@ -42,7 +42,7 @@ permissions:
 env:
   # Where the TestNexus AI code is checked out from.
   TESTNEXUS_REPOSITORY: ApooravSharma01/TestNexus-AI
-  TESTNEXUS_REF: feat/suite-runner
+  TESTNEXUS_REF: main
   DATABASE_URL: postgres://openoms:openoms-dev-password@localhost:5433/openoms?sslmode=disable
   REDIS_URL: redis://localhost:6379
   # CI-only values. Never reuse these outside a throwaway test machine.
