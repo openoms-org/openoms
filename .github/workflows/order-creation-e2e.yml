@@ -124,7 +124,8 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
-          go-version-file: apps/api-server/go.mod
+          # "1.25" picks the newest 1.25 patch. The go.mod version alone is too old for golang-migrate.
+          go-version: "1.25"
           cache-dependency-path: apps/api-server/go.sum
 
       - name: Install dashboard dependencies
@@ -143,7 +144,7 @@ jobs:
         run: docker compose -f docker-compose.dev.yml up -d postgres redis
 
       - name: Install golang-migrate
-        run: go install -tags postgres github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+        run: go install -tags postgres github.com/golang-migrate/migrate/v4/cmd/migrate@v4.20.1
 
       - name: Run database migrations
         run: |
