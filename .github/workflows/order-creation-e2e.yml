@@ -16,6 +16,11 @@ on:
         required: false
         default: "@regression"
         type: string
+      pr_number:
+        description: "Optional pull request number. When set, TestNexus AI picks the tests for that PR and only those run."
+        required: false
+        default: ""
+        type: string
   pull_request:
     paths:
       - "qa-automation/order-creation/**"
@@ -32,8 +37,12 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 env:
+  # Where the TestNexus AI code is checked out from.
+  TESTNEXUS_REPOSITORY: ApooravSharma01/TestNexus-AI
+  TESTNEXUS_REF: feat/suite-runner
   DATABASE_URL: postgres://openoms:openoms-dev-password@localhost:5433/openoms?sslmode=disable
   REDIS_URL: redis://localhost:6379
   # CI-only values. Never reuse these outside a throwaway test machine.
@@ -41,7 +50,59 @@ env:
   ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
 
 jobs:
+  # Asks TestNexus AI which sale-order tests this pull request needs.
+  # Skipped for plain suite runs, where the suite itself decides what runs.
+  select:
+    if: ${{ github.event_name == 'pull_request' || inputs.pr_number != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      grep: ${{ steps.pick.outputs.grep }}
+      selected: ${{ steps.pick.outputs.selected }}
+    steps:
+      - name: Checkout TestNexus AI
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.TESTNEXUS_REPOSITORY }}
+          ref: ${{ env.TESTNEXUS_REF }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install TestNexus AI
+        run: npm ci
+
+      - name: Analyze the pull request
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+        run: |
+          npm run analyze -- --project openoms --repo "${{ github.repository }}" --pr "$PR_NUMBER" \
+            --out reports/openoms.json --markdown reports/openoms.md
+          npm run playwright-grep -- reports/openoms.json reports/openoms-grep.txt
+
+      - name: Publish the selection
+        id: pick
+        run: |
+          printf 'grep=%s\n' "$(cat reports/openoms-grep.txt)" >> "$GITHUB_OUTPUT"
+          printf 'selected=%s\n' "$(node -p "require('./reports/openoms.json').selectedTests.length")" >> "$GITHUB_OUTPUT"
+          cat reports/openoms.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload TestNexus report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testnexus-report
+          path: reports/openoms.json
+          if-no-files-found: ignore
+
   order-creation-e2e:
+    needs: select
+    # If TestNexus fails, the full suite still runs. Skipping tests is only safe when TestNexus said so.
+    if: ${{ always() && needs.select.outputs.selected != '0' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -131,7 +192,7 @@ jobs:
       - name: Run Playwright suite
         working-directory: qa-automation/order-creation
         env:
-          SUITE_GREP: ${{ inputs.grep }}
+          SUITE_GREP: ${{ (needs.select.result == 'success' && needs.select.outputs.grep) || inputs.grep }}
         run: |
           if [ -n "$SUITE_GREP" ]; then
             npx playwright test --project=chromium --workers=1 --retries=0 --grep "$SUITE_GREP"
