@@ -147,13 +147,28 @@ jobs:
 
       - name: Run database migrations
         run: |
-          for i in {1..30}; do
-            if docker compose -f docker-compose.dev.yml exec -T postgres pg_isready -U openoms -d openoms; then
+          # The Postgres image starts a short-lived setup server and then restarts.
+          # Only the final server accepts TCP connections, so wait for a real query over TCP.
+          ready=0
+          for i in {1..60}; do
+            if docker compose -f docker-compose.dev.yml exec -T postgres psql -h 127.0.0.1 -U openoms -d openoms -tAc 'select 1' > /dev/null 2>&1; then
+              ready=1
               break
             fi
             sleep 2
           done
-          migrate -path apps/api-server/migrations -database "$DATABASE_URL" up
+          if [ "$ready" != "1" ]; then
+            echo "PostgreSQL never became ready"
+            exit 1
+          fi
+          for attempt in 1 2 3; do
+            if migrate -path apps/api-server/migrations -database "$DATABASE_URL" up; then
+              exit 0
+            fi
+            echo "Migration attempt $attempt failed, retrying"
+            sleep 3
+          done
+          exit 1
 
       - name: Seed database
         run: docker compose -f docker-compose.dev.yml exec -T postgres psql -U openoms -d openoms < scripts/seed.sql
