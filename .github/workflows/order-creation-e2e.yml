@@ -102,7 +102,9 @@ jobs:
   order-creation-e2e:
     needs: select
     # If TestNexus fails, the full suite still runs. Skipping tests is only safe when TestNexus said so.
-    if: ${{ always() && needs.select.outputs.selected != '0' }}
+    # Compare against the job result first: a skipped job has a null output, and GitHub
+    # treats null and '0' as equal, which would wrongly skip plain suite runs.
+    if: ${{ always() && !(needs.select.result == 'success' && needs.select.outputs.selected == '0') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
