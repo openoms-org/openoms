@@ -1,0 +1,247 @@
+﻿name: OpenOMS Order Creation E2E
+
+# Runs the sale-order automation suite (UI + API + DB) against a real OpenOMS stack.
+#   - workflow_dispatch: started by a person, by TestNexus AI, or by the TestNexus dashboard.
+#   - pull_request: runs only when order-related code or the suite itself changes.
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "Suite name (label only, shown in the run title)"
+        required: false
+        default: "sale-order-regression"
+        type: string
+      grep:
+        description: "Playwright --grep filter, for example @regression or @smoke. Leave empty to run everything."
+        required: false
+        default: "@regression"
+        type: string
+      pr_number:
+        description: "Optional pull request number. When set, TestNexus AI picks the tests for that PR and only those run."
+        required: false
+        default: ""
+        type: string
+  pull_request:
+    paths:
+      - "qa-automation/order-creation/**"
+      - "apps/api-server/**/order*"
+      - "apps/api-server/migrations/**"
+      - "apps/dashboard/src/**/orders/**"
+      - ".github/workflows/order-creation-e2e.yml"
+
+run-name: "Order E2E - ${{ inputs.suite || 'pull request' }} (${{ inputs.grep || 'all tests' }})"
+
+concurrency:
+  group: order-creation-e2e-${{ github.ref }}-${{ inputs.suite || 'pull-request' }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  # Where the TestNexus AI code is checked out from.
+  TESTNEXUS_REPOSITORY: ApooravSharma01/TestNexus-AI
+  TESTNEXUS_REF: main
+  DATABASE_URL: postgres://openoms:openoms-dev-password@localhost:5433/openoms?sslmode=disable
+  REDIS_URL: redis://localhost:6379
+  # CI-only values. Never reuse these outside a throwaway test machine.
+  JWT_SECRET: ci-only-jwt-secret-for-order-e2e-0123456789abcdef
+  ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+
+jobs:
+  # Asks TestNexus AI which sale-order tests this pull request needs.
+  # Skipped for plain suite runs, where the suite itself decides what runs.
+  select:
+    if: ${{ github.event_name == 'pull_request' || inputs.pr_number != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      grep: ${{ steps.pick.outputs.grep }}
+      selected: ${{ steps.pick.outputs.selected }}
+    steps:
+      - name: Checkout TestNexus AI
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          repository: ${{ env.TESTNEXUS_REPOSITORY }}
+          ref: ${{ env.TESTNEXUS_REF }}
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install TestNexus AI
+        run: npm ci
+
+      - name: Analyze the pull request
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
+        run: |
+          npm run analyze -- --project openoms --repo "${{ github.repository }}" --pr "$PR_NUMBER" \
+            --out reports/openoms.json --markdown reports/openoms.md
+          npm run playwright-grep -- reports/openoms.json reports/openoms-grep.txt
+
+      - name: Publish the selection
+        id: pick
+        run: |
+          printf 'grep=%s\n' "$(cat reports/openoms-grep.txt)" >> "$GITHUB_OUTPUT"
+          printf 'selected=%s\n' "$(node -p "require('./reports/openoms.json').selectedTests.length")" >> "$GITHUB_OUTPUT"
+          cat reports/openoms.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload TestNexus report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: testnexus-report
+          path: reports/openoms.json
+          if-no-files-found: ignore
+
+  order-creation-e2e:
+    needs: select
+    # If TestNexus fails, the full suite still runs. Skipping tests is only safe when TestNexus said so.
+    # Compare against the job result first: a skipped job has a null output, and GitHub
+    # treats null and '0' as equal, which would wrongly skip plain suite runs.
+    if: ${{ always() && !(needs.select.result == 'success' && needs.select.outputs.selected == '0') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            apps/dashboard/package-lock.json
+            qa-automation/order-creation/package-lock.json
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          # "1.25" picks the newest 1.25 patch. The go.mod version alone is too old for golang-migrate.
+          go-version: "1.25"
+          cache-dependency-path: apps/api-server/go.sum
+
+      - name: Install dashboard dependencies
+        working-directory: apps/dashboard
+        run: npm ci
+
+      - name: Install QA dependencies
+        working-directory: qa-automation/order-creation
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        working-directory: qa-automation/order-creation
+        run: npx playwright install --with-deps chromium
+
+      - name: Start PostgreSQL and Redis
+        run: docker compose -f docker-compose.dev.yml up -d postgres redis
+
+      - name: Install golang-migrate
+        run: go install -tags postgres github.com/golang-migrate/migrate/v4/cmd/migrate@v4.20.1
+
+      - name: Run database migrations
+        run: |
+          # The Postgres image starts a short-lived setup server and then restarts.
+          # Only the final server accepts TCP connections, so wait for a real query over TCP.
+          ready=0
+          for i in {1..60}; do
+            if docker compose -f docker-compose.dev.yml exec -T postgres psql -h 127.0.0.1 -U openoms -d openoms -tAc 'select 1' > /dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" != "1" ]; then
+            echo "PostgreSQL never became ready"
+            exit 1
+          fi
+          for attempt in 1 2 3; do
+            if migrate -path apps/api-server/migrations -database "$DATABASE_URL" up; then
+              exit 0
+            fi
+            echo "Migration attempt $attempt failed, retrying"
+            sleep 3
+          done
+          exit 1
+
+      - name: Seed database
+        run: docker compose -f docker-compose.dev.yml exec -T postgres psql -U openoms -d openoms < scripts/seed.sql
+
+      - name: Start OpenOMS API
+        working-directory: apps/api-server
+        env:
+          PORT: "8080"
+          ENV: development
+          BASE_URL: http://localhost:8080
+          FRONTEND_URL: http://localhost:3000
+          WORKERS_ENABLED: "false"
+        run: |
+          go build -o /tmp/openoms-api ./cmd/server
+          nohup /tmp/openoms-api > /tmp/openoms-api.log 2>&1 &
+          for i in {1..60}; do
+            if curl --fail --silent http://localhost:8080/health > /dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl --fail http://localhost:8080/health
+
+      - name: Start OpenOMS Dashboard
+        working-directory: apps/dashboard
+        env:
+          DASHBOARD_API_PROXY_URL: http://localhost:8080
+        run: |
+          nohup npm run dev > /tmp/openoms-dashboard.log 2>&1 &
+          for i in {1..90}; do
+            if curl --fail --silent http://localhost:3000/login > /dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl --fail http://localhost:3000/login > /dev/null
+
+      - name: Run Playwright suite
+        working-directory: qa-automation/order-creation
+        env:
+          SUITE_GREP: ${{ (needs.select.result == 'success' && needs.select.outputs.grep) || inputs.grep }}
+        run: |
+          if [ -n "$SUITE_GREP" ]; then
+            npx playwright test --project=chromium --workers=1 --retries=0 --grep "$SUITE_GREP"
+          else
+            npx playwright test --project=chromium --workers=1 --retries=0
+          fi
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: playwright-report
+          path: qa-automation/order-creation/playwright-report/
+          if-no-files-found: ignore
+
+      - name: Upload machine-readable results
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: playwright-results
+          path: qa-automation/order-creation/results/results.json
+          if-no-files-found: ignore
+
+      - name: Dump service logs on failure
+        if: failure()
+        run: |
+          echo "===== API LOG ====="
+          cat /tmp/openoms-api.log || true
+          echo "===== DASHBOARD LOG ====="
+          cat /tmp/openoms-dashboard.log || true
+
+      - name: Cleanup
+        if: always()
+        run: docker compose -f docker-compose.dev.yml down -v
