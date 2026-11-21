@@ -1,6 +1,7 @@
 ﻿const { test, expect } = require('@playwright/test');
 const { TEST_CREDENTIALS } = require('../../../apps/dashboard/e2e/fixtures/test-data');
 
+// API checks run without a browser, so they are the fastest signal for order endpoints.
 test.describe('Independent API Tests', () => {
   test('authenticates and reads orders through API without UI @api @regression', async ({ request }) => {
     const loginResponse = await request.post('/v1/auth/login', {
