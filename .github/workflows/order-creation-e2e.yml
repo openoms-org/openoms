@@ -27,7 +27,7 @@ on:
 run-name: "Order E2E - ${{ inputs.suite || 'pull request' }} (${{ inputs.grep || 'all tests' }})"
 
 concurrency:
-  group: order-creation-e2e-${{ github.ref }}
+  group: order-creation-e2e-${{ github.ref }}-${{ inputs.suite || 'pull-request' }}
   cancel-in-progress: true
 
 permissions:
