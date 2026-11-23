@@ -127,6 +127,8 @@ type Config struct {
 	OpenAIModel  string `env:"OPENAI_MODEL" envDefault:"gpt-4o-mini"`
 
 	RemoveBGAPIKey string `env:"REMOVEBG_API_KEY"`
+	// RemoveBGAPIURL lets operators point background removal at any remove.bg-compatible API.
+	RemoveBGAPIURL string `env:"REMOVEBG_API_URL" envDefault:"https://api.remove.bg/v1.0/removebg"`
 
 	MetricsToken string `env:"METRICS_TOKEN"` // Bearer token for /metrics; if empty, metrics are disabled in production
 

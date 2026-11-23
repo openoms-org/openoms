@@ -15,14 +15,23 @@ import (
 // BGRemovalService handles background removal from product images via remove.bg API.
 type BGRemovalService struct {
 	apiKey     string
+	apiURL     string
 	httpClient *http.Client
 }
 
+// DefaultBGRemovalAPIURL is the remove.bg endpoint used when no URL is configured.
+const DefaultBGRemovalAPIURL = "https://api.remove.bg/v1.0/removebg"
+
 // NewBGRemovalService creates a new background removal service.
-// If apiKey is empty, IsConfigured() returns false.
-func NewBGRemovalService(apiKey string) *BGRemovalService {
+// If apiKey is empty, IsConfigured() returns false. An empty apiURL means
+// DefaultBGRemovalAPIURL; any API that accepts remove.bg's requests can be used.
+func NewBGRemovalService(apiKey, apiURL string) *BGRemovalService {
+	if apiURL == "" {
+		apiURL = DefaultBGRemovalAPIURL
+	}
 	return &BGRemovalService{
 		apiKey:     apiKey,
+		apiURL:     apiURL,
 		httpClient: netutil.SafeHTTPClient(60 * time.Second),
 	}
 }
@@ -60,7 +69,7 @@ func (s *BGRemovalService) RemoveBackground(ctx context.Context, imageData []byt
 		return nil, "", fmt.Errorf("close multipart writer: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.remove.bg/v1.0/removebg", &body)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.apiURL, &body)
 	if err != nil {
 		return nil, "", fmt.Errorf("create request: %w", err)
 	}
