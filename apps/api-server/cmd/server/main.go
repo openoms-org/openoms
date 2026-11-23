@@ -845,7 +845,7 @@ func run() error {
 	}
 
 	// Background removal service & handler
-	bgRemovalService := service.NewBGRemovalService(cfg.RemoveBGAPIKey)
+	bgRemovalService := service.NewBGRemovalService(cfg.RemoveBGAPIKey, cfg.RemoveBGAPIURL)
 	bgRemovalHandler := handler.NewBGRemovalHandler(bgRemovalService, objectStorage, productRepo, pool, cfg.MaxUploadSize)
 	if cfg.RemoveBGAPIKey != "" {
 		slog.Info("background removal enabled (remove.bg)")
